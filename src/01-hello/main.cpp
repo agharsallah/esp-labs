@@ -37,7 +37,10 @@ void printIdentityCard() {
   Serial.printf("| psram     %lu MB   (the R8 part: expect ~8)\n",
                 static_cast<unsigned long>(ESP.getPsramSize() / (1024 * 1024)));
   Serial.printf("| free heap %lu KB\n", static_cast<unsigned long>(ESP.getFreeHeap() / 1024));
-  Serial.printf("| mac       %012llX\n", ESP.getEfuseMac());
+  // The eFuse stores the MAC lowest byte first, so print byte 0 first to match what esptool shows.
+  const uint64_t mac = ESP.getEfuseMac();
+  Serial.print("| mac       ");
+  for (int i = 0; i < 6; i++) Serial.printf(i < 5 ? "%02X:" : "%02X\n", static_cast<unsigned>((mac >> (8 * i)) & 0xFF));
   Serial.printf("| sdk       %s\n", ESP.getSdkVersion());
   Serial.println("+-----------------------------------------------------+");
 
