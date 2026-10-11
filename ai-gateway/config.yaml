@@ -1,0 +1,39 @@
+# LiteLLM proxy config for the bench. The board asks for a model by its NAME on the left
+# (model_name); LiteLLM sends it to the provider and model on the right (litellm_params.model).
+# Switch providers here, without reflashing the board: serial `ai model <name>` picks one.
+#
+# Keys come from .env (os.environ/...), never from this file.
+
+model_list:
+  # Anthropic (ANTHROPIC_API_KEY)
+  - model_name: oracle
+    litellm_params:
+      model: anthropic/claude-opus-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+  - model_name: oracle-fast
+    litellm_params:
+      model: anthropic/claude-haiku-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # More providers: uncomment, put the key in .env, use any model the provider offers.
+  # The board needs tool (function) calling, so pick models that support it.
+  # - model_name: oracle-openai
+  #   litellm_params:
+  #     model: openai/<model id>
+  #     api_key: os.environ/OPENAI_API_KEY
+  # - model_name: oracle-gemini
+  #   litellm_params:
+  #     model: gemini/<model id>
+  #     api_key: os.environ/GEMINI_API_KEY
+  # - model_name: oracle-local          # free, on your Mac: https://ollama.com, then `ollama pull <model>`
+  #   litellm_params:
+  #     model: ollama_chat/<model>
+  #     api_base: http://localhost:11434
+
+litellm_settings:
+  # A provider that doesn't support a parameter: drop it instead of failing the request.
+  drop_params: true
+
+general_settings:
+  # The board sends this as "Authorization: Bearer ..." (serial: ai key ...).
+  master_key: os.environ/LITELLM_MASTER_KEY
