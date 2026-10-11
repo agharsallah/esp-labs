@@ -16,8 +16,9 @@ class Display {
 
   // Returns false if there is no memory for the frame buffer.
   bool begin(uint32_t spiHz = 40'000'000) {
-    pinMode(PIN_TFT_BL, OUTPUT);
-    digitalWrite(PIN_TFT_BL, HIGH);
+    // Backlight through PWM so it can be dimmed (setBacklight). Full brightness to start.
+    ledcAttach(PIN_TFT_BL, 5000, 8);
+    ledcWrite(PIN_TFT_BL, 255);
     SPI.begin(PIN_TFT_SCLK, -1, PIN_TFT_MOSI, PIN_TFT_CS);
     tft_.init(170, 320);
     tft_.setSPISpeed(spiHz);
@@ -27,6 +28,8 @@ class Display {
   }
 
   FrameBuffer &fb() { return fb_; }
+  // 0 = off, 255 = full brightness.
+  void setBacklight(uint8_t level) { ledcWrite(PIN_TFT_BL, level); }
   void push() { tft_.drawRGBBitmap(0, 0, fb_.pixels(), kW, kH); }
 
  private:
