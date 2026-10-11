@@ -1,0 +1,2037 @@
+<title>ESP32-S3 Bench Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a datasheet page. Left: the board as a live pinout that lights up per lesson. Right: the lesson card, wiring, steps and a simulator. */
+:root {
+  --bg: #eef1f0;
+  --surface: #f8faf9;
+  --ink: #18221f;
+  --muted: #56645f;
+  --line: #c9d2ce;
+  --copper: #b0601f;
+  --copper-soft: #f3dfcd;
+  --pcb: #14201c;
+  --pcb-edge: #2a3a34;
+  --silk: #e9efe9;
+  --silk-dim: #8fa39a;
+  --pad: #d4a24a;
+  --ok: #1f7a4a;
+  --warn: #a05a00;
+  --danger: #b3261e;
+  --power: #c2410c;
+  --gnd: #3f4a46;
+  --scope-paper: #0c121c;
+  --scope-grid: #1e2e42;
+  --scope-trace: #5ae6be;
+  --scope-ink: #e6ecf5;
+  --scope-muted: #788ca5;
+  --scope-amber: #ffb03c;
+  --scope-coral: #ff6054;
+  --scope-dim: #222e3e;
+  --scope-indigo: #10162a;
+  --test-r: #ff0000; --test-g: #00ff00; --test-b: #0000ff; --test-w: #ffffff;
+  --w-gnd: #2b2f2e; --w-vcc: #d1352b; --w-scl: #c99700; --w-sda: #2563c9; --w-res: #e07a10; --w-dc: #1f9d55; --w-cs: #8a4fd0; --w-blk: #7d8b86; --w-btn: #c2255c;
+  --term-bg: #101614;
+  --term-ink: #cfe0d8;
+  --term-dim: #71877d;
+  --term-info: #6fd3a1;
+  --term-warn: #f0b85a;
+  --term-err: #ff7a6e;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1513; --surface: #161e1b; --ink: #e4ebe7; --muted: #9aaba4; --line: #2b3833;
+    --copper: #e39a5c; --copper-soft: #3a2a1d; --pcb: #0a110e; --pcb-edge: #2f423a;
+    --ok: #5fcf8f; --warn: #f0b85a; --danger: #ff8a80; --power: #ff9a5c; --gnd: #8a9a94; --w-gnd: #a3aeaa; --w-vcc: #ff6b5e; --w-scl: #f5c542; --w-sda: #6aa2ff; --w-res: #ffa04a; --w-dc: #4fd18b; --w-cs: #b88cff; --w-blk: #e6ece9; --w-btn: #ff7aa8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1513; --surface: #161e1b; --ink: #e4ebe7; --muted: #9aaba4; --line: #2b3833;
+  --copper: #e39a5c; --copper-soft: #3a2a1d; --pcb: #0a110e; --pcb-edge: #2f423a;
+  --ok: #5fcf8f; --warn: #f0b85a; --danger: #ff8a80; --power: #ff9a5c; --gnd: #8a9a94; --w-gnd: #a3aeaa; --w-vcc: #ff6b5e; --w-scl: #f5c542; --w-sda: #6aa2ff; --w-res: #ffa04a; --w-dc: #4fd18b; --w-cs: #b88cff; --w-blk: #e6ece9; --w-btn: #ff7aa8;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-inline: 16px; padding-block: 20px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-stretch: 125%; font-weight: 800; font-size: clamp(26px, 4.4vw, 40px); line-height: 1.05; margin: 4px 0 0; text-wrap: balance; letter-spacing: -.01em; }
+h1 .part { color: var(--copper); }
+.spec { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.spec b { color: var(--ink); font-weight: 600; }
+
+
+/* Theme row */
+nav.tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+nav.tracks button { --track: var(--copper); position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 12px 14px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
+nav.tracks button::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--track); }
+nav.tracks button[aria-pressed="true"] { border-color: var(--track); background: var(--copper-soft); }
+nav.tracks button[disabled] { cursor: default; opacity: .5; }
+nav.tracks button:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+nav.tracks .tt { font-family: var(--font-display); font-stretch: 112%; font-weight: 750; font-size: 16px; }
+nav.tracks .tb { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+nav.tracks .tp { font-family: var(--font-mono); font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+nav.tracks .tp i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+nav.tracks .tp i:first-of-type { margin-left: 4px; }
+nav.tracks .tp i.on { background: var(--track); }
+
+/* Lesson stepper: real sequence, so numbering carries meaning */
+nav.steps { display: flex; gap: 0; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+nav.steps button {
+  flex: 1 0 auto; min-width: 128px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 10px 14px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--ink);
+  font: inherit; text-align: left; cursor: pointer;
+}
+nav.steps button:last-child { border-right: 0; }
+nav.steps button .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+nav.steps button .t { font-family: var(--font-display); font-stretch: 100%; font-weight: 650; font-size: 15px; }
+nav.steps button .st { font-family: var(--font-mono); font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+nav.steps button .st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+nav.steps button[data-done="true"] .st::before { background: var(--ok); }
+nav.steps button[aria-selected="true"] { background: var(--copper-soft); box-shadow: inset 0 -3px 0 var(--copper); }
+nav.steps button[disabled] { cursor: default; opacity: .55; }
+nav.steps button:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; }
+
+main.grid { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 880px) { main.grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Board */
+.board-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 880px) { .board-card { position: static; } }
+.board-card svg { width: 100%; height: auto; display: block; max-height: 78vh; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.svg-pinlabel { font-family: var(--font-mono); font-size: 10.5px; fill: var(--muted); }
+.svg-silk { font-family: var(--font-mono); font-size: 9px; fill: var(--silk-dim); letter-spacing: .06em; }
+.svg-role { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; fill: var(--surface); }
+
+/* Lesson panel */
+.lesson { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+.panel h2 { font-family: var(--font-display); font-stretch: 112%; font-weight: 750; font-size: 22px; line-height: 1.15; margin: 0 0 6px; text-wrap: balance; }
+.panel h3 { font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.goal { color: var(--muted); margin: 0; max-width: 64ch; }
+.learn { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding: 0; list-style: none; }
+.learn li { font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+
+.cmd { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-top: 10px; }
+.cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-family: var(--font-mono); font-size: 13px; padding: 9px 12px; background: var(--bg); }
+.cmd button { border: 0; border-left: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 12px var(--font-mono); padding: 0 12px; cursor: pointer; }
+.cmd button:focus-visible, .btn:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+
+table.wiring { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table-scroll { overflow-x: auto; }
+table.wiring th, table.wiring td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.wiring th { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+table.wiring td.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.chip { display: inline-block; font-family: var(--font-mono); font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 5px; background: var(--copper); color: var(--surface); }
+.chip.pwr { background: var(--power); }
+.chip.gnd { background: var(--gnd); }
+
+ol.check { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; counter-reset: s; }
+ol.check li { counter-increment: s; }
+ol.check label { display: grid; grid-template-columns: 22px 26px 1fr; gap: 6px; align-items: start; padding: 7px 6px; border-radius: 8px; cursor: pointer; }
+ol.check label:hover { background: var(--bg); }
+ol.check label::before { content: counter(s, decimal-leading-zero); grid-column: 2; grid-row: 1; font-family: var(--font-mono); font-size: 12px; color: var(--muted); padding-top: 2px; }
+ol.check input { grid-column: 1; grid-row: 1; margin: 3px 0 0; width: 16px; height: 16px; accent-color: var(--copper); }
+ol.check span { grid-column: 3; grid-row: 1; min-width: 0; }
+ol.check input:checked ~ span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+ol.check code, .note code, .goal code { font-family: var(--font-mono); font-size: 13px; background: var(--bg); padding: 0 5px; border-radius: 4px; }
+.note { font-size: 14px; color: var(--muted); border-left: 3px solid var(--warn); padding: 4px 0 4px 12px; margin: 12px 0 0; }
+
+/* Simulator */
+.sim { display: flex; flex-direction: column; gap: 12px; }
+.term { background: var(--term-bg); color: var(--term-ink); border-radius: 10px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; min-width: 0; overflow: hidden; }
+.term-bar { display: flex; justify-content: space-between; gap: 8px; padding: 7px 12px; border-bottom: 1px solid var(--pcb-edge); color: var(--term-dim); font-size: 11.5px; }
+.term-out { height: 230px; overflow: auto; padding: 10px 12px; white-space: pre; }
+.term-out .ts { color: var(--term-dim); }
+.term-out .i { color: var(--term-info); }
+.term-out .w { color: var(--term-warn); }
+.term-out .e { color: var(--term-err); }
+.term-out .you { color: var(--scope-amber); }
+.term-in { display: flex; border-top: 1px solid var(--pcb-edge); }
+.term-in span { padding: 8px 0 8px 12px; color: var(--scope-amber); }
+.term-in input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--term-ink); font: inherit; padding: 8px 12px 8px 8px; }
+.term-in input:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn { font: 600 12.5px var(--font-mono); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--copper); }
+
+.bb { background: var(--bg); border-radius: 10px; padding: 8px; }
+.bb svg { width: 100%; height: auto; display: block; }
+.screen-frame { background: var(--pcb); border-radius: 12px; padding: 14px 18px; max-width: 100%; display: flex; justify-content: center; }
+.screen-frame canvas { width: 100%; max-width: 480px; aspect-ratio: 320 / 170; height: auto; image-rendering: pixelated; border-radius: 3px; display: block; }
+.sim-cap { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin: 0; }
+
+.foot { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+
+
+/* Animated wiring diagram (lesson 03) */
+.wd { display: flex; flex-direction: column; gap: 12px; }
+.wd-svg { background: var(--bg); border-radius: 10px; overflow-x: auto; }
+.wd-svg svg { width: 100%; min-width: 520px; height: auto; display: block; }
+.wd-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.wd-bar .btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.wd-count { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.wd-cap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; align-items: baseline; background: var(--bg); border-radius: 10px; padding: 10px 14px; min-height: 64px; }
+.wd-cap .sw { grid-row: span 2; width: 14px; height: 14px; border-radius: 4px; align-self: center; }
+.wd-cap strong { font-family: var(--font-mono); font-size: 14px; }
+.wd-cap span { color: var(--muted); font-size: 14px; }
+.wire { fill: none; stroke-width: 4; stroke-linecap: round; transition: opacity .3s, stroke-width .3s; }
+.wire.dim { opacity: .14; }
+.wire.active { stroke-width: 6; }
+.wire.drawing { transition: stroke-dashoffset .9s ease-out, opacity .3s, stroke-width .3s; }
+.flow { fill: none; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 2 12; opacity: 0; pointer-events: none; }
+.signals .flow { opacity: 1; animation: flow var(--speed, 1s) linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -28; } }
+.endpoint { transition: r .3s; }
+.endpoint.active { animation: pulse 1.1s ease-in-out infinite; }
+@keyframes pulse { 50% { r: 9; } }
+.wd-lbl { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.wd-lbl.on { fill: var(--ink); font-weight: 600; }
+.wd-title { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; fill: var(--muted); }
+.la { background: var(--term-bg); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.la canvas { width: 100%; height: auto; display: block; }
+.la p { margin: 0; font-family: var(--font-mono); font-size: 12px; color: var(--term-ink); min-height: 2.6em; }
+.la .k { color: var(--term-dim); }
+@media (prefers-reduced-motion: reduce) {
+  .signals .flow { animation: none; stroke-dasharray: none; opacity: .5; }
+  .endpoint.active { animation: none; }
+  .wire.drawing { transition: none; }
+}
+
+
+/* Lesson 03b showcase */
+.boot-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.boot-btn { font: 700 13px var(--font-mono); letter-spacing: .06em; border: 0; border-radius: 999px; padding: 10px 18px; cursor: pointer; background: var(--pcb); color: var(--silk); box-shadow: 0 3px 0 var(--pcb-edge); transition: transform .08s, box-shadow .08s; touch-action: manipulation; user-select: none; }
+.boot-btn:active, .boot-btn.down { transform: translateY(2px); box-shadow: 0 1px 0 var(--pcb-edge); }
+.boot-btn:focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; }
+.scene-dots { display: flex; gap: 6px; }
+.scene-dots button { font: 600 12px var(--font-mono); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+.scene-dots button[aria-current="true"] { background: var(--copper); border-color: var(--copper); color: var(--surface); }
+.scene-dots button:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+.auto-flag { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-left: auto; }
+
+
+/* Variations switch + full wiring + comparison */
+.variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 10px 0 14px; }
+.variants button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 14px; border: 0; border-right: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.variants button:last-child { border-right: 0; }
+.variants button b { font-family: var(--font-display); font-weight: 650; font-size: 15px; }
+.variants button span { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.variants button[aria-selected="true"] { background: var(--copper-soft); box-shadow: inset 0 -3px 0 var(--copper); }
+.variants button:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; }
+.flow-out { animation-direction: reverse !important; }
+.cmp { display: grid; grid-template-columns: minmax(110px, .7fr) minmax(0, 1fr) minmax(0, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 14px; }
+.cmp > div { padding: 9px 12px; border-bottom: 1px solid var(--line); min-width: 0; }
+.cmp > div:nth-last-child(-n+3) { border-bottom: 0; }
+.cmp .k { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+.cmp .h { font-family: var(--font-display); font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; background: var(--bg); }
+.cmp .h i { font-style: normal; font: 700 10.5px var(--font-mono); letter-spacing: .08em; padding: 2px 7px; border-radius: 4px; color: var(--surface); }
+.cmp code { font-family: var(--font-mono); font-size: 12.5px; background: var(--bg); padding: 0 4px; border-radius: 4px; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .cmp { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .cmp .k { grid-column: 1 / -1; } .cmp > div.blank { display: none; } }
+
+
+.between { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.between h3 { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.between ol { margin: 0; padding-left: 20px; font-size: 13.5px; display: flex; flex-direction: column; gap: 2px; }
+.between p { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+.between code { font-family: var(--font-mono); font-size: 12px; background: var(--bg); padding: 0 4px; border-radius: 4px; }
+
+
+/* Wi-Fi track */
+.hop { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 4px; }
+.hop div { border: 1px solid var(--line); border-radius: 6px; padding: 6px 0 4px; text-align: center; font: 600 12px var(--font-mono); background: var(--surface); transition: background .12s, color .12s; min-height: 54px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.hop div.clean { border-color: var(--warn); }
+.hop div.on { background: var(--ink); color: var(--surface); }
+.hop i { width: 7px; height: 7px; border-radius: 50%; display: block; }
+.rssi-scale { display: flex; flex-direction: column; gap: 6px; }
+.rssi-bar { height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--ok), var(--warn) 55%, var(--danger)); }
+.rssi-ticks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+.rssi-ticks span b { display: block; color: var(--ink); font-weight: 600; }
+.roadmap { width: 100%; border-collapse: collapse; font-size: 14px; }
+.roadmap th, .roadmap td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.roadmap th { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.roadmap td:first-child { font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
+.roadmap tr.now td { background: var(--copper-soft); }
+.roadmap .needs { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+/* Bench overview + log */
+.overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.overview > div { padding: 12px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.overview dt { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.overview dd { margin: 0; font-family: var(--font-display); font-stretch: 100%; font-weight: 650; font-size: 16px; overflow-wrap: anywhere; }
+.overview dd small { display: block; font-family: var(--font-mono); font-weight: 400; font-size: 12px; color: var(--muted); }
+.overview .now { background: var(--copper-soft); }
+.overview .now dd { color: var(--copper); }
+.overview .flag::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 6px; vertical-align: middle; }
+
+section.log { display: flex; flex-direction: column; gap: 14px; }
+.log-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 20px; }
+.log-head h2 { font-family: var(--font-display); font-stretch: 112%; font-weight: 750; font-size: 24px; margin: 0; }
+.log-head p { margin: 4px 0 0; color: var(--muted); max-width: 66ch; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button { font: 600 12px var(--font-mono); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.filters button:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+ol.entries { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+ol.entries > li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+ol.entries > li.is-flash { border-color: var(--copper); box-shadow: inset 4px 0 0 var(--copper); }
+.e-num { font-family: var(--font-mono); font-size: 20px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.e-body { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.e-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.e-title { font-family: var(--font-display); font-stretch: 100%; font-weight: 650; font-size: 16px; }
+.pill { font: 600 11px var(--font-mono); letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; border: 1px solid currentColor; }
+.pill.install { color: var(--warn); } .pill.build { color: var(--muted); } .pill.read { color: var(--ok); }
+.pill.reset { color: var(--power); } .pill.flash { color: var(--surface); background: var(--copper); border-color: var(--copper); }
+.pill.failed { color: var(--danger); } .pill.observe { color: var(--muted); border-style: dashed; }
+.e-where { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+.e-why { margin: 0; color: var(--muted); max-width: 72ch; }
+.e-cmd { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.e-cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-family: var(--font-mono); font-size: 12.5px; padding: 8px 12px; background: var(--bg); }
+.e-cmd button { border: 0; border-left: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 12px var(--font-mono); padding: 0 12px; cursor: pointer; }
+details.e-out summary { cursor: pointer; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+details.e-out summary:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--term-ink); border-radius: 8px; padding: 10px 12px; font-family: var(--font-mono); font-size: 12px; line-height: 1.5; overflow-x: auto; }
+.e-result { margin: 0; font-size: 14px; }
+.e-result b { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-right: 6px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.facts .panel { padding: 14px 16px; }
+@media (max-width: 480px) { ol.entries > li { grid-template-columns: minmax(0, 1fr); } }
+
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">hardware-diary / test-esp</p>
+      <h1>ESP32-S3 <span class="part">N16R8</span> bench guide</h1>
+    </div>
+    <div class="spec" aria-label="Board specifications">
+      <span><b>2×</b> Xtensa LX7 @ 240 MHz</span>
+      <span><b>16 MB</b> flash</span>
+      <span><b>8 MB</b> octal PSRAM</span>
+      <span><b>Wi-Fi 4</b> + BLE 5</span>
+      <span><b>3.3 V</b> logic</span>
+    </div>
+  </header>
+
+
+  <dl class="overview" aria-label="On the bench now">
+    <div class="now"><dt>On the board now</dt><dd>03b-showcase-button (v2)<small>as you report · 5 flashes · scenes run, button not reacting yet</small></dd></div>
+    <div><dt>Connection</dt><dd>/dev/cu.usbserial-A5069RR4<small>FTDI FT232R · VID:PID 0403:6001</small></dd></div>
+    <div><dt>Chip</dt><dd>ESP32-S3 rev v0.2<small>16 MB flash · 8 MB PSRAM · MAC 28:84:85:9E:3B:E4</small></dd></div>
+    <div><dt>Verified</dt><dd class="flag">RGB · LED · screen · showcase<small>all seen working by you · display at 22 fps</small></dd></div>
+    <div><dt>Installed on the Mac</dt><dd>5.8 GB<small>~/.platformio (shared) + 50 MB in test-esp</small></dd></div>
+  </dl>
+
+  <nav class="tracks" aria-label="Themes" id="tracks"></nav>
+  <nav class="steps" role="tablist" aria-label="Lessons in this theme" id="steps"></nav>
+
+  <main class="grid">
+    <section class="board-card" aria-label="Board pinout">
+      <svg id="board" viewBox="0 0 440 640" role="img" aria-labelledby="board-title">
+        <title id="board-title">ESP32-S3 DevKitC pinout with the pins used by the current lesson highlighted</title>
+      </svg>
+      <div class="legend">
+        <span><i style="background:var(--copper)"></i>used in this lesson</span>
+        <span><i style="background:var(--pad)"></i>safe GPIO</span>
+        <span><i style="background:var(--danger)"></i>avoid</span>
+        <span><i style="background:var(--power)"></i>power</span>
+        <span><i style="background:var(--gnd)"></i>ground</span>
+        <span><i style="background:var(--w-btn)"></i>button input</span>
+      </div>
+      <div class="between" aria-label="Between lessons">
+        <h3>Between lessons</h3>
+        <ol>
+          <li><code>Ctrl+C</code> closes the monitor on the Mac only. The board keeps running.</li>
+          <li>Unplug USB: this is what stops the program and the screen</li>
+          <li>Rewire while off</li>
+          <li>Check VCC is on 3V3, no loose ends</li>
+          <li>Plug in, flash the next lesson</li>
+        </ol>
+        <p>Never unplug during <code>Writing at 0x…</code>. Pin changing from output to input? Flash first, then wire.</p>
+      </div>
+    </section>
+
+    <section class="lesson" id="lesson" aria-live="polite"></section>
+  </main>
+
+
+  <section class="log" id="log" aria-labelledby="log-title">
+    <div class="log-head">
+      <div>
+        <h2 id="log-title">Bench log</h2>
+        <p>Every command that installed software, talked to the board or flashed it, with its response. Claude announces each command first. Anything that touches the board or installs waits for your go.</p>
+      </div>
+      <div class="filters" role="group" aria-label="Filter by type" id="filters"></div>
+    </div>
+    <ol class="entries" id="entries"></ol>
+    <div class="facts">
+      <div class="panel"><h3>Flash layout written by 01-hello</h3><div class="table-scroll"><table class="wiring">
+        <thead><tr><th>Address</th><th>File</th><th>Size</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">0x0000</td><td class="mono">bootloader.bin</td><td class="mono">19,968 B</td><td>second-stage bootloader</td></tr>
+          <tr><td class="mono">0x8000</td><td class="mono">partitions.bin</td><td class="mono">3,072 B</td><td>partition table</td></tr>
+          <tr><td class="mono">0xE000</td><td class="mono">boot_app0.bin</td><td class="mono">8,192 B</td><td>which app slot to boot</td></tr>
+          <tr><td class="mono">0x10000</td><td class="mono">firmware.bin</td><td class="mono">321,328 B</td><td>our program</td></tr>
+        </tbody></table></div>
+        <p class="note">Only the 0x10000 write was in the captured output. The other three are PlatformIO's standard layout for this board and match the build files.</p>
+      </div>
+      <div class="panel"><h3>Installed on the Mac</h3><div class="table-scroll"><table class="wiring">
+        <thead><tr><th>Where</th><th>What</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">~/.platformio/packages</td><td>Arduino-ESP32 3.3.12 + IDF libs, GCC 14.2, GDB, esptool 5.4</td><td class="mono">3.8 GB</td></tr>
+          <tr><td class="mono">~/.platformio/tools</td><td>unpacked toolchain copies</td><td class="mono">1.2 GB</td></tr>
+          <tr><td class="mono">~/.platformio/.cache</td><td>download cache (safe to clear)</td><td class="mono">470 MB</td></tr>
+          <tr><td class="mono">~/.platformio/dist</td><td>downloaded archives (safe to clear)</td><td class="mono">213 MB</td></tr>
+          <tr><td class="mono">~/.platformio/penv</td><td>PlatformIO's Python (runs esptool)</td><td class="mono">71 MB</td></tr>
+          <tr><td class="mono">~/.platformio/platforms</td><td>pioarduino espressif32 55.03.312</td><td class="mono">27 MB</td></tr>
+          <tr><td class="mono">test-esp/.pio</td><td>build output, display libraries</td><td class="mono">28 MB</td></tr>
+          <tr><td class="mono">test-esp/.venv</td><td>PlatformIO 6.2.0</td><td class="mono">22 MB</td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">Pin layout follows the Espressif DevKitC-1 v1.0. Clones are nearly identical, but the labels printed on your board always win. Your ticks are saved in this browser only.</p>
+</div>
+
+<script>
+(() => {
+  // ---------- Pin map (DevKitC-1, USB at the bottom) ----------
+  const LEFT = ["3V3","3V3","RST","4","5","6","7","15","16","17","18","8","3","46","9","10","11","12","13","14","5V","GND"];
+  const RIGHT = ["GND","43","44","1","2","42","41","40","39","38","37","36","35","0","45","48","47","21","20","19","GND","GND"];
+  const ALIAS = { "43": "TX 43", "44": "RX 44" };
+  const AVOID = new Set(["0","3","45","46","19","20","35","36","37","43","44"]);
+  const kindOf = (p) => p === "3V3" || p === "5V" ? "power" : p === "GND" ? "gnd" : p === "RST" ? "avoid" : AVOID.has(p) ? "avoid" : "safe";
+
+  // ---------- Lessons ----------
+  const LESSONS = [
+    {
+      id: "00", track: "intro", title: "Setup", status: "works on your board",
+      heading: "Plug in and find the board",
+      goal: "Get the toolchain talking to the chip: a data cable, the right USB port, and a serial port name on your Mac.",
+      learn: ["USB-C data vs charge cable", "COM vs native USB port", "serial ports", "boot mode"],
+      pins: [], usb: true,
+      cmd: "cd test-esp && uv sync && uv run pio device list",
+      steps: [
+        "Plug a <b>data</b> USB-C cable into the port labelled <code>COM</code> (or <code>UART</code>).",
+        "Check that a red power LED comes on.",
+        "Run the command above. A new <code>/dev/cu.usbmodem…</code> or <code>/dev/cu.wchusbserial…</code> should appear.",
+        "Tell Claude the port name and whether your board has one or two USB ports.",
+      ],
+      note: "Flashing says “Failed to connect”? Hold BOOT, tap RST, release BOOT, then flash again.",
+      sim: "usb",
+    },
+    {
+      id: "01", track: "intro", title: "Hello", status: "works on your board",
+      heading: "Meet the board",
+      goal: "Flash your first program. It prints the chip's identity card and cycles the on-board RGB LED through a rainbow.",
+      learn: ["setup() and loop()", "Serial logging", "millis()", "WS2812 RGB LED"],
+      pins: [{ pin: "48", role: "RGB", side: "R" }],
+      cmd: "uv run pio run -e 01-hello -t upload -t monitor",
+      steps: [
+        "Nothing to wire. Keep the cable in the <code>COM</code> port.",
+        "Run the command. Wait for <code>Hard resetting via RTS pin…</code>.",
+        "Read the identity card: flash should say <b>16 MB</b>, PSRAM about <b>8 MB</b>.",
+        "Watch the RGB LED next to the chip cycle through colours.",
+        "Press <code>Ctrl+C</code> to leave the monitor.",
+      ],
+      note: "No colour on the LED? Some boards wire it to GPIO 38. Change PIN_RGB in include/pins.h.",
+      sim: "hello",
+    },
+    {
+      id: "02", track: "intro", title: "First circuit", status: "works on your board",
+      heading: "An LED on the breadboard",
+      goal: "Build your first circuit and control it by typing commands. The LED keeps animating while the board listens.",
+      learn: ["breadboard rows", "resistors", "PWM brightness", "state machines"],
+      pins: [{ pin: "4", role: "LED +", side: "L" }, { pin: "GND", idx: 21, role: "LED −", side: "L", kind: "gnd" }],
+      wiring: [["GPIO 4", "resistor 220–330 Ω", "first leg"], ["resistor", "LED long leg (+)", "other leg, same row"], ["LED short leg (−)", "GND", "blue rail or GND pin"]],
+      cmd: "uv run pio run -e 02-led -t upload -t monitor",
+      steps: [
+        "Unplug USB before wiring. Seat the board across the breadboard's centre gap.",
+        "Wire GPIO 4 → resistor → LED long leg. LED short leg → GND.",
+        "Plug back in and run the command. The LED starts breathing.",
+        "Type <code>blink 200</code>, <code>sos</code>, <code>level 30</code>, <code>on</code>, <code>off</code>.",
+      ],
+      note: "No resistor yet? The code sets the weakest pin drive (about 5 mA) as a safety net. Still add one soon.",
+      sim: "led",
+    },
+    {
+      id: "03", track: "display", title: "Display", status: "works on your board",
+      heading: "The 1.9″ IPS screen",
+      goal: "Drive the ST7789 display over SPI. Draw each frame in PSRAM, then send it in one go so nothing flickers.",
+      learn: ["SPI bus", "RGB565 colour", "frame buffer", "PSRAM"],
+      pins: [
+        { pin: "3V3", idx: 0, role: "VCC", side: "L", kind: "power" },
+        { pin: "7", role: "BLK", side: "L" }, { pin: "8", role: "RES", side: "L" },
+        { pin: "9", role: "DC", side: "L" }, { pin: "10", role: "CS", side: "L" },
+        { pin: "11", role: "SDA", side: "L" }, { pin: "12", role: "SCL", side: "L" },
+        { pin: "GND", idx: 21, role: "GND", side: "L", kind: "gnd" },
+      ],
+      wiring: [["GND", "GND", "ground (bottom-left pin)"], ["VCC", "3V3", "power (top-left pin)"], ["SCL", "GPIO 12", "SPI clock"], ["SDA", "GPIO 11", "SPI data (MOSI)"], ["RES", "GPIO 8", "reset"], ["DC", "GPIO 9", "data / command"], ["CS", "GPIO 10", "chip select"], ["BLK", "GPIO 7", "backlight"]],
+      wiringHead: ["Display pin", "ESP32-S3", "Role"],
+      cmd: "uv run pio run -e 03-display -t upload -t monitor",
+      steps: [
+        "Unplug USB. Wire the 8 display pins as in the table (female-to-male jumpers).",
+        "Double-check VCC goes to <b>3V3</b>, not 5V.",
+        "Run the command. You should see red, green and blue bars for 2.5 s.",
+        "Then the bench scope: a moving sine wave, uptime and frames per second.",
+        "Tell Claude the fps from the monitor and anything that looks off.",
+      ],
+      note: "All white or black? Check BLK and RES. Colours inverted? We switch invertDisplay. Garbage? Drop SPI to 20 MHz.",
+      sim: "display", diagram: true,
+    },
+    {
+      id: "03b", track: "display", title: "Showcase", status: "v2 on board, button issue",
+      heading: "Push the screen further",
+      sim: "showcase", boot: true,
+      variants: [
+        {
+          key: "boot", label: "Variation 1 · BOOT button", short: "nothing to wire",
+          goal: "Same wiring as lesson 03. Four scenes show what the S3 can draw: real-time 3D, per-pixel effects, particles and a live dashboard of your chip. The on-board BOOT button switches scenes.",
+          learn: ["3D projection", "lookup tables", "particle systems", "internal RAM vs PSRAM", "measuring"],
+          pins: [
+        { pin: "3V3", idx: 0, role: "VCC", side: "L", kind: "power" },
+        { pin: "7", role: "BLK", side: "L" }, { pin: "8", role: "RES", side: "L" },
+        { pin: "9", role: "DC", side: "L" }, { pin: "10", role: "CS", side: "L" },
+        { pin: "11", role: "SDA", side: "L" }, { pin: "12", role: "SCL", side: "L" },
+        { pin: "GND", idx: 21, role: "GND", side: "L", kind: "gnd" },
+            { pin: "0", role: "BOOT", side: "R" },
+          ],
+          cmd: "uv run pio run -e 03b-showcase -t upload",
+          steps: [
+            "Keep the display wired exactly as in lesson 03. Nothing new to plug in.",
+            "Flash with the command above (or tell Claude “go” and it runs it for you).",
+            "Watch the 3D torus, then press <b>BOOT</b> to step through Plasma, Fireworks and the Dashboard.",
+            "Long-press BOOT (0.6 s) to stop or restart the 12-second auto-cycle.",
+            "Open <code>uv run pio device monitor</code> and type <code>scene 2</code>, <code>hud</code>, <code>auto off</code>.",
+            "Note fps, draw ms and send ms for each scene and tell Claude. They feed the speed lesson.",
+          ],
+          note: "BOOT only matters at power-on. Don't hold it while pressing RST or plugging in, or the chip waits in flash mode. If that happens, just press RST.",
+          simMode: "boot",
+        },
+        {
+          key: "button", label: "Variation 2 · Push button", short: "2 extra wires on GPIO 5",
+          goal: "The same four scenes, now driven by your own push button on GPIO 5: click, double-click, long press. The screen is an output on 8 wires; the button is an input on 2. This variation shows both together.",
+          learn: ["inputs vs outputs", "pull-up resistors", "interrupts", "debouncing", "gestures"],
+          pins: [
+        { pin: "3V3", idx: 0, role: "VCC", side: "L", kind: "power" },
+        { pin: "7", role: "BLK", side: "L" }, { pin: "8", role: "RES", side: "L" },
+        { pin: "9", role: "DC", side: "L" }, { pin: "10", role: "CS", side: "L" },
+        { pin: "11", role: "SDA", side: "L" }, { pin: "12", role: "SCL", side: "L" },
+        { pin: "GND", idx: 21, role: "GND", side: "L", kind: "gnd" },
+            { pin: "5", role: "BTN", side: "L", kind: "btn" },
+            { pin: "0", role: "BOOT", side: "R" },
+          ],
+          fullWiring: true, compare: true, buttonDiagram: true,
+          wiring: [["button leg A (any corner)", "GPIO 5", "expansion board: the socket labelled 5 (4 and 5 sit side by side, check the label). Board in a breadboard: a free hole in the pin 5 row"], ["button leg D (diagonal to A)", "GND", "any GND socket or terminal"]],
+          wiringHead: ["From", "To", "Where"], wiringTitle: "Button wiring (the 2 new wires)",
+          cmd: "uv run pio run -e 03b-showcase-button -t upload",
+          steps: [
+            "Unplug USB. Keep the display wired exactly as in lesson 03.",
+            "Push the button into the breadboard so it straddles the centre gap, away from the board.",
+            "Jumper from leg A to the ESP32's <b>pin 5</b>. On an expansion board that is the socket labelled 5, two past the display's BLK wire on 7. Jumper from the <b>diagonal</b> leg D to any <b>GND</b>. Breadboard holes are not connected to the ESP32, so both wires must end on the ESP32's own sockets.",
+            "Plug in and flash with the command above (or tell Claude “go”).",
+            "Press the button: <b>click</b> = next scene, <b>double-click</b> = previous, <b>long press</b> = auto-cycle on/off. BOOT does the same.",
+            "Open <code>uv run pio device monitor</code>: every click logs how many contact bounces it filtered.",
+          ],
+          note: "Never reacts? Check the signal wire really ends on 5, not its neighbour 4, and that both wires end on the ESP32, not on breadboard holes. Always “pressed”? Use diagonally opposite legs.",
+          simMode: "button",
+        },
+      ],
+    },
+    {
+      id: "W1", track: "wifi", title: "Scan & join", status: "built, not flashed",
+      heading: "Scan the air, then join your network",
+      goal: "The first Wi-Fi lab, on the wifi-lab firmware that every Wi-Fi lab grows. The ESP32 lists every 2.4 GHz network nearby, then joins yours: you pick it from the scan table and type the password once. It's stored on the chip, never in code. A status view shows the clock (internet time), IP address, bench.local and a live signal chart.",
+      learn: ["station mode", "channels & dBm", "security types", "NVS storage", "Wi-Fi events", "internet time (NTP)", "mDNS"],
+      pins: [
+        { pin: "3V3", idx: 0, role: "VCC", side: "L", kind: "power" },
+        { pin: "7", role: "BLK", side: "L" }, { pin: "8", role: "RES", side: "L" },
+        { pin: "9", role: "DC", side: "L" }, { pin: "10", role: "CS", side: "L" },
+        { pin: "11", role: "SDA", side: "L" }, { pin: "12", role: "SCL", side: "L" },
+        { pin: "GND", idx: 21, role: "GND", side: "L", kind: "gnd" },
+        { pin: "5", role: "BTN", side: "L", kind: "btn" },
+        { pin: "0", role: "BOOT", side: "R" },
+      ],
+      boot: true, wifiConcepts: true, roadmap: true,
+      cmd: "uv run pio run -e wifi-lab -t upload",
+      steps: [
+        "Keep the screen and the push button (pin 5 + GND) wired as in 03b variation 2.",
+        "Flash with the command above (or tell Claude “go”).",
+        "Watch the first scan. <b>Click</b> through the views: networks, channels, radar, status.",
+        "Open <code>uv run pio device monitor</code>. Find your network's number in the scan table.",
+        "Type <code>join 3</code> (your number), then your password on the next line. It is saved on the chip; the log only shows its length.",
+        "The status view opens by itself: clock, IP address, <code>bench.local</code>, signal chart. Try <code>ping bench.local</code> from your Mac.",
+        "Unplug and replug: it rejoins by itself. <code>forget</code> erases the saved network.",
+      ],
+      note: "5 GHz networks never appear: the S3 radio is 2.4 GHz only. The monitor shows your neighbours' network names and what you type, including the password. Don't paste that part into anything shared.",
+      sim: "wifi",
+    },
+    { id: "W2", track: "wifi", title: "Phone control", status: "planned", disabled: true },
+    { id: "W3", track: "wifi", title: "Internet & Diary", status: "planned", disabled: true },
+    { id: "W4", track: "wifi", title: "Radio lab (bonus)", status: "planned", disabled: true },
+  ];
+
+  // ---------- Storage (per-viewer convenience only) ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+  let ticks = store.get("esp-ticks", {});
+  let current = store.get("esp-lesson", "03b");
+  const hash = location.hash.replace("#", "");
+  if (/^l0([0-3]|3b)$/.test(hash)) current = hash.slice(1);
+  if (hash === "w1") current = "W1";
+  const hashTrack = { intro: "00", display: "03", wifi: "W1" }[hash];
+  if (hashTrack) current = hashTrack;
+
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs = {}, parent) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+
+  // ---------- Board drawing ----------
+  const board = document.getElementById("board");
+  const BX = 140, BW = 160, PY0 = 96, PSTEP = 22;
+  const pinPos = (side, i) => ({ x: side === "L" ? BX + 12 : BX + BW - 12, y: PY0 + i * PSTEP });
+  let rgbDot, usbCom, bootCap, pinNodes = { L: [], R: [] }, roleLayer;
+
+  function drawBoard() {
+    el("rect", { x: BX, y: 20, width: BW, height: 600, rx: 10, fill: "var(--pcb)", stroke: "var(--pcb-edge)", "stroke-width": 2 }, board);
+    // Module + antenna
+    el("rect", { x: BX + 32, y: 30, width: BW - 64, height: 150, rx: 4, fill: "var(--pcb-edge)" }, board);
+    el("rect", { x: BX + 40, y: 64, width: BW - 80, height: 108, rx: 3, fill: "var(--silk-dim)", opacity: .35 }, board);
+    el("path", { d: `M${BX + 44} 52 h12 v-12 h12 v12 h12 v-12 h12 v12 h12 v-12 h8`, fill: "none", stroke: "var(--pad)", "stroke-width": 2 }, board);
+    const t1 = el("text", { x: BX + BW / 2, y: 112, "text-anchor": "middle", class: "svg-silk" }, board); t1.textContent = "ESP32-S3";
+    const t2 = el("text", { x: BX + BW / 2, y: 126, "text-anchor": "middle", class: "svg-silk" }, board); t2.textContent = "WROOM-1 N16R8";
+    // Buttons
+    [["BOOT", BX + 34], ["RST", BX + BW - 34]].forEach(([name, x]) => {
+      el("rect", { x: x - 12, y: 548, width: 24, height: 16, rx: 3, fill: "var(--pcb-edge)" }, board);
+      const cap = el("circle", { cx: x, cy: 556, r: 5, fill: "var(--silk-dim)" }, board);
+      if (name === "BOOT") bootCap = cap;
+      const t = el("text", { x, y: 576, "text-anchor": "middle", class: "svg-silk" }, board); t.textContent = name;
+    });
+    // RGB LED
+    rgbDot = el("circle", { cx: BX + BW / 2 + 30, cy: 470, r: 7, fill: "var(--silk-dim)", stroke: "var(--pcb-edge)", "stroke-width": 2 }, board);
+    const tr = el("text", { x: BX + BW / 2 + 30, y: 492, "text-anchor": "middle", class: "svg-silk" }, board); tr.textContent = "RGB";
+    // USB ports
+    const usb1 = el("rect", { x: BX + 28, y: 596, width: 40, height: 28, rx: 6, fill: "var(--silk-dim)" }, board);
+    usbCom = el("rect", { x: BX + BW - 68, y: 596, width: 40, height: 28, rx: 6, fill: "var(--silk-dim)" }, board);
+    const u1 = el("text", { x: BX + 48, y: 590, "text-anchor": "middle", class: "svg-silk" }, board); u1.textContent = "USB";
+    const u2 = el("text", { x: BX + BW - 48, y: 590, "text-anchor": "middle", class: "svg-silk" }, board); u2.textContent = "COM";
+    void usb1;
+    // Pins
+    [["L", LEFT], ["R", RIGHT]].forEach(([side, list]) => {
+      list.forEach((p, i) => {
+        const { x, y } = pinPos(side, i);
+        const kind = kindOf(p);
+        const c = el("circle", { cx: x, cy: y, r: 6, fill: `var(--${kind === "safe" ? "pad" : kind === "avoid" ? "danger" : kind})`, stroke: "var(--pcb)", "stroke-width": 2 }, board);
+        const lx = side === "L" ? BX - 8 : BX + BW + 8;
+        const t = el("text", { x: lx, y: y + 3.5, "text-anchor": side === "L" ? "end" : "start", class: "svg-pinlabel" }, board);
+        t.textContent = ALIAS[p] || p;
+        pinNodes[side].push({ c, t, kind, p });
+      });
+    });
+    roleLayer = el("g", {}, board);
+  }
+
+  function highlight(lesson) {
+    roleLayer.replaceChildren();
+    ["L", "R"].forEach((s) => pinNodes[s].forEach((n) => {
+      n.c.setAttribute("r", 6); n.c.setAttribute("stroke", "var(--pcb)");
+      n.t.setAttribute("style", "");
+    }));
+    (lesson.pins || []).forEach((u) => {
+      const list = u.side === "L" ? LEFT : RIGHT;
+      const idx = u.idx ?? list.indexOf(u.pin);
+      const node = pinNodes[u.side][idx];
+      if (!node) return;
+      const isPlain = !u.kind;
+      node.c.setAttribute("r", 8);
+      node.c.setAttribute("stroke", "var(--copper)");
+      node.c.setAttribute("stroke-width", 3);
+      node.t.setAttribute("style", "fill: var(--ink); font-weight: 600");
+      const { y } = pinPos(u.side, idx);
+      const w = 50, h = 18;
+      const gx = u.side === "L" ? 8 : 440 - 8 - w;
+      const fillVar = isPlain ? "var(--copper)" : u.kind === "btn" ? "var(--w-btn)" : `var(--${u.kind})`;
+      el("rect", { x: gx, y: y - h / 2, width: w, height: h, rx: 4, fill: fillVar }, roleLayer);
+      const lineX1 = u.side === "L" ? gx + w : gx;
+      const lineX2 = u.side === "L" ? BX - 8 - node.t.getComputedTextLength() - 6 : BX + BW + 8 + node.t.getComputedTextLength() + 6;
+      el("line", { x1: lineX1, y1: y, x2: lineX2, y2: y, stroke: fillVar, "stroke-width": 1.5, "stroke-dasharray": "3 3" }, roleLayer);
+      const t = el("text", { x: gx + w / 2, y: y + 3.8, "text-anchor": "middle", class: "svg-role" }, roleLayer);
+      t.textContent = u.role;
+    });
+    usbCom.setAttribute("fill", lesson.usb || lesson.sim ? "var(--copper)" : "var(--silk-dim)");
+    bootCap.setAttribute("fill", lesson.boot ? "var(--copper)" : "var(--silk-dim)");
+    bootCap.setAttribute("r", lesson.boot ? 7 : 5);
+  }
+
+
+  // ---------- Themes: lessons are grouped so the guide can keep growing ----------
+  // Adding a theme = one entry here + `track: "<id>"` on its lessons.
+  const TRACKS = [
+    { id: "intro", title: "Intro", blurb: "Tools, first program, first circuit", color: "--ok" },
+    { id: "display", title: "Display & input", blurb: "The 1.9″ screen and buttons", color: "--copper" },
+    { id: "wifi", title: "Wi-Fi", blurb: "Scan, join, serve pages, update over the air", color: "--w-sda" },
+    { id: "sensors", title: "Sensors", blurb: "Temperature, air, motion over I2C", color: "--w-dc", planned: true },
+    { id: "ble", title: "Bluetooth LE", blurb: "Talk to your phone without Wi-Fi", color: "--w-cs", planned: true },
+  ];
+  const trackOf = (id) => (LESSONS.find((l) => l.id === id) || LESSONS[0]).track;
+  const working = (l) => !l.disabled && (lessonDone(l) || /works|runs|on board/.test(l.status));
+
+  // ---------- Stepper ----------
+  const stepsNav = document.getElementById("steps");
+  function lessonDone(l) {
+    if (l.variants) return l.variants.some((v) => v.steps.every((_, i) => ticks[`${l.id}.${v.key}-${i}`]));
+    return l.steps && l.steps.every((_, i) => ticks[`${l.id}-${i}`]);
+  }
+  const tracksNav = document.getElementById("tracks");
+  function renderTracks() {
+    const active = trackOf(current);
+    tracksNav.replaceChildren();
+    TRACKS.forEach((t) => {
+      const lessons = LESSONS.filter((l) => l.track === t.id && !l.disabled);
+      const ok = lessons.filter(working).length;
+      const b = document.createElement("button");
+      b.type = "button"; b.id = `track-${t.id}`; b.setAttribute("aria-pressed", String(t.id === active));
+      b.style.setProperty("--track", `var(${t.color})`);
+      if (t.planned) b.disabled = true;
+      b.innerHTML = `<span class="tt">${t.title}</span><span class="tb">${t.blurb}</span>
+        <span class="tp">${t.planned ? "planned" : `${ok}/${lessons.length} working`}${lessons.map((l) => `<i class="${working(l) ? "on" : ""}"></i>`).join("")}</span>`;
+      b.addEventListener("click", () => {
+        const first = lessons.find((l) => !working(l)) || lessons[0];
+        if (first) select(first.id);
+      });
+      tracksNav.appendChild(b);
+    });
+  }
+  function renderSteps() {
+    renderTracks();
+    stepsNav.replaceChildren();
+    const active = trackOf(current);
+    LESSONS.filter((l) => l.track === active).forEach((l) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.setAttribute("role", "tab"); b.id = `tab-${l.id}`;
+      b.setAttribute("aria-selected", String(l.id === current));
+      b.dataset.done = String(!!lessonDone(l));
+      if (l.disabled) b.disabled = true;
+      b.innerHTML = `<span class="n">${l.id}</span><span class="t">${l.title}</span><span class="st">${lessonDone(l) ? "done" : l.status}</span>`;
+      b.addEventListener("click", () => select(l.id));
+      stepsNav.appendChild(b);
+    });
+  }
+
+  // ---------- Lesson panel ----------
+  const lessonEl = document.getElementById("lesson");
+  let stopSim = () => {};
+
+  function select(id) {
+    current = id; store.set("esp-lesson", id);
+    render();
+  }
+
+  function variantOf(base) {
+    if (!base.variants) return base;
+    const key = store.get(`esp-variant-${base.id}`, base.variants[0].key);
+    const v = base.variants.find((x) => x.key === key) || base.variants[0];
+    return { ...base, ...v, variantKey: v.key };
+  }
+  function render() {
+    stopSim(); stopSim = () => {};
+    const base = LESSONS.find((x) => x.id === current) || LESSONS[0];
+    const l = variantOf(base);
+    const tk = (i) => `${l.id}${l.variantKey ? "." + l.variantKey : ""}-${i}`;
+    renderSteps();
+    highlight(l);
+    const wiring = l.wiring ? `
+      <div class="panel"><h3>${l.wiringTitle || "Wiring"}</h3><div class="table-scroll"><table class="wiring">
+        <thead><tr>${(l.wiringHead || ["From", "To", "Notes"]).map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+        <tbody>${l.wiring.map(([a, b, c]) => `<tr><td class="mono">${a}</td><td>${chipFor(b)}</td><td>${c}</td></tr>`).join("")}</tbody>
+      </table></div></div>` : "";
+    lessonEl.innerHTML = `
+      <div class="panel">
+        <p class="eyebrow">Lesson ${l.id}</p>
+        ${base.variants ? `<div class="variants" role="tablist" aria-label="Variations">${base.variants.map((v) => `<button type="button" role="tab" id="var-${v.key}" aria-selected="${v.key === l.variantKey}"><b>${v.label}</b><span>${v.short}</span></button>`).join("")}</div>` : ""}
+        <h2>${l.heading}</h2>
+        <p class="goal">${l.goal}</p>
+        <ul class="learn">${l.learn.map((x) => `<li>${x}</li>`).join("")}</ul>
+        <div class="cmd"><code id="cmd-${l.id}">${l.cmd}</code><button type="button" id="copy-${l.id}">Copy</button></div>
+      </div>
+      ${l.diagram ? `<div class="panel"><h3>How the screen is wired</h3><div class="wd" id="diagram"></div></div>` : ""}
+      ${l.wifiConcepts ? `<div class="panel"><h3>How a scan works</h3><div class="wd" id="wifi-concepts"></div></div>` : ""}
+      ${l.roadmap ? `<div class="panel"><h3>The Wi-Fi track</h3><div id="wifi-roadmap"></div></div>` : ""}
+      ${l.fullWiring ? `<div class="panel"><h3>Wiring on the ESP32: screen + button</h3><div class="wd" id="full-wiring"></div></div>` : ""}
+      ${l.compare ? `<div class="panel"><h3>Screen vs button</h3><div id="compare"></div></div>` : ""}
+      ${l.buttonDiagram ? `<div class="panel"><h3>How the button is wired</h3><div class="wd" id="btn-diagram"></div></div>` : ""}
+      ${wiring}
+      <div class="panel"><h3>Steps</h3>
+        <ol class="check">${l.steps.map((s, i) => `<li><label><input type="checkbox" id="tick-${tk(i)}" ${ticks[tk(i)] ? "checked" : ""}><span>${s}</span></label></li>`).join("")}</ol>
+        <p class="note">${l.note}</p>
+      </div>
+      <div class="panel"><h3>Preview: what you should see</h3><div class="sim" id="sim"></div></div>`;
+    lessonEl.querySelectorAll('ol.check input').forEach((cb) => cb.addEventListener("change", () => {
+      ticks[cb.id.replace("tick-", "")] = cb.checked; store.set("esp-ticks", ticks); renderSteps();
+    }));
+    const copyBtn = document.getElementById(`copy-${l.id}`);
+    copyBtn.addEventListener("click", () => {
+      const text = l.cmd;
+      const done = () => { copyBtn.textContent = "Copied"; setTimeout(() => (copyBtn.textContent = "Copy"), 1400); };
+      navigator.clipboard?.writeText(text).then(done).catch(() => {
+        const r = document.createRange(); r.selectNodeContents(document.getElementById(`cmd-${l.id}`));
+        const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); copyBtn.textContent = "Selected";
+      });
+    });
+    const sim = document.getElementById("sim");
+    const stopMain = ({ usb: simUsb, hello: simHello, led: simLed, display: simDisplay, showcase: simShowcase, wifi: simWifi })[l.sim](sim, l) || (() => {});
+    const stopDiagram = l.diagram ? wiringDiagram(document.getElementById("diagram")) : () => {};
+    const stopButton = l.buttonDiagram ? buttonDiagram(document.getElementById("btn-diagram")) : () => {};
+    const stopFull = l.fullWiring ? fullWiring(document.getElementById("full-wiring")) : () => {};
+    const stopConcepts = l.wifiConcepts ? wifiConcepts(document.getElementById("wifi-concepts")) : () => {};
+    if (l.roadmap) renderRoadmap(document.getElementById("wifi-roadmap"));
+    if (l.compare) renderCompare(document.getElementById("compare"));
+    lessonEl.querySelectorAll(".variants button").forEach((b) => b.addEventListener("click", () => { store.set(`esp-variant-${base.id}`, b.id.replace("var-", "")); render(); }));
+    stopSim = () => { stopMain(); stopDiagram(); stopButton(); stopFull(); stopConcepts(); };
+  }
+
+  function chipFor(text) {
+    if (text === "GND") return `<span class="chip gnd">GND</span>`;
+    if (text === "3V3") return `<span class="chip pwr">3V3</span>`;
+    if (/^GPIO \d+$/.test(text)) return `<span class="chip">${text}</span>`;
+    return text;
+  }
+
+  // ---------- Terminal helper ----------
+  function terminal(parent, title, withInput) {
+    const wrap = document.createElement("div"); wrap.className = "term";
+    wrap.innerHTML = `<div class="term-bar"><span>${title}</span><span>115200 baud</span></div><div class="term-out" tabindex="0" aria-label="Simulated serial monitor"></div>` +
+      (withInput ? `<form class="term-in"><span>&gt;</span><input id="term-input" autocomplete="off" spellcheck="false" placeholder="type a command, press Enter" aria-label="Command"></form>` : "");
+    parent.appendChild(wrap);
+    const out = wrap.querySelector(".term-out");
+    const t0 = performance.now();
+    const stamp = () => { const s = (performance.now() - t0) / 1000; const d = new Date(Date.UTC(2026, 9, 11, 14, 2, 0) + s * 1000); return d.toISOString().slice(11, 23); };
+    const line = (text, cls = "") => {
+      const row = document.createElement("div");
+      row.innerHTML = `<span class="ts">${stamp()} &gt; </span><span class="${cls}"></span>`;
+      row.lastChild.textContent = text;
+      out.appendChild(row);
+      while (out.childNodes.length > 200) out.firstChild.remove();
+      out.scrollTop = out.scrollHeight;
+    };
+    return { wrap, line, form: wrap.querySelector("form"), input: wrap.querySelector("input") };
+  }
+
+  // ---------- Sim 00: USB ----------
+  function simUsb(parent) {
+    const term = terminal(parent, "$ uv run pio device list", false);
+    const rows = [
+      ["/dev/cu.Bluetooth-Incoming-Port", ""], ["----------", ""], ["Hardware ID: n/a", ""], ["", ""],
+      ["/dev/cu.usbserial-A5069RR4", "i"], ["--------------------------", ""], ["Hardware ID: USB VID:PID=0403:6001 SER=A5069RR4 LOCATION=2-1.4", ""], ["Description: FT232R USB UART  <- your board (FTDI USB-to-serial chip)", "w"],
+    ];
+    let i = 0; const id = setInterval(() => { if (i >= rows.length) return clearInterval(id); term.line(...rows[i++]); }, 260);
+    const cap = document.createElement("p"); cap.className = "sim-cap"; cap.textContent = "Your real result. esptool confirmed an ESP32-S3 rev v0.2 with 8 MB PSRAM and 16 MB flash behind this port.";
+    parent.appendChild(cap);
+    return () => clearInterval(id);
+  }
+
+  // ---------- Sim 01: hello + RGB ----------
+  function wheel(pos) {
+    if (pos < 85) return [255 - pos * 3, pos * 3, 0];
+    if (pos < 170) { pos -= 85; return [0, 255 - pos * 3, pos * 3]; }
+    pos -= 170; return [pos * 3, 0, 255 - pos * 3];
+  }
+  function simHello(parent) {
+    const term = terminal(parent, "$ uv run pio device monitor", false);
+    const card = [
+      ["ESP-ROM:esp32s3-20210327", ""], ["", ""],
+      ["+---------------- ESP32 identity card ----------------+", ""],
+      ["| chip      ESP32-S3 rev 2, 2 cores @ 240 MHz", ""],
+      ["| flash     16 MB   (the N16 part: expect 16)", ""],
+      ["| psram     8 MB   (the R8 part: expect ~8)", ""],
+      ["| free heap 337 KB", ""],
+      ["| mac       E43B9E858428", ""],
+      ["| sdk       v5.5.5", ""],
+      ["+-----------------------------------------------------+", ""],
+      ["[I][main.cpp:60] setup(): RGB LED on GPIO 48. You should see a slow rainbow.", "i"],
+    ];
+    let i = 0, hue = 0, secs = 0;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const id = setInterval(() => { if (i < card.length) term.line(...card[i++]); }, 140);
+    const beat = setInterval(() => { secs += 5; term.line(`[I][main.cpp:76] loop(): alive for ${secs}s, hue=${(hue & 255)}`, "i"); }, 5000);
+    const led = setInterval(() => {
+      hue = (hue + (reduce ? 8 : 1)) & 255;
+      const [r, g, b] = wheel(hue);
+      rgbDot.setAttribute("fill", `rgb(${r},${g},${b})`);
+      rgbDot.setAttribute("style", `filter: drop-shadow(0 0 6px rgb(${r},${g},${b}))`);
+    }, reduce ? 300 : 20);
+    const cap = document.createElement("p"); cap.className = "sim-cap"; cap.textContent = "Look at the board on the left: the RGB LED cycles just like the real one.";
+    parent.appendChild(cap);
+    return () => { clearInterval(id); clearInterval(beat); clearInterval(led); rgbDot.setAttribute("fill", "var(--silk-dim)"); rgbDot.removeAttribute("style"); };
+  }
+
+  // ---------- Sim 02: LED + commands (same logic as src/02-led/main.cpp) ----------
+  function simLed(parent) {
+    const bb = document.createElement("div"); bb.className = "bb";
+    bb.innerHTML = `<svg viewBox="0 0 520 170" role="img" aria-label="Breadboard: GPIO 4 to a resistor to the LED, LED to ground">
+      <rect x="6" y="6" width="508" height="158" rx="10" fill="var(--surface)" stroke="var(--line)"/>
+      <line x1="20" y1="24" x2="500" y2="24" stroke="var(--danger)" stroke-width="2" opacity=".6"/>
+      <line x1="20" y1="148" x2="500" y2="148" stroke="var(--gnd)" stroke-width="2" opacity=".8"/>
+      ${Array.from({ length: 24 }, (_, c) => Array.from({ length: 5 }, (_, r) => `<circle cx="${30 + c * 20}" cy="${50 + r * 18}" r="2.2" fill="var(--line)"/>`).join("")).join("")}
+      <text x="22" y="164" class="svg-pinlabel">GND rail</text>
+      <path d="M30 50 V20 H6" fill="none" stroke="var(--copper)" stroke-width="4" stroke-linecap="round"/>
+      <text x="38" y="40" class="svg-pinlabel" style="fill:var(--ink);font-weight:600">GPIO 4</text>
+      <path d="M30 86 H150" stroke="var(--muted)" stroke-width="2"/>
+      <rect x="70" y="78" width="44" height="16" rx="6" fill="var(--copper-soft)" stroke="var(--copper)"/>
+      <rect x="80" y="78" width="4" height="16" fill="var(--danger)"/><rect x="88" y="78" width="4" height="16" fill="var(--danger)"/><rect x="96" y="78" width="4" height="16" fill="var(--gnd)"/><rect x="104" y="78" width="4" height="16" fill="var(--pad)"/>
+      <text x="70" y="112" class="svg-pinlabel">220 Ω</text>
+      <path d="M30 50 V86" stroke="var(--copper)" stroke-width="3"/>
+      <path d="M150 86 V70 M190 86 V148" stroke="var(--muted)" stroke-width="2"/>
+      <path d="M150 70 h40" stroke="var(--muted)" stroke-width="0"/>
+      <circle id="led-glow" cx="170" cy="58" r="26" fill="var(--danger)" opacity="0"/>
+      <path d="M156 70 V52 a14 14 0 0 1 28 0 V70 Z" id="led-body" fill="var(--danger)" opacity=".35" stroke="var(--danger)" stroke-width="1.5"/>
+      <path d="M150 86 V70 H158 M190 86 V70 H182" fill="none" stroke="var(--muted)" stroke-width="2"/>
+      <text x="200" y="62" class="svg-pinlabel">LED: long leg (+) left, short leg (−) to GND</text>
+      <text x="200" y="80" class="svg-pinlabel" id="led-duty">duty 0 / 255</text>
+    </svg>`;
+    parent.appendChild(bb);
+    const term = terminal(parent, "$ uv run pio device monitor   (try typing)", true);
+    const quick = document.createElement("div"); quick.className = "quick";
+    ["fade", "blink 200", "sos", "level 30", "on", "off", "help"].forEach((c) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.textContent = c;
+      b.addEventListener("click", () => run(c)); quick.appendChild(b);
+    });
+    parent.appendChild(quick);
+
+    const SOS = "101010001110111011100010101000000";
+    const st = { mode: "fade", level: 255, blinkMs: 500, start: performance.now() };
+    const setMode = (m) => { st.mode = m; st.start = performance.now(); term.line(`[I][main.cpp:51] setMode(): mode -> ${m}`, "i"); };
+    const help = () => { term.line("Commands: on | off | blink [ms] | fade | sos | level <0-255> | help"); term.line(`Now: mode=${st.mode} level=${st.level} blink=${st.blinkMs}ms`); };
+    function run(raw) {
+      const line = raw.trim().toLowerCase(); if (!line) return;
+      term.line(line, "you");
+      const [cmd, arg = ""] = [line.split(" ")[0], line.split(" ").slice(1).join(" ")];
+      if (["on", "off", "fade", "sos"].includes(cmd)) return setMode(cmd);
+      if (cmd === "blink") {
+        if (arg) { const ms = parseInt(arg, 10); if (!(ms >= 20 && ms <= 5000)) return term.line(`[W][main.cpp:104] handleCommand(): blink speed must be 20-5000 ms, got '${arg}'`, "w"); st.blinkMs = ms; }
+        return setMode("blink");
+      }
+      if (cmd === "level") {
+        const v = parseInt(arg, 10);
+        if (!arg || !(v >= 0 && v <= 255)) return term.line(`[W][main.cpp:112] handleCommand(): level needs a number 0-255, got '${arg}'`, "w");
+        st.level = v; return term.line(`[I][main.cpp:116] handleCommand(): level -> ${v}`, "i");
+      }
+      if (cmd === "help" || cmd === "?") return help();
+      term.line(`[W][main.cpp:121] handleCommand(): unknown command '${cmd}' (type help)`, "w");
+    }
+    term.form.addEventListener("submit", (e) => { e.preventDefault(); run(term.input.value); term.input.value = ""; });
+    term.line("[I][main.cpp:146] setup(): LED on GPIO 4 ready.", "i");
+    term.line("[I][main.cpp:51] setMode(): mode -> fade", "i");
+    help();
+
+    const body = bb.querySelector("#led-body"), glow = bb.querySelector("#led-glow"), dutyText = bb.querySelector("#led-duty");
+    let raf;
+    const duty = (el) => {
+      switch (st.mode) {
+        case "off": return 0;
+        case "on": return st.level;
+        case "blink": return Math.floor(el / st.blinkMs) % 2 === 0 ? st.level : 0;
+        case "fade": { const t = el % 2000; const x = Math.floor(t < 1000 ? t * 255 / 1000 : (2000 - t) * 255 / 1000); return Math.floor(x * x / 255); }
+        case "sos": return SOS[Math.floor(el / 150) % SOS.length] === "1" ? st.level : 0;
+      }
+      return 0;
+    };
+    const tick = () => {
+      const d = duty(performance.now() - st.start);
+      const k = d / 255;
+      body.setAttribute("opacity", (0.25 + 0.75 * k).toFixed(3));
+      glow.setAttribute("opacity", (0.45 * k).toFixed(3));
+      dutyText.textContent = `duty ${d} / 255`;
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(raf);
+  }
+
+  // ---------- Sim 03: display (same drawing as src/03-display/main.cpp) ----------
+  function simDisplay(parent) {
+    const frame = document.createElement("div"); frame.className = "screen-frame";
+    const cv = document.createElement("canvas"); cv.width = 320; cv.height = 170; cv.setAttribute("aria-label", "Simulated 320 by 170 display: colour check, then a moving sine wave");
+    frame.appendChild(cv); parent.appendChild(frame);
+    const cap = document.createElement("p"); cap.className = "sim-cap"; parent.appendChild(cap);
+    const term = terminal(parent, "$ uv run pio device monitor", false);
+    term.line("[I][main.cpp:116] setup(): Display ready: 320x170 over SPI at 40 MHz", "i");
+    term.line("[I][main.cpp:76] colourCheck(): Colour check on screen. Left->right should read red, green, blue.", "i");
+    const g = cv.getContext("2d");
+    const C = { paper: css("--scope-paper"), grid: css("--scope-grid"), trace: css("--scope-trace"), ink: css("--scope-ink"), muted: css("--scope-muted"), amber: css("--scope-amber"), r: css("--test-r"), g: css("--test-g"), b: css("--test-b"), w: css("--test-w") };
+    const t0 = performance.now(); let raf, lastLog = 0, logged = false, fps = 0, last = t0;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const draw = () => {
+      const now = performance.now(); const el = now - t0;
+      const dt = (now - last) / 1000; last = now; if (dt > 0) fps = fps * 0.9 + Math.min(60, 1 / dt) * 0.1;
+      g.font = "16px 'IBM Plex Mono', monospace"; g.textBaseline = "top";
+      if (el < 2500) {
+        cap.textContent = "Step 1: colour check (2.5 s). Left to right must read red, green, blue.";
+        [C.r, C.g, C.b].forEach((c, i) => { g.fillStyle = c; g.fillRect(i * 106, 0, i === 2 ? 108 : 106, 170); });
+        g.fillStyle = C.w; g.fillText("RED    GREEN    BLUE", 52, 76);
+      } else {
+        if (!logged) { logged = true; term.line("[I][main.cpp:127] setup(): Frame buffer: 106 KB, PSRAM free: 8085 KB", "i"); }
+        cap.textContent = "Step 2: the bench scope. Your real screen runs it at 22 fps.";
+        const t = reduce ? 0 : el / 1000;
+        g.fillStyle = C.paper; g.fillRect(0, 0, 320, 170);
+        g.fillStyle = C.ink; g.font = "600 18px 'IBM Plex Mono', monospace"; g.fillText("hello, bench", 8, 8);
+        g.fillStyle = C.muted; g.font = "10px 'IBM Plex Mono', monospace"; g.fillText("ESP32-S3 N16R8", 196, 8); g.fillText(`${Math.round(Math.min(fps, 22))} fps`, 196, 20);
+        g.strokeStyle = C.grid; g.lineWidth = 1; g.beginPath();
+        for (let x = 0; x < 320; x += 32) { g.moveTo(x + .5, 34); g.lineTo(x + .5, 170); }
+        for (let y = 34; y < 170; y += 34) { g.moveTo(0, y + .5); g.lineTo(320, y + .5); }
+        g.stroke();
+        g.strokeStyle = C.trace; g.lineWidth = 1.4; g.beginPath();
+        for (let x = 0; x < 320; x++) {
+          const ph = x * 0.045 - t * 3;
+          const y = Math.sin(ph) * 40 * (0.7 + 0.3 * Math.sin(t * 0.7)) + Math.sin(ph * 3.1) * 6;
+          x ? g.lineTo(x, 102 + y) : g.moveTo(x, 102 + y);
+        }
+        g.stroke();
+        const s = Math.floor(el / 1000); const p = (n) => String(n).padStart(2, "0");
+        g.fillStyle = C.amber; g.font = "600 18px 'IBM Plex Mono', monospace"; g.fillText(`${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}`, 196, 148);
+        if (now - lastLog > 5000) { lastLog = now; term.line(`[I][main.cpp:156] loop(): ${(21.6 + Math.random() * 0.8).toFixed(1)} fps`, "i"); }
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }
+
+
+
+
+  // ---------- Sim 03b: the four showcase scenes (same maths as src/03b-showcase) ----------
+  function simShowcase(parent, lesson) {
+    const mode = (lesson && lesson.simMode) || "boot";
+    const W = 320, H = 170, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = document.createElement("div"); frame.className = "screen-frame";
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    cv.setAttribute("aria-label", "Simulated display showing the current showcase scene");
+    frame.appendChild(cv); parent.appendChild(frame);
+    const row = document.createElement("div"); row.className = "boot-row";
+    row.innerHTML = `<button type="button" class="boot-btn" id="sc-boot" aria-label="${mode === "boot" ? "BOOT button: click for next scene, hold for auto-cycle" : "Push button: click for next scene, double-click for previous, hold for auto-cycle"}">${mode === "boot" ? "BOOT" : "BUTTON"}</button>
+      <div class="scene-dots" role="group" aria-label="Scenes"></div><span class="auto-flag" id="sc-auto"></span>`;
+    parent.appendChild(row);
+    const cap = document.createElement("p"); cap.className = "sim-cap";
+    cap.textContent = (mode === "boot" ? "Click BOOT for the next scene, hold 0.6 s to toggle auto-cycle, just like the real BOOT button." : "Click BUTTON for the next scene, double-click for the previous one, hold 0.6 s to toggle auto-cycle, just like your push button.") + " The dashboard here uses placeholder numbers; your board shows its real temperature, memory and frame times.";
+    parent.appendChild(cap);
+    const term = terminal(parent, "$ uv run pio device monitor   (expected output)", false);
+
+    const g = cv.getContext("2d");
+    const hex = (t) => { const v = css(t).replace("#", ""); return [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16)); };
+    const C = { night: hex("--scope-paper"), ink: hex("--scope-ink"), muted: hex("--scope-muted"), dim: hex("--scope-dim"),
+                teal: hex("--scope-trace"), amber: hex("--scope-amber"), coral: hex("--scope-coral"), indigo: hex("--scope-indigo") };
+    const mixc = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+    const str = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+    const hsv = (h, s, v) => { const i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+      const [r, gg, b] = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][((i % 6) + 6) % 6]; return [r * 255, gg * 255, b * 255]; };
+    const img = g.createImageData(W, H), px = img.data;
+
+    // --- Torus ---
+    const U = 24, V = 10, R = 1, r = 0.42, CAM = 3.4, F = 175, L = [-0.45, -0.6, -0.66];
+    const pts = [], nrm = [];
+    for (let i = 0; i < U; i++) for (let j = 0; j < V; j++) {
+      const u = i * 2 * Math.PI / U, v = j * 2 * Math.PI / V, uc = (i + .5) * 2 * Math.PI / U, vc = (j + .5) * 2 * Math.PI / V;
+      pts.push([(R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v)]);
+      nrm.push([Math.cos(vc) * Math.cos(uc), Math.cos(vc) * Math.sin(uc), Math.sin(vc)]);
+    }
+    function torus(t) {
+      const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, str(C.indigo)); sky.addColorStop(1, str(C.night));
+      g.fillStyle = sky; g.fillRect(0, 0, W, H);
+      const ca = Math.cos(t * .9), sa = Math.sin(t * .9), cb = Math.cos(t * .55), sb = Math.sin(t * .55);
+      const rot = ([x, y, z]) => { const y1 = y * ca - z * sa, z1 = y * sa + z * ca; return [x * cb + z1 * sb, y1, -x * sb + z1 * cb]; };
+      const P = pts.map((p) => { const q = rot(p), z = q[2] + CAM; return [W / 2 + q[0] * F / z, H / 2 + q[1] * F / z, z, q]; });
+      const faces = [];
+      for (let i = 0; i < U; i++) for (let j = 0; j < V; j++) {
+        const a = i * V + j, b = ((i + 1) % U) * V + j, c = ((i + 1) % U) * V + (j + 1) % V, d = i * V + (j + 1) % V;
+        const n = rot(nrm[a]), ce = P[a][3];
+        if (n[0] * ce[0] + n[1] * ce[1] + n[2] * (ce[2] + CAM) >= 0) continue;
+        const k = (40 + 215 * Math.max(0, n[0] * L[0] + n[1] * L[1] + n[2] * L[2])) / 255;
+        faces.push({ z: P[a][2] + P[b][2] + P[c][2] + P[d][2], q: [a, b, c, d], col: str(mixc(C.night, ((i >> 1) + j) % 2 === 0 ? C.amber : C.teal, k)) });
+      }
+      faces.sort((x, y) => y.z - x.z);
+      for (const f of faces) { g.beginPath(); f.q.forEach((k, i) => (i ? g.lineTo(P[k][0], P[k][1]) : g.moveTo(P[k][0], P[k][1]))); g.closePath(); g.fillStyle = f.col; g.fill(); g.strokeStyle = f.col; g.lineWidth = .6; g.stroke(); }
+      label(`${U * V} faces, ${faces.length} drawn`, C.muted);
+    }
+
+    // --- Plasma ---
+    const SIN = Array.from({ length: 256 }, (_, i) => Math.round(128 + 127 * Math.sin(i * 2 * Math.PI / 256)));
+    const PAL = Array.from({ length: 256 }, (_, i) => { const f = i / 256, ch = (o) => 255 * (.5 + .5 * Math.cos(2 * Math.PI * (f + o))); return [ch(0), ch(.18) * .75, ch(.42)]; });
+    function plasma(t) {
+      const t1 = (t * 47) & 255, t2 = (t * 29) & 255, sh = (t * 21) & 255;
+      const cx = Math.floor(W / 2 + 110 * Math.sin(t * .63)), cy = Math.floor(H / 2 + 55 * Math.cos(t * .81));
+      let o = 0;
+      for (let y = 0; y < H; y++) {
+        const rw = SIN[(y * 3 - t2) & 255], dy = y - cy;
+        for (let x = 0; x < W; x++) {
+          const dx = x - cx, v = SIN[(x * 2 + t1) & 255] + rw + SIN[(x + y + t2) & 255] + SIN[(((dx * dx + dy * dy) >> 7) - t1) & 255];
+          const c = PAL[((v >> 2) + sh) & 255]; px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255; o += 4;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      label(`${W * H} pixels computed every frame`, C.ink);
+    }
+
+    // --- Fireworks ---
+    const trail = new Float32Array(W * H * 3); let parts = [], nextLaunch = 0;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    function plot(x, y, c, size) { x |= 0; y |= 0; for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) { const X = x + i, Y = y + j; if (X < 0 || Y < 0 || X >= W || Y >= H) continue; const k = (Y * W + X) * 3; trail[k] = c[0]; trail[k + 1] = c[1]; trail[k + 2] = c[2]; } }
+    function fireworks(t, dt) {
+      dt = Math.min(dt, .05);
+      for (let k = 0; k < trail.length; k++) trail[k] *= .8125;
+      if (t >= nextLaunch) { parts.push({ x: rnd(40, W - 40), y: H, vx: rnd(-25, 25), vy: -rnd(150, 205), life: 2, max: 2, hue: Math.random(), rocket: true }); nextLaunch = t + rnd(.35, .9); }
+      const born = [];
+      for (const p of parts) {
+        p.vy += 95 * dt; if (!p.rocket) { p.vx *= .985; p.vy *= .985; }
+        p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+        if (p.rocket) { plot(p.x, p.y, [255, 240, 210], 2); if (p.vy > -25) { p.life = 0; const n = rnd(70, 120) | 0; for (let s = 0; s < n; s++) { const a = rnd(0, 6.283), sp = rnd(25, 115), l = rnd(1.1, 2.1); born.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: l, max: l, hue: (p.hue + rnd(-.05, .05) + 1) % 1, rocket: false }); } } continue; }
+        const k = Math.max(0, p.life / p.max); plot(p.x, p.y, hsv(p.hue, 1 - .47 * (1 - k) * (1 - k), k), k > .55 ? 2 : 1);
+      }
+      parts = parts.filter((p) => p.life > 0).concat(born);
+      for (let k = 0, o = 0; k < trail.length; k += 3, o += 4) { px[o] = trail[k]; px[o + 1] = trail[k + 1]; px[o + 2] = trail[k + 2]; px[o + 3] = 255; }
+      g.putImageData(img, 0, 0);
+      label(`${parts.length} particles`, C.muted);
+    }
+
+    // --- Dashboard (preview numbers, your board shows real ones) ---
+    const hist = Array.from({ length: 120 }, () => 45);
+    function dashboard(t) {
+      g.fillStyle = str(C.night); g.fillRect(0, 0, W, H);
+      const temp = 41 + Math.sin(t * .4) * .6, level = Math.min(1, Math.max(0, (temp - 20) / 60)) * Math.min(1, t * 1.5);
+      const cx = 72, cy = 96;
+      for (let s = 0; s < 36; s++) {
+        const a0 = 2.35 + 4.71 * s / 36, a1 = 2.35 + 4.71 * (s + .8) / 36, pos = s / 36;
+        const lit = pos < .5 ? mixc(C.teal, C.amber, pos * 2) : mixc(C.amber, C.coral, (pos - .5) * 2);
+        g.beginPath(); g.arc(cx, cy, 54, a0, a1); g.arc(cx, cy, 42, a1, a0, true); g.closePath();
+        g.fillStyle = str(pos < level ? lit : C.dim); g.fill();
+      }
+      g.textAlign = "center"; g.fillStyle = str(C.ink); g.font = "700 20px Archivo, sans-serif"; g.fillText(temp.toFixed(1), cx, cy + 6);
+      g.font = "9px 'IBM Plex Mono', monospace"; g.fillStyle = str(C.muted); g.fillText("CHIP TEMP °C", cx, cy + 20); g.fillText("20", cx - 40, cy + 44); g.fillText("80", cx + 40, cy + 44);
+      g.textAlign = "left"; g.fillStyle = str(C.ink); g.font = "13px Archivo, sans-serif"; g.fillText("ESP32-S3 N16R8", 150, 22);
+      const bar = (y, lbl, used, total) => { g.font = "9px 'IBM Plex Mono', monospace"; g.fillStyle = str(C.muted); g.fillText(lbl, 150, y + 7); g.textAlign = "right"; g.fillText(`${used} / ${total} KB`, 310, y + 7); g.textAlign = "left";
+        g.fillStyle = str(C.dim); g.beginPath(); g.roundRect(150, y + 10, 160, 8, 3); g.fill(); g.fillStyle = str(C.teal); g.beginPath(); g.roundRect(150, y + 10, Math.max(6, 160 * used / total), 8, 3); g.fill(); };
+      bar(34, "RAM", 212, 394); bar(58, "PSRAM", 108, 8192);
+      hist.push(44 + Math.sin(t * 3) * 3 + Math.random() * 2); hist.shift();
+      const x0 = 150, y0 = 96, w = 160, h = 60, mx = 80;
+      g.fillStyle = str(C.muted); g.fillText(`FRAME TIME  ${hist[119].toFixed(0)} ms (preview)`, x0, y0 - 4);
+      g.fillStyle = str(C.dim); [20, 40, 60].forEach((ms) => { const y = y0 + h - h * ms / mx; for (let x = x0; x < x0 + w; x += 4) g.fillRect(x, y, 1, 1); });
+      g.beginPath(); hist.forEach((v, i) => { const x = x0 + i * w / 120, y = y0 + h - h * Math.min(v, mx) / mx; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+      g.strokeStyle = str(C.teal); g.lineWidth = 1.2; g.stroke(); g.lineTo(x0 + w, y0 + h); g.lineTo(x0, y0 + h); g.closePath(); g.fillStyle = str(mixc(C.night, C.teal, .27)); g.globalCompositeOperation = "destination-over"; g.fill(); g.globalCompositeOperation = "source-over";
+      g.fillStyle = str(C.muted); g.fillText("last 120 frames, grid every 20 ms", x0, y0 + h + 12);
+    }
+
+    function label(text, c) { g.textAlign = "left"; g.font = "9px 'IBM Plex Mono', monospace"; g.fillStyle = str(c); g.fillText(text, 8, 15); }
+
+    const SCENES = [{ name: "3D torus", draw: torus }, { name: "Plasma", draw: plasma }, { name: "Fireworks", draw: fireworks }, { name: "Live dashboard", draw: dashboard }];
+    const dots = row.querySelector(".scene-dots"), autoFlag = row.querySelector("#sc-auto");
+    SCENES.forEach((sc, i) => { const b = document.createElement("button"); b.type = "button"; b.textContent = `${i + 1} ${sc.name}`; b.addEventListener("click", () => show(i, `scene ${i + 1}`)); dots.appendChild(b); });
+    let scene = 0, sceneStart = performance.now(), auto = !reduce, last = performance.now(), raf;
+    function show(i, via) {
+      scene = (i + SCENES.length) % SCENES.length; sceneStart = performance.now();
+      if (scene === 2) { trail.fill(0); parts = []; nextLaunch = 0; }
+      dots.querySelectorAll("button").forEach((b, k) => b.setAttribute("aria-current", String(k === scene)));
+      if (via) term.line(via, "you");
+      term.line(`[I][main.cpp:70] showScene(): scene ${scene + 1}/4: ${SCENES[scene].name}`, "i");
+    }
+    function setAuto(on) {
+      auto = on; autoFlag.textContent = `auto-cycle ${auto ? "on · 12 s per scene" : "off"}`;
+      term.line(mode === "boot" ? "[I][boot_only.cpp:24] poll(): BOOT long press" : "[I][with_button.cpp:24] toAction(): button: long press", "i");
+      term.line(`[I][main.cpp:170] pollControls(): auto-cycle ${auto ? "on" : "off"}`, "i");
+    }
+    const boot = row.querySelector("#sc-boot"); let downAt = 0;
+    boot.addEventListener("pointerdown", (e) => { downAt = performance.now(); boot.classList.add("down"); boot.setPointerCapture?.(e.pointerId); });
+    let clickTimer = null;
+    boot.addEventListener("pointerup", () => {
+      boot.classList.remove("down"); if (!downAt) return; const held = performance.now() - downAt; downAt = 0;
+      if (held >= 600) return setAuto(!auto);
+      if (mode === "boot") return show(scene + 1);
+      if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; term.line("[I][with_button.cpp:21] toAction(): button: double-click", "i"); return show(scene - 1); }
+      clickTimer = setTimeout(() => { clickTimer = null; term.line(`[I][with_button.cpp:18] toAction(): button: click (${2 + Math.floor(Math.random() * 5)} bounces filtered)`, "i"); show(scene + 1); }, 280);
+    });
+    boot.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(scene + 1); } });
+
+    function banner(since) {
+      if (since >= 2000) return;
+      let k = since < 250 ? since / 250 : since > 1750 ? (2000 - since) / 250 : 1; k = 1 - (1 - k) * (1 - k);
+      const text = `${scene + 1}/4  ${SCENES[scene].name}`; g.font = "700 13px Archivo, sans-serif";
+      const w = g.measureText(text).width + 28, x = (W - w) / 2, y = -28 + 36 * k;
+      g.fillStyle = str(C.ink); g.beginPath(); g.roundRect(x, y, w, 28, 14); g.fill();
+      g.fillStyle = str(C.night); g.textAlign = "left"; g.fillText(text, x + 14, y + 19);
+    }
+    let fps = 0;
+    function hud() {
+      const text = `${fps.toFixed(0)} fps in your browser${auto ? "  auto" : ""}`; g.font = "9px 'IBM Plex Mono', monospace";
+      g.fillStyle = str(C.night); g.fillRect(0, H - 13, g.measureText(text).width + 10, 13);
+      g.fillStyle = str(C.amber); g.textAlign = "left"; g.fillText(text, 4, H - 3);
+      if (mode === "button") { g.beginPath(); g.arc(W - 10, H - 10, 5, 0, 7); g.fillStyle = str(boot.classList.contains("down") ? C.teal : C.dim); g.fill(); }
+    }
+    function loop() {
+      const now = performance.now(), dt = (now - last) / 1000; last = now; if (dt > 0) fps = fps * .9 + (1 / dt) * .1;
+      if (auto && now - sceneStart >= 12000) show(scene + 1);
+      const t = reduce ? 1.2 : (now - sceneStart) / 1000;
+      SCENES[scene].draw(t, dt); banner(reduce ? 999999 : now - sceneStart); hud();
+      raf = requestAnimationFrame(loop);
+    }
+    term.line("Commands: next | prev | scene <1-4> | auto on|off | hud | help");
+    term.line("[I][main.cpp:229] setup(): Frame buffer: 106 KB in internal RAM (fast) (largest free internal block was … KB)", "i");
+    term.line(mode === "boot" ? "[I][boot_only.cpp:15] begin(): Controls: BOOT button on GPIO 0 (variation 1)" : "[I][with_button.cpp:38] begin(): Controls: button on GPIO 5 and BOOT on GPIO 0 (variation 2)", "i");
+    show(0); autoFlag.textContent = `auto-cycle ${auto ? "on · 12 s per scene" : "off"}`;
+    loop();
+    return () => cancelAnimationFrame(raf);
+  }
+
+
+
+
+  // ---------- Wi-Fi track: example networks shared by the W1 preview and concepts ----------
+  const EXAMPLE_NETS = [
+    { ssid: "example-home", rssi: -42, ch: 6, auth: "WPA2", bssid: "02:00:00:00:00:01" },
+    { ssid: "example-home-guest", rssi: -45, ch: 6, auth: "WPA2", bssid: "02:00:00:00:00:02" },
+    { ssid: "neighbour-a", rssi: -63, ch: 1, auth: "WPA2/WPA3", bssid: "02:00:00:00:00:03" },
+    { ssid: "neighbour-b", rssi: -68, ch: 11, auth: "WPA2", bssid: "02:00:00:00:00:04" },
+    { ssid: "printer-direct", rssi: -71, ch: 6, auth: "WPA2", bssid: "02:00:00:00:00:05" },
+    { ssid: "", rssi: -77, ch: 11, auth: "WPA2", bssid: "02:00:00:00:00:06" },
+    { ssid: "cafe-free", rssi: -83, ch: 1, auth: "open", bssid: "02:00:00:00:00:07" },
+    { ssid: "neighbour-c", rssi: -86, ch: 3, auth: "WPA3", bssid: "02:00:00:00:00:08" },
+    { ssid: "tv-setup", rssi: -89, ch: 13, auth: "WPA2", bssid: "02:00:00:00:00:09" },
+  ];
+
+  function wifiConcepts(root) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    root.innerHTML = `
+      <p class="goal">The radio visits each 2.4 GHz channel in turn, asks “who's there?” (a probe request) and listens for replies and for the beacons every router sends about 10 times a second. A full pass takes 2–3 seconds.</p>
+      <div class="hop" id="hop" aria-label="Channels 1 to 13, the one being scanned is highlighted"></div>
+      <div class="wd-cap" id="hop-cap"></div>
+      <div class="rssi-scale" aria-label="Signal strength scale in dBm">
+        <h3 style="margin: 6px 0 0">Signal strength (RSSI)</h3>
+        <div class="rssi-bar"></div>
+        <div class="rssi-ticks"><span><b>−30</b>excellent</span><span><b>−55</b>very good</span><span><b>−67</b>good</span><span><b>−78</b>weak</span><span><b>−90</b>barely there</span></div>
+        <p class="sim-cap">dBm is logarithmic: every 3 dB less means half the power. −90 is a billion times weaker than −30.</p>
+      </div>`;
+    const hop = root.querySelector("#hop"), cap = root.querySelector("#hop-cap");
+    const cells = [];
+    for (let ch = 1; ch <= 13; ch++) {
+      const d = document.createElement("div"); if ([1, 6, 11].includes(ch)) d.classList.add("clean");
+      d.innerHTML = `<span>${ch}</span><span class="dots"></span>`; hop.appendChild(d); cells.push(d);
+    }
+    let ch = 0;
+    function tick() {
+      cells.forEach((c, i) => c.classList.toggle("on", i === ch));
+      const found = EXAMPLE_NETS.filter((n) => n.ch === ch + 1);
+      const dots = cells[ch].querySelector(".dots"); dots.innerHTML = found.map(() => `<i style="background: var(--ok)"></i>`).join("");
+      cap.innerHTML = `<i class="sw" style="background: var(--ink)"></i><strong>Channel ${ch + 1}${[1, 6, 11].includes(ch + 1) ? " · one of the three that don't overlap" : ""}</strong><span>${found.length ? `heard ${found.length}: ${found.map((n) => n.ssid || "(hidden)").join(", ")}` : "nothing heard here"} <em>(example networks)</em></span>`;
+      ch = (ch + 1) % 13;
+    }
+    tick();
+    const id = reduce ? null : setInterval(tick, 900);
+    return () => id && clearInterval(id);
+  }
+
+  function renderRoadmap(root) {
+    const rows = [
+      ["W1", "Scan & join", "scanner views, join your network, password stored on the chip, reconnects by itself, status view with clock, IP and signal chart, bench.local", "nothing", true],
+      ["W2", "Phone control", "web dashboard on your phone with live updates; the ESP32's own network with a set-up page; firmware updates from the browser, no USB", "W1"],
+      ["W3", "Internet & Hardware Diary", "HTTPS + JSON from the internet (weather, for example); post bench entries to this repo's API", "W1 + the API"],
+      ["W4", "Radio lab (bonus)", "channel activity from packet counts; board-to-board messages with ESP-NOW", "a 2nd ESP32 for ESP-NOW"],
+    ];
+    root.innerHTML = `<div class="table-scroll"><table class="roadmap"><thead><tr><th>#</th><th>Lesson</th><th>Wi-Fi capability</th><th>Needs</th></tr></thead><tbody>
+      ${rows.map(([n, t, c, need, now]) => `<tr class="${now ? "now" : ""}"><td>${n}</td><td>${t}</td><td>${c}</td><td class="needs">${need}</td></tr>`).join("")}
+    </tbody></table></div><p class="sim-cap">All four labs grow one firmware, <code>wifi-lab</code>: each adds features instead of starting over.</p>
+    <h3 style="margin: 18px 0 8px">Parts that unlock more</h3>
+    <div class="table-scroll"><table class="roadmap"><thead><tr><th>Part</th><th>About</th><th>What it adds</th></tr></thead><tbody>
+      <tr class="now"><td>BME280</td><td class="needs">€3–10 · I2C, 4 wires</td><td>Temperature, humidity, pressure (BME680 adds air quality): real data for the phone dashboard and Hardware Diary posts</td></tr>
+      <tr class="now"><td>2nd ESP32</td><td class="needs">€3–8 · any C3 or S3</td><td>ESP-NOW without a router, a wireless remote, one board as access point and the other joining it</td></tr>
+      <tr class="now"><td>Power bank</td><td class="needs">you likely have one</td><td>A portable scanner: walk around and map the signal room by room</td></tr>
+      <tr><td>Rotary encoder</td><td class="needs">€1–2 · KY-040</td><td>Scroll and select in menus: network picker, settings</td></tr>
+      <tr><td>WS2812 ring</td><td class="needs">€2–5 · 1 data wire</td><td>A colour signal gauge; pick colours from your phone</td></tr>
+      <tr><td>INA219</td><td class="needs">€2–4 · I2C</td><td>Measure Wi-Fi's power draw (about 300 mA peaks) and what sleep modes save</td></tr>
+      <tr><td>Passive buzzer</td><td class="needs">€1</td><td>Sound alerts: network lost, value over a limit</td></tr>
+    </tbody></table></div>`;
+  }
+
+  // ---------- Sim W1: the scanner's three views ----------
+  function simWifi(parent) {
+    const W = 320, H = 170, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = document.createElement("div"); frame.className = "screen-frame";
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H; cv.setAttribute("aria-label", "Simulated scanner screen");
+    frame.appendChild(cv); parent.appendChild(frame);
+    const row = document.createElement("div"); row.className = "boot-row";
+    row.innerHTML = `<button type="button" class="boot-btn" id="wf-btn" aria-label="Push button: click next view, double-click scan, hold auto-scan">BUTTON</button>
+      <div class="scene-dots" role="group" aria-label="Views"></div><button type="button" class="btn" id="wf-join">join 1 (example)</button><span class="auto-flag" id="wf-auto"></span>`;
+    parent.appendChild(row);
+    const cap = document.createElement("p"); cap.className = "sim-cap";
+    cap.textContent = "Example networks and addresses, not yours. Click = next view, double-click = scan now, hold 0.6 s = auto-scan on/off. “join 1 (example)” shows what joining looks like. Your board shows the real networks around you.";
+    parent.appendChild(cap);
+    const term = terminal(parent, "$ uv run pio device monitor   (expected output, example networks)", false);
+    const g = cv.getContext("2d");
+    const hex = (t) => { const v = css(t).replace("#", ""); return `rgb(${[0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16)).join(",")})`; };
+    const C = { night: hex("--scope-paper"), ink: hex("--scope-ink"), muted: hex("--scope-muted"), dim: hex("--scope-dim"), teal: hex("--scope-trace"), amber: hex("--scope-amber"), coral: hex("--scope-coral") };
+    const strength = (r) => (r >= -60 ? C.teal : r >= -75 ? C.amber : C.coral);
+    const bars = (r) => (r >= -55 ? 4 : r >= -67 ? 3 : r >= -78 ? 2 : 1);
+    const hue = (b) => { let h = 2166136261; for (const c of b) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; return `hsl(${(h & 255) / 255 * 360}, 70%, 62%)`; };
+    const name = (n) => n.ssid || "(hidden)";
+    const VIEWS = ["networks", "channels", "radar", "status"];
+    let link = "none", linkAt = 0; const rssiHist = [];
+    let nets = [], scanning = true, scanStart = performance.now(), lastMs = 0, scans = 0, view = 0, page = 0, flipAt = performance.now(), auto = true, finishedAt = 0, raf;
+    const dots = row.querySelector(".scene-dots"), autoFlag = row.querySelector("#wf-auto");
+    VIEWS.forEach((v, i) => { const b = document.createElement("button"); b.type = "button"; b.textContent = `${i + 1} ${v}`; b.addEventListener("click", () => setView(i, `view ${i + 1}`)); dots.appendChild(b); });
+    function setView(v, via) { view = (v + 4) % 4; page = 0; flipAt = performance.now(); dots.querySelectorAll("button").forEach((b, k) => b.setAttribute("aria-current", String(k === view))); if (via) term.line(via, "you"); term.line(`[I][main.cpp:73] setView(): view ${view + 1}: ${VIEWS[view]}`, "i"); }
+    function setAuto(on) { auto = on; autoFlag.textContent = `auto-scan ${auto ? "on · every 10 s" : "off"}`; term.line(`[I][main.cpp:79] setAuto(): auto-scan ${auto ? "on" : "off"}`, "i"); }
+    function startScan(why) { if (scanning) return; scanning = true; scanStart = performance.now(); term.line(`[I][main.cpp:68] scanNow(): scan started (${why})`, "i"); }
+    function finishScan() {
+      scanning = false; lastMs = Math.round(2100 + Math.random() * 700); scans++; finishedAt = performance.now();
+      nets = EXAMPLE_NETS.map((n) => ({ ...n, rssi: n.rssi + Math.round(Math.random() * 6 - 3) })).sort((a, b) => b.rssi - a.rssi);
+      term.line(`[I][main.cpp:166] loop(): scan ${scans} done: ${nets.length} networks in ${lastMs} ms`, "i");
+      term.line(" #   dBm  ch  security    ssid");
+      nets.forEach((n, i) => term.line(`${String(i + 1).padStart(2)}  ${String(n.rssi).padStart(4)}  ${String(n.ch).padStart(2)}  ${n.auth.padEnd(10)}  ${name(n)}`));
+    }
+    row.querySelector("#wf-join").addEventListener("click", () => {
+      if (!nets.length) return term.line("[W][main.cpp:93] startJoin(): join needs a number from the last scan table", "w");
+      term.line("join 1", "you"); term.line(`Password for '${nets[0].ssid}' (the monitor shows what you type; it is stored on the chip only):`);
+      term.line("••••••••••••", "you");
+      term.line(`[I][connection.h:57] save(): Saved '${nets[0].ssid}' (password: 12 characters, not shown)`, "i");
+      term.line(`[I][connection.h:83] connect(): Joining '${nets[0].ssid}'...`, "i");
+      link = "joining"; linkAt = performance.now(); setView(3);
+    });
+    const btn = row.querySelector("#wf-btn"); let downAt = 0, clickTimer = null;
+    btn.addEventListener("pointerdown", (e) => { downAt = performance.now(); btn.classList.add("down"); btn.setPointerCapture?.(e.pointerId); });
+    btn.addEventListener("pointerup", () => {
+      btn.classList.remove("down"); if (!downAt) return; const held = performance.now() - downAt; downAt = 0;
+      if (held >= 600) return setAuto(!auto);
+      if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; return startScan("button"); }
+      clickTimer = setTimeout(() => { clickTimer = null; setView(view + 1); }, 280);
+    });
+    btn.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(view + 1); } });
+
+    const txt = (t, x, y, c, f = "9px 'IBM Plex Mono', monospace", a = "left") => { g.font = f; g.fillStyle = c; g.textAlign = a; g.fillText(t, x, y); };
+    const fitText = (t, w) => { if (g.measureText(t).width <= w) return t; while (t.length > 1 && g.measureText(t + "..").width > w) t = t.slice(0, -1); return t + ".."; };
+    function header() {
+      txt("Wi-Fi", 8, 19, C.ink, "700 13px Archivo, sans-serif"); txt(VIEWS[view], 46, 19, C.muted, "13px Archivo, sans-serif");
+      txt(scans === 0 && scanning ? "first scan..." : `${nets.length} networks  ${lastMs} ms`, 186, 13, C.muted);
+      for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(266 + i * 10, 20, 3, 0, 7); g.fillStyle = i === view ? C.ink : C.dim; g.fill(); }
+      g.beginPath(); g.arc(312, 20, 4, 0, 7); g.fillStyle = link === "up" ? C.teal : link === "joining" ? C.amber : C.dim; g.fill();
+      g.fillStyle = C.dim; g.fillRect(0, 28, W, 1);
+    }
+    function footer() {
+      g.fillStyle = C.night; g.fillRect(0, H - 11, W, 11);
+      txt("click: view  double: scan  hold: auto", 6, H - 3, C.muted);
+      txt(scanning ? "scanning" + ".".repeat(Math.floor(performance.now() / 250) % 4) : auto ? "auto 10 s" : "auto off", W - 66, H - 3, scanning ? C.amber : auto ? C.teal : C.muted);
+    }
+    function list() {
+      if (!nets.length) { txt("No networks yet", 8, 92, C.muted, "13px Archivo, sans-serif"); return; }
+      const pages = Math.ceil(nets.length / 5); page %= pages;
+      for (let r = 0; r < 5; r++) {
+        const n = nets[page * 5 + r]; if (!n) break; const y = 32 + r * 25;
+        if (r % 2) { g.fillStyle = "rgba(255,255,255,0.03)"; g.fillRect(0, y, W, 25); }
+        for (let b = 0; b < 4; b++) { const h = 4 + b * 3; g.fillStyle = b < bars(n.rssi) ? strength(n.rssi) : C.dim; g.fillRect(8 + b * 5, y + 18 - h, 3, h); }
+        g.font = "13px Archivo, sans-serif"; txt(fitText(name(n), 176), 34, y + 17, n.ssid ? C.ink : C.muted, "13px Archivo, sans-serif");
+        txt(`ch${String(n.ch).padStart(2)}`, 216, y + 15, C.muted);
+        if (n.auth === "open") txt("open", 244, y + 15, C.coral); else { g.strokeStyle = C.muted; g.strokeRect(249.5, y + 7.5, 5, 5); g.fillStyle = C.muted; g.fillRect(248, y + 11, 8, 6); }
+        txt(String(n.rssi).padStart(4), 276, y + 15, strength(n.rssi)); txt("dB", 300, y + 15, C.muted);
+      }
+      if (pages > 1) txt(`page ${page + 1}/${pages}`, W - 70, H - 15, C.muted);
+    }
+    function channels() {
+      const x0 = 22, x1 = 312, base = 140, top = 40, slot = (x1 - x0) / 14, cx = (c) => x0 + c * slot;
+      const hy = (r) => base - (Math.min(-30, Math.max(-95, r)) + 95) * (base - top) / 65;
+      [-40, -60, -80].forEach((db) => { const y = hy(db); g.fillStyle = C.dim; for (let x = x0; x < x1; x += 4) g.fillRect(x, y, 1, 1); txt(String(db), 0, y + 3, C.muted); });
+      [...nets].reverse().forEach((n, kk) => {
+        const k = nets.length - 1 - kk, c = cx(n.ch), peak = hy(n.rssi), hw = slot * 2.2;
+        g.strokeStyle = hue(n.bssid); g.lineWidth = 1.4; g.beginPath();
+        for (let dx = -hw; dx <= hw; dx += 2) { const f = dx / hw, y = base - (base - peak) * (1 - f * f); dx === -hw ? g.moveTo(c + dx, y) : g.lineTo(c + dx, y); }
+        g.stroke();
+        if (k < 3) txt(fitText(name(n), 64), Math.min(W - 40, Math.max(2, c - 20)), peak - 6, hue(n.bssid));
+      });
+      g.fillStyle = C.muted; g.fillRect(x0, base, x1 - x0, 1);
+      for (let c = 1; c <= 13; c++) {
+        const clean = [1, 6, 11].includes(c), count = nets.filter((n) => n.ch === c).length;
+        txt(String(c), cx(c), base + 11, clean ? C.amber : C.muted, "9px 'IBM Plex Mono', monospace", "center");
+        if (count) txt(String(count), cx(c), base + 21, C.ink, "9px 'IBM Plex Mono', monospace", "center");
+      }
+    }
+    function radar(t) {
+      const cx = 222, cy = 98, rMax = 66, rad = (r) => 6 + (-30 - Math.min(-30, Math.max(-95, r))) * (rMax - 6) / 65;
+      g.strokeStyle = C.dim; g.lineWidth = 1; [-50, -70, -90].forEach((db) => { g.beginPath(); g.arc(cx, cy, rad(db), 0, 7); g.stroke(); txt(String(db), cx + 3, cy - rad(db) - 2, C.muted); });
+      g.beginPath(); g.moveTo(cx - rMax, cy); g.lineTo(cx + rMax, cy); g.moveTo(cx, cy - rMax); g.lineTo(cx, cy + rMax); g.stroke();
+      const a = reduce ? 0.8 : t * (scanning ? 4 : 1.2);
+      for (let k = 0; k < 10; k++) { const ak = a - k * 0.06; g.strokeStyle = C.teal; g.globalAlpha = (200 - k * 20) / 255; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(ak) * rMax, cy + Math.sin(ak) * rMax); g.stroke(); }
+      g.globalAlpha = 1;
+      [...nets].reverse().forEach((n, kk) => { const k = nets.length - 1 - kk; let h = 0; for (const c of n.bssid) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0; const ang = (h % 628) / 100, r = rad(n.rssi);
+        g.beginPath(); g.arc(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r, k < 3 ? 4 : 2, 0, 7); g.fillStyle = strength(n.rssi); g.fill(); });
+      txt("Closest", 8, 50, C.ink, "13px Archivo, sans-serif");
+      nets.slice(0, 5).forEach((n, k) => { g.beginPath(); g.arc(11, 64 + k * 16, 3, 0, 7); g.fillStyle = strength(n.rssi); g.fill(); g.font = "9px 'IBM Plex Mono', monospace"; txt(fitText(name(n), 102), 20, 67 + k * 16, C.ink); txt(String(n.rssi), 126, 67 + k * 16, C.muted); });
+    }
+    function status(t) {
+      if (link === "none") {
+        txt("Not joined to a network yet", 8, 54, C.ink, "13px Archivo, sans-serif");
+        ["1. Open the serial monitor", "2. Find your network in the scan table", "3. Type: join <number>", "4. Type the password on the next line", "   (stored on the chip only, never logged)"].forEach((l, i) => txt(l, 8, 76 + i * 14, C.muted));
+        return;
+      }
+      const n = nets[0] || EXAMPLE_NETS[0];
+      if (link === "joining") {
+        txt("Joining", 8, 54, C.amber, "13px Archivo, sans-serif"); txt(n.ssid, 8, 76, C.ink, "13px Archivo, sans-serif");
+        txt(`${Math.floor((performance.now() - linkAt) / 1000)} s ...`, 8, 96, C.muted);
+        for (let k = 0; k < 8; k++) { const a = t * 6 + k * 0.785; g.beginPath(); g.arc(270 + Math.cos(a) * 18, 80 + Math.sin(a) * 18, k ? 2 : 4, 0, 7); g.fillStyle = C.amber; g.globalAlpha = 1 - k * 0.11; g.fill(); }
+        g.globalAlpha = 1; return;
+      }
+      const d = new Date(), p2 = (v) => String(v).padStart(2, "0");
+      txt(`${p2(d.getHours())}:${p2(d.getMinutes())}`, 8, 72, C.ink, "700 40px Archivo, sans-serif");
+      txt(p2(d.getSeconds()), 126, 72, C.muted, "15px Archivo, sans-serif");
+      txt(d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }), 8, 94, C.muted, "13px Archivo, sans-serif");
+      const r = rssiHist.length ? rssiHist[rssiHist.length - 1] : n.rssi;
+      [[n.ssid, C.teal], ["192.168.1.42 (example)", C.ink], ["bench.local", C.muted], [`ch ${n.ch}  ${r} dBm`, C.muted], [`up ${Math.floor((performance.now() - linkAt) / 60000)} min`, C.muted]].forEach(([s2, c], i) => txt(s2, 188, 44 + i * 14, c));
+      const x0 = 30, x1 = 312, y0 = 108, y1 = 150, yOf = (db) => y1 - (Math.min(-30, Math.max(-95, db)) + 95) * (y1 - y0) / 65;
+      [-50, -70, -90].forEach((db) => { g.fillStyle = C.dim; for (let x = x0; x < x1; x += 4) g.fillRect(x, yOf(db), 1, 1); txt(String(db), 2, yOf(db) + 3, C.muted); });
+      g.lineWidth = 1.3; g.beginPath(); rssiHist.forEach((v, i) => { const x = x1 - (rssiHist.length - 1 - i) * (x1 - x0) / 59; i ? g.lineTo(x, yOf(v)) : g.moveTo(x, yOf(v)); }); g.strokeStyle = strength(r); g.stroke();
+    }
+    let lastSample = 0;
+    function loop() {
+      const now = performance.now();
+      if (link === "joining" && now - linkAt > 2500) { link = "up"; linkAt = now; const n = nets[0]; term.line(`[I][connection.h:98] loop(): Connected to '${n.ssid}': IP 192.168.1.42 (example), channel ${n.ch}, ${n.rssi} dBm`, "i"); term.line("[I][connection.h:101] loop(): Reachable as bench.local (try: ping bench.local)", "i"); }
+      if (link === "up" && now - lastSample > 1000) { lastSample = now; const base = (nets[0] || EXAMPLE_NETS[0]).rssi; rssiHist.push(base + Math.round(Math.sin(now / 3000) * 3 + Math.random() * 2 - 1)); if (rssiHist.length > 60) rssiHist.shift(); }
+      if (scanning && now - scanStart >= 2400) finishScan();
+      if (auto && link !== "joining" && !scanning && now - finishedAt >= 10000) startScan("auto");
+      if (view === 0 && now - flipAt >= 4000) { page++; flipAt = now; }
+      g.fillStyle = C.night; g.fillRect(0, 0, W, H);
+      [list, channels, radar, status][view](now / 1000);
+      header(); footer();
+      raf = requestAnimationFrame(loop);
+    }
+    term.line("[I][connection.h:44] begin(): No saved network. Type 'join <number>' after a scan.", "i");
+    term.line("[I][main.cpp:196] setup(): Wi-Fi lab W1: station mode, MAC 28:84:85:9E:3B:E4. Radio: 2.4 GHz only.", "i");
+    term.line("[I][main.cpp:68] scanNow(): scan started (start-up)", "i");
+    setView(0); autoFlag.textContent = "auto-scan on · every 10 s";
+    loop();
+    return () => { cancelAnimationFrame(raf); clearTimeout(clickTimer); };
+  }
+
+  // ---------- Lesson 03b v2: everything on the ESP32 header, screen + button ----------
+  function fullWiring(root) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    root.innerHTML = `
+      <div class="wd-bar">
+        <span class="sim-cap">Show</span>
+        <button type="button" class="btn" id="fw-both" aria-pressed="true">Both</button>
+        <button type="button" class="btn" id="fw-screen" aria-pressed="false">Screen · 8 wires</button>
+        <button type="button" class="btn" id="fw-button" aria-pressed="false">Button · 2 wires</button>
+        <button type="button" class="boot-btn" id="fw-press" aria-label="Press the drawn button">PRESS</button>
+      </div>
+      <div class="wd-svg"><svg viewBox="0 0 760 600" role="img" aria-label="The ESP32 left header with the display wired to 8 pins and the push button wired to GPIO 5 and GND"></svg></div>
+      <div class="wd-cap" id="fw-cap"></div>`;
+    const svg = root.querySelector("svg");
+    const T = (x, y, text, cls = "wd-lbl", anchor = "start") => { const t = el("text", { x, y, class: cls, "text-anchor": anchor }, svg); t.textContent = text; return t; };
+    const EX = 600, E0 = 50, ESTEP = 22, eY = (i) => E0 + i * ESTEP;
+
+    // ESP32 left header
+    el("rect", { x: EX - 20, y: 24, width: 110, height: 528, rx: 10, fill: "var(--pcb)", stroke: "var(--pcb-edge)", "stroke-width": 2 }, svg);
+    T(EX - 20, 16, "ESP32-S3 · LEFT HEADER", "wd-title");
+    T(EX + 35, 568, "USB ↓", "svg-silk", "middle");
+    const espLbl = {};
+    LEFT.forEach((p, i) => {
+      el("circle", { cx: EX, cy: eY(i), r: 4, fill: "var(--silk-dim)", opacity: .6 }, svg);
+      const t = T(EX + 14, eY(i) + 3.5, /^\d+$/.test(p) ? `GPIO ${p}` : p, "svg-silk"); espLbl[i] = t;
+    });
+
+    // Display module (top-left)
+    el("rect", { x: 30, y: 40, width: 220, height: 290, rx: 12, fill: "var(--pcb)", stroke: "var(--pcb-edge)", "stroke-width": 2 }, svg);
+    el("rect", { x: 50, y: 58, width: 136, height: 254, rx: 4, fill: "var(--scope-paper)" }, svg);
+    T(118, 182, "SCREEN", "svg-silk", "middle"); T(118, 196, "output", "svg-silk", "middle");
+    T(30, 32, "1.9″ DISPLAY · OUTPUT", "wd-title");
+    const DX = 252, dY = (i) => 76 + i * 32;
+
+    // Push button (bottom-left)
+    T(110, 418, "PUSH BUTTON · INPUT", "wd-title");
+    el("rect", { x: 130, y: 432, width: 100, height: 100, rx: 10, fill: "var(--pcb)", stroke: "var(--pcb-edge)", "stroke-width": 2 }, svg);
+    const knob = el("circle", { cx: 180, cy: 482, r: 24, fill: "var(--pcb-edge)", stroke: "var(--silk-dim)", "stroke-width": 2 }, svg);
+    [[144, 446, "A"], [216, 446, "B"], [144, 518, "C"], [216, 518, "D"]].forEach(([x, y, k]) => { el("circle", { cx: x, cy: y, r: 4, fill: "var(--silk-dim)" }, svg); T(x + (x < 180 ? -10 : 10), y + 4, k, "svg-silk", x < 180 ? "end" : "start"); });
+
+    // Wires
+    const groups = { screen: [], button: [] };
+    const wire = (d, color, group, flowSpeed, out) => {
+      const p = el("path", { d, class: "wire", stroke: `var(${color})` }, svg);
+      p.style.strokeDasharray = "none"; p.style.strokeDashoffset = "0";
+      let f = null;
+      if (flowSpeed) { f = el("path", { d, class: "flow" + (out ? " flow-out" : ""), stroke: "var(--surface)" }, svg); f.style.setProperty("--speed", `${flowSpeed}s`); }
+      groups[group].push({ p, f });
+      return p;
+    };
+    WIRES.forEach((w, i) => {
+      const y1 = dY(i), y2 = eY(w.idx);
+      wire(`M${DX} ${y1} C ${DX + 150} ${y1}, ${EX - 170} ${y2}, ${EX} ${y2}`, w.color, "screen", w.speed, true);
+      el("circle", { cx: DX, cy: y1, r: 5, fill: `var(${w.color})`, stroke: "var(--pcb)", "stroke-width": 2 }, svg);
+      const t = T(DX - 10, y1 + 4, w.disp, "svg-silk", "end"); t.setAttribute("style", "fill: var(--silk); font-size: 11px");
+    });
+    const sigPath = wire(`M144 446 C 330 430, ${EX - 200} ${eY(4) + 10}, ${EX} ${eY(4)}`, "--w-btn", "button", 0, false);
+    wire(`M216 518 C 300 560, ${EX - 160} ${eY(21) + 30}, ${EX} ${eY(21)}`, "--w-gnd", "button", 0, false);
+    const pulse = el("circle", { r: 6, fill: "var(--w-btn)", opacity: 0 }, svg);
+    // pin dots on top of wire ends
+    WIRES.forEach((w) => el("circle", { cx: EX, cy: eY(w.idx), r: 5.5, fill: `var(${w.color})`, stroke: "var(--pcb)", "stroke-width": 2 }, svg));
+    el("circle", { cx: EX, cy: eY(4), r: 5.5, fill: "var(--w-btn)", stroke: "var(--pcb)", "stroke-width": 2 }, svg);
+    espLbl[4].setAttribute("style", "fill: var(--w-btn); font-weight: 700; font-size: 10px");
+    WIRES.forEach((w) => espLbl[w.idx].setAttribute("style", "fill: var(--silk); font-size: 10px"));
+
+    // Direction labels
+    const outLbl = T(400, 40, "OUT →  ESP32 talks to the screen", "wd-lbl on", "middle");
+    const inLbl = T(130, 586, "IN ←  ESP32 listens to the button", "wd-lbl on", "start");
+    T(EX - 12, eY(21) + 46, "screen and button GND: any GND pin works", "wd-lbl", "end");
+    const lvl = T(EX - 40, eY(4) - 14, "GPIO 5 = HIGH", "wd-lbl on", "end");
+
+    const cap = root.querySelector("#fw-cap");
+    let mode = "both";
+    const caps = {
+      both: `<i class="sw" style="background: var(--copper)"></i><strong>10 wires on one header</strong><span>8 go to the screen (an output), 2 go to the button (an input). Both need a GND; any GND pin works. Pin 5 sits right next to 4, so check the label.</span>`,
+      screen: `<i class="sw" style="background: var(--w-scl)"></i><strong>Screen: an output on 8 wires</strong><span>Power (VCC, GND), the SPI bus (SCL, SDA), and control lines (CS, DC, RES, BLK). Data flows from the ESP32 to the screen, millions of bits a second.</span>`,
+      button: `<i class="sw" style="background: var(--w-btn)"></i><strong>Button: an input on 2 wires</strong><span>GPIO 5 and GND. No power wire: the chip's internal pull-up holds GPIO 5 HIGH, and pressing joins it to GND (LOW). Press the button to see the signal travel in.</span>`,
+    };
+    function setMode(m) {
+      mode = m;
+      ["both", "screen", "button"].forEach((k) => root.querySelector(`#fw-${k}`).setAttribute("aria-pressed", String(k === m)));
+      const showS = m !== "button", showB = m !== "screen";
+      groups.screen.forEach(({ p, f }) => { p.classList.toggle("dim", !showS); if (f) f.style.display = showS && !reduce ? "" : "none"; });
+      groups.button.forEach(({ p }) => p.classList.toggle("dim", !showB));
+      outLbl.setAttribute("opacity", showS ? 1 : .25); inLbl.setAttribute("opacity", showB ? 1 : .25);
+      cap.innerHTML = caps[m];
+    }
+    ["both", "screen", "button"].forEach((k) => root.querySelector(`#fw-${k}`).addEventListener("click", () => setMode(k)));
+    root.querySelector(".wd-svg").classList.add("signals");
+
+    // Press: the knob goes down, GPIO 5 drops LOW, and a pulse travels from the button to the pin.
+    const press = root.querySelector("#fw-press");
+    let raf = 0, pulseStart = 0, down = false;
+    const len = sigPath.getTotalLength();
+    function animatePulse(now) {
+      const k = Math.min(1, (now - pulseStart) / (reduce ? 1 : 500));
+      const pt = sigPath.getPointAtLength(len * k);
+      pulse.setAttribute("cx", pt.x); pulse.setAttribute("cy", pt.y); pulse.setAttribute("opacity", k < 1 ? 1 : 0);
+      if (k < 1) raf = requestAnimationFrame(animatePulse);
+    }
+    function setDown(d) {
+      down = d; press.classList.toggle("down", d);
+      knob.setAttribute("fill", d ? "var(--w-btn)" : "var(--pcb-edge)");
+      lvl.textContent = d ? "GPIO 5 = LOW (pressed)" : "GPIO 5 = HIGH";
+      groups.button.forEach(({ p }) => p.classList.toggle("active", d));
+      if (d) { if (mode === "screen") setMode("both"); cancelAnimationFrame(raf); pulseStart = performance.now(); raf = requestAnimationFrame(animatePulse); }
+    }
+    press.addEventListener("pointerdown", (e) => { press.setPointerCapture?.(e.pointerId); setDown(true); });
+    press.addEventListener("pointerup", () => setDown(false)); press.addEventListener("pointercancel", () => setDown(false));
+    press.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); setDown(true); } });
+    press.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") setDown(false); });
+    setMode("both");
+    return () => cancelAnimationFrame(raf);
+  }
+
+  function renderCompare(root) {
+    const rows = [
+      ["Direction", "<b>Output.</b> The ESP32 sends; the screen only listens.", "<b>Input.</b> The ESP32 listens; the button only reports."],
+      ["Wires", "8: VCC + GND for power, SCL + SDA for data, CS, DC, RES, BLK for control", "2: GPIO 5 and GND"],
+      ["Power", "Needs 3V3 from the board to light up", "None. A button is just a switch"],
+      ["Signal", "SPI bus: a clock (SCL) and data (SDA), 40 million bits per second", "One level: HIGH (up) or LOW (pressed), a few changes per second"],
+      ["Which pins", "SCL/SDA on the S3's fast SPI pins 12/11; the other 4 on any safe GPIO", "Any safe GPIO. We picked 5"],
+      ["Helper inside the chip", "The SPI peripheral clocks the bits out for us", "The internal pull-up resistor keeps the pin HIGH until pressed"],
+      ["Code", "<code>SPI.begin(12, -1, 11, 10)</code><br><code>tft.init(170, 320)</code>", "<code>pinMode(5, INPUT_PULLUP)</code><br><code>attachInterruptArg(…, CHANGE)</code>"],
+      ["If it goes wrong", "Black or white screen: check VCC, BLK, RES", "Always or never pressed: use diagonal legs"],
+    ];
+    root.innerHTML = `<div class="cmp">
+      <div class="k blank"></div>
+      <div class="h"><i style="background: var(--w-scl)">OUTPUT</i>Screen</div>
+      <div class="h"><i style="background: var(--w-btn)">INPUT</i>Button</div>
+      ${rows.map(([k, a, b]) => `<div class="k">${k}</div><div>${a}</div><div>${b}</div>`).join("")}
+    </div>`;
+  }
+
+  // ---------- Lesson 03b: push-button wiring + bounce scope ----------
+  function buttonDiagram(root) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    root.innerHTML = `
+      <div class="wd-svg"><svg viewBox="0 0 720 300" role="img" aria-label="Inside a 4-leg push button, and how it sits on the breadboard wired to GPIO 5 and GND"></svg></div>
+      <div class="wd-bar">
+        <button type="button" class="boot-btn" id="bd-press" aria-label="Press the drawn button">PRESS</button>
+        <span class="wd-count" id="bd-level"></span>
+      </div>
+      <div class="wd-cap" id="bd-cap"></div>
+      <div class="la"><canvas width="680" height="190" aria-label="Signal on GPIO 5: raw with bounce, and debounced"></canvas><p id="bd-scope"></p></div>`;
+    const svg = root.querySelector("svg");
+    const T = (x, y, text, cls = "wd-lbl", anchor = "start") => { const t = el("text", { x, y, class: cls, "text-anchor": anchor }, svg); t.textContent = text; return t; };
+
+    // Panel 1: inside the button
+    T(20, 22, "INSIDE THE BUTTON (TOP VIEW)", "wd-title");
+    const legs = { A: [92, 58], B: [168, 58], C: [92, 222], D: [168, 222] };
+    Object.entries(legs).forEach(([k, [x, y]]) => {
+      el("rect", { x: x - 5, y: y - (y < 100 ? 12 : -2), width: 10, height: 22, rx: 2, fill: "var(--silk-dim)" }, svg);
+      T(x, y < 100 ? y - 18 : y + 38, k, "wd-lbl on", "middle");
+    });
+    el("rect", { x: 66, y: 68, width: 128, height: 144, rx: 10, fill: "var(--pcb)", stroke: "var(--pcb-edge)", "stroke-width": 2 }, svg);
+    const stripL = el("path", { d: "M92 64 V216", stroke: "var(--pad)", "stroke-width": 6, "stroke-linecap": "round" }, svg);
+    const stripR = el("path", { d: "M168 64 V216", stroke: "var(--pad)", "stroke-width": 6, "stroke-linecap": "round" }, svg);
+    const bridge = el("path", { d: "M92 140 H168", stroke: "var(--w-dc)", "stroke-width": 7, "stroke-linecap": "round", opacity: 0 }, svg);
+    const knob = el("circle", { cx: 130, cy: 140, r: 26, fill: "var(--pcb-edge)", stroke: "var(--silk-dim)", "stroke-width": 2 }, svg);
+    T(20, 262, "A–C and B–D are always joined.", "wd-lbl");
+    T(20, 280, "Pressing joins the two sides.", "wd-lbl");
+
+    // Panel 2: on the breadboard
+    T(270, 22, "ON THE BREADBOARD", "wd-title");
+    el("rect", { x: 270, y: 36, width: 430, height: 236, rx: 10, fill: "var(--surface)", stroke: "var(--line)" }, svg);
+    el("rect", { x: 270, y: 148, width: 430, height: 12, fill: "var(--bg)" }, svg);
+    for (let c = 0; c < 20; c++) for (let r = 0; r < 5; r++) {
+      el("circle", { cx: 290 + c * 21, cy: 58 + r * 18, r: 2.2, fill: "var(--line)" }, svg);
+      el("circle", { cx: 290 + c * 21, cy: 176 + r * 18, r: 2.2, fill: "var(--line)" }, svg);
+    }
+    T(690, 156, "centre gap", "wd-lbl", "end");
+    // button body straddling the gap; legs on columns 13 and 16, rows 4 (top) and 1 (bottom)
+    const ax = 290 + 13 * 21, dx = 290 + 16 * 21, ay = 58 + 4 * 18, dy = 176;
+    const wireG = el("path", { d: `M${ax} ${ay} V44 H300`, fill: "none", stroke: "var(--w-dc)", "stroke-width": 4, "stroke-linecap": "round" }, svg);
+    const wireN = el("path", { d: `M${dx} ${dy} V264 H300`, fill: "none", stroke: "var(--w-gnd)", "stroke-width": 4, "stroke-linecap": "round" }, svg);
+    el("rect", { x: ax - 10, y: ay - 10, width: dx - ax + 20, height: dy - ay + 20, rx: 8, fill: "var(--pcb)", stroke: "var(--pcb-edge)", "stroke-width": 2 }, svg);
+    const knob2 = el("circle", { cx: (ax + dx) / 2, cy: (ay + dy) / 2, r: 18, fill: "var(--pcb-edge)", stroke: "var(--silk-dim)", "stroke-width": 2 }, svg);
+    [[ax, ay, "A"], [dx, ay, "B"], [ax, dy, "C"], [dx, dy, "D"]].forEach(([x, y, k]) => { el("circle", { cx: x, cy: y, r: 4, fill: "var(--silk-dim)" }, svg); T(x + (x === ax ? -8 : 8), y + 4, k, "svg-silk", x === ax ? "end" : "start"); });
+    const lg = el("g", {}, svg);
+    el("rect", { x: 276, y: 34, width: 112, height: 20, rx: 4, fill: "var(--w-dc)" }, lg);
+    T(332, 48, "to ESP32 pin 5", "svg-role", "middle");
+    el("rect", { x: 276, y: 254, width: 112, height: 20, rx: 4, fill: "var(--gnd)" }, lg);
+    T(332, 268, "to ESP32 GND", "svg-role", "middle");
+    T(ax - 22, ay - 30, "use diagonal legs", "wd-lbl on", "end");
+    T(ax - 22, ay - 14, "A and D: works in", "wd-lbl", "end");
+    T(ax - 22, ay + 2, "any orientation", "wd-lbl", "end");
+
+    const cap = root.querySelector("#bd-cap"), lvl = root.querySelector("#bd-level"), scopeCap = root.querySelector("#bd-scope");
+    const pressBtn = root.querySelector("#bd-press");
+
+    // ---- signal model: raw edges with bounce, debounced state, gestures (same rules as button.h) ----
+    const DEBOUNCE = 25, LONG = 600, GAP = 280;
+    let edges = [{ t: -1e9, low: false }], deb = [{ t: -1e9, low: false }];
+    let physicallyDown = false, lastPressT = null, clicks = 0, releasedAt = 0, pressedAt = 0, longFired = false, lastEvent = "", bounceCount = 0, edgesAtRest = 0, totalEdges = 0;
+    const rawLow = () => edges[edges.length - 1].low, debLow = () => deb[deb.length - 1].low;
+    function bounceTo(low, now) {
+      let t = now, n = low ? 3 + Math.floor(Math.random() * 4) : 1 + Math.floor(Math.random() * 3), cur = rawLow();
+      for (let k = 0; k < n * 2; k++) { t += 0.08 + Math.random() * 0.45; cur = !cur; edges.push({ t, low: cur }); totalEdges++; }
+      if (cur !== low) { t += 0.3; edges.push({ t, low }); totalEdges++; }
+      if (low) lastPressT = now;
+    }
+    function down() { if (physicallyDown) return; physicallyDown = true; pressBtn.classList.add("down"); bounceTo(true, performance.now()); }
+    function up() { if (!physicallyDown) return; physicallyDown = false; pressBtn.classList.remove("down"); bounceTo(false, performance.now()); }
+    pressBtn.addEventListener("pointerdown", (e) => { pressBtn.setPointerCapture?.(e.pointerId); down(); });
+    pressBtn.addEventListener("pointerup", up); pressBtn.addEventListener("pointercancel", up);
+    pressBtn.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); down(); } });
+    pressBtn.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") up(); });
+
+    function step(now) {
+      // only look at edges that have "happened" by now
+      const past = edges.filter((e) => e.t <= now);
+      const last = past[past.length - 1];
+      if (last.low !== debLow() && now - last.t >= DEBOUNCE) {
+        deb.push({ t: last.t + DEBOUNCE, low: last.low });
+        if (last.low) { pressedAt = now; longFired = false; }
+        else {
+          const n = totalEdges - edgesAtRest; edgesAtRest = totalEdges; bounceCount = Math.max(0, n - 2);
+          if (!longFired) { clicks++; releasedAt = now; }
+        }
+      }
+      if (debLow() && !longFired && now - pressedAt >= LONG) { longFired = true; clicks = 0; lastEvent = "Long press → auto-cycle on/off"; }
+      if (!debLow() && clicks >= 2) { clicks = 0; lastEvent = "Double-click → previous scene"; }
+      if (!debLow() && clicks === 1 && now - releasedAt >= GAP) { clicks = 0; lastEvent = `Click → next scene (${bounceCount} bounces filtered)`; }
+      // forget old edges, but keep the last press for the zoom box
+      const cutoff = Math.min(now - 3000, lastPressT === null ? Infinity : lastPressT - 1);
+      if (edges.length > 2 && edges[1].t < cutoff) edges = edges.filter((e, i) => i === 0 || e.t >= cutoff || i === edges.length - 1);
+      if (deb.length > 2 && deb[1].t < cutoff) deb = deb.filter((e, i) => i === 0 || e.t >= cutoff || i === deb.length - 1);
+      return last.low;
+    }
+
+    const cv = root.querySelector("canvas"), g = cv.getContext("2d");
+    const levelAt = (list, t) => { let lv = list[0].low; for (const e of list) { if (e.t <= t) lv = e.low; else break; } return lv; };
+    function trace(list, t0, t1, x0, x1, y, color, now) {
+      const sx = (t) => x0 + (t - t0) / (t1 - t0) * (x1 - x0);
+      g.strokeStyle = color; g.lineWidth = 2; g.beginPath();
+      let lv = levelAt(list, t0), yy = (l) => (l ? y + 14 : y - 14);
+      g.moveTo(x0, yy(lv));
+      for (const e of list) { if (e.t <= t0 || e.t > Math.min(t1, now)) continue; g.lineTo(sx(e.t), yy(lv)); lv = e.low; g.lineTo(sx(e.t), yy(lv)); }
+      g.lineTo(sx(Math.min(t1, now)), yy(lv)); g.stroke();
+    }
+    let raf;
+    function draw() {
+      const now = performance.now(), low = step(now);
+      g.clearRect(0, 0, cv.width, cv.height);
+      g.font = "600 11px 'IBM Plex Mono', monospace"; g.textBaseline = "middle";
+      const X0 = 70, X1 = 450, W0 = now - 1200;
+      g.fillStyle = css("--term-dim"); g.fillText("RAW PIN", 4, 46); g.fillText("DEBOUNCED", 4, 116); g.fillText("HIGH", X0 - 34, 32); g.fillText("LOW", X0 - 30, 60);
+      g.fillText("last 1.2 s", X0, 176);
+      trace(edges, W0, now, X0, X1, 46, css("--w-scl"), now);
+      trace(deb, W0, now, X0, X1, 116, css("--w-dc"), now);
+      // zoom box: first 6 ms of the last press
+      const ZX0 = 480, ZX1 = 672;
+      g.strokeStyle = css("--term-dim"); g.lineWidth = 1; g.strokeRect(ZX0 - 6.5, 18.5, ZX1 - ZX0 + 12, 150);
+      g.fillStyle = css("--term-dim"); g.fillText("ZOOM: first 7 ms of the press", ZX0, 30);
+      if (lastPressT !== null) { trace(edges, lastPressT - 0.3, lastPressT + 7, ZX0, ZX1, 90, css("--w-scl"), now); g.fillText("each spike = one bounce", ZX0, 150); }
+      else g.fillText("press to capture", ZX0, 90);
+      raf = requestAnimationFrame(draw);
+      // DOM readouts
+      const on = low;
+      bridge.setAttribute("opacity", on ? 1 : 0); knob.setAttribute("fill", on ? "var(--copper)" : "var(--pcb-edge)"); knob2.setAttribute("fill", on ? "var(--copper)" : "var(--pcb-edge)");
+      [stripL, stripR].forEach((s) => s.setAttribute("stroke", on ? "var(--w-dc)" : "var(--pad)"));
+      wireG.setAttribute("stroke-width", on ? 6 : 4); wireN.setAttribute("stroke-width", on ? 6 : 4);
+      lvl.textContent = on ? "GPIO 5 reads LOW (0 V)" : "GPIO 5 reads HIGH (3.3 V)";
+      cap.innerHTML = on
+        ? `<i class="sw" style="background: var(--w-dc)"></i><strong>Pressed: GPIO 5 joined to GND</strong><span>The pin is pulled to 0 V, so it reads LOW. The internal pull-up only leaks a tiny current.</span>`
+        : `<i class="sw" style="background: var(--line)"></i><strong>Released: the pull-up holds the pin HIGH</strong><span>A resistor inside the chip connects GPIO 5 to 3.3 V, so an open button reads HIGH. Press and hold the button above.</span>`;
+      scopeCap.innerHTML = lastEvent ? `<span class="k">gesture:</span> ${lastEvent}<br><span class="k">debounce waits ${DEBOUNCE} ms of quiet before trusting a change</span>` : `<span class="k">Press the button above.</span> The yellow line is what the pin really does; green is what the program trusts.<br><span class="k">Try a click, a double-click and a long press.</span>`;
+    }
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }
+
+  // ---------- Lesson 03: animated wiring diagram + SPI logic analyzer ----------
+  const WIRES = [
+    { disp: "GND", esp: "GND", idx: 21, color: "--w-gnd", what: "Ground first. Both boards need the same 0 V reference, or no signal makes sense.", speed: 0 },
+    { disp: "VCC", esp: "3V3", idx: 0, color: "--w-vcc", what: "Power for the screen. Use 3V3, not 5V: the ESP32's pins speak 3.3 V.", speed: 0 },
+    { disp: "SCL", esp: "GPIO 12", idx: 17, color: "--w-scl", what: "SPI clock. The ESP ticks this line once per bit, 40 million times a second.", speed: .35 },
+    { disp: "SDA", esp: "GPIO 11", idx: 16, color: "--w-sda", what: "SPI data (MOSI). The bits themselves: the screen reads one on every clock tick.", speed: .6 },
+    { disp: "RES", esp: "GPIO 8", idx: 11, color: "--w-res", what: "Reset. Pulled low once at start-up to reboot the screen's controller chip.", speed: 0 },
+    { disp: "DC", esp: "GPIO 9", idx: 14, color: "--w-dc", what: "Data/Command. Low means the byte is a command, high means it is pixel data.", speed: 1.6 },
+    { disp: "CS", esp: "GPIO 10", idx: 15, color: "--w-cs", what: "Chip select. Low means “I'm talking to you”. Lets several devices share one SPI bus.", speed: 2.4 },
+    { disp: "BLK", esp: "GPIO 7", idx: 6, color: "--w-blk", what: "Backlight. High switches the light on. Without it the screen looks dead even while drawing.", speed: 0 },
+  ];
+
+  function wiringDiagram(root) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const DX = 262, D0 = 150, DSTEP = 34;          // display header pins
+    const EX = 600, E0 = 44, ESTEP = 22;           // ESP32 left header pins
+    const dY = (i) => D0 + i * DSTEP, eY = (i) => E0 + i * ESTEP;
+
+    root.innerHTML = `
+      <div class="wd-bar">
+        <button type="button" class="btn" id="wd-prev">◀ Prev</button>
+        <button type="button" class="btn" id="wd-play">Play</button>
+        <button type="button" class="btn" id="wd-next">Next ▶</button>
+        <button type="button" class="btn" id="wd-all">Show all</button>
+        <button type="button" class="btn" id="wd-sig" aria-pressed="false">Signals</button>
+        <span class="wd-count" id="wd-count"></span>
+      </div>
+      <div class="wd-svg"><svg viewBox="0 0 720 566" role="img" aria-label="Wiring diagram: 8 jumper wires from the display header to the ESP32 left header"></svg></div>
+      <div class="wd-cap" id="wd-cap"></div>
+      <div class="la" id="wd-la" hidden><canvas width="680" height="200" aria-label="Logic analyzer view of one SPI transfer"></canvas><p id="wd-la-cap"></p></div>`;
+    const svg = root.querySelector("svg");
+
+    // Display module: PCB, glass, header on its right edge
+    el("rect", { x: 40, y: 110, width: 236, height: 340, rx: 12, fill: "var(--pcb)", stroke: "var(--pcb-edge)", "stroke-width": 2 }, svg);
+    el("rect", { x: 62, y: 128, width: 150, height: 304, rx: 6, fill: "var(--scope-paper)", stroke: "var(--pcb-edge)" }, svg);
+    const glass = el("rect", { x: 70, y: 136, width: 134, height: 288, rx: 3, fill: "var(--scope-grid)" }, svg);
+    const tg = el("text", { x: 137, y: 284, "text-anchor": "middle", class: "svg-silk" }, svg); tg.textContent = "170 × 320";
+    const tg2 = el("text", { x: 137, y: 298, "text-anchor": "middle", class: "svg-silk" }, svg); tg2.textContent = "ST7789 IPS";
+    const tt = el("text", { x: 40, y: 98, class: "wd-title" }, svg); tt.textContent = "1.9″ DISPLAY MODULE";
+    // ESP32 header strip
+    el("rect", { x: EX - 20, y: 20, width: 100, height: 526, rx: 10, fill: "var(--pcb)", stroke: "var(--pcb-edge)", "stroke-width": 2 }, svg);
+    const te = el("text", { x: EX - 20, y: 14, class: "wd-title" }, svg); te.textContent = "ESP32-S3 · LEFT HEADER";
+    const tu = el("text", { x: EX + 30, y: 536, "text-anchor": "middle", class: "svg-silk" }, svg); tu.textContent = "USB ↓";
+    const espLbls = [];
+    LEFT.forEach((p, i) => {
+      const used = WIRES.some((w) => w.idx === i);
+      el("circle", { cx: EX, cy: eY(i), r: used ? 5 : 3.5, fill: used ? "var(--pad)" : "var(--silk-dim)", opacity: used ? 1 : .5 }, svg);
+      const t = el("text", { x: EX + 14, y: eY(i) + 3.5, class: "svg-silk" }, svg);
+      t.textContent = /^\d+$/.test(p) ? `GPIO ${p}` : p;
+      if (used) { t.setAttribute("style", "fill: var(--silk); font-size: 10px"); espLbls[i] = t; }
+    });
+
+    // Wires (drawn under the pin dots of the display header)
+    const wireLayer = el("g", {}, svg), flowLayer = el("g", {}, svg);
+    const parts = WIRES.map((w, i) => {
+      const y1 = dY(i), y2 = eY(w.idx);
+      const d = `M${DX} ${y1} C ${DX + 150} ${y1}, ${EX - 160} ${y2}, ${EX} ${y2}`;
+      const wire = el("path", { d, class: "wire", stroke: `var(${w.color})` }, wireLayer);
+      const flow = el("path", { d, class: "flow", stroke: "var(--surface)" }, flowLayer);
+      if (w.speed) flow.style.setProperty("--speed", `${w.speed}s`); else flow.style.display = "none";
+      const len = wire.getTotalLength();
+      wire.style.strokeDasharray = `${len}`; wire.style.strokeDashoffset = `${len}`;
+      const a = el("circle", { cx: DX, cy: y1, r: 5.5, class: "endpoint", fill: `var(${w.color})`, stroke: "var(--pcb)", "stroke-width": 2 }, svg);
+      const b = el("circle", { cx: EX, cy: y2, r: 5.5, class: "endpoint", fill: `var(${w.color})`, stroke: "var(--pcb)", "stroke-width": 2 }, svg);
+      const lbl = el("text", { x: DX - 12, y: y1 + 4, "text-anchor": "end", class: "svg-silk" }, svg);
+      lbl.textContent = w.disp; lbl.setAttribute("style", "fill: var(--silk); font-size: 11px");
+      return { wire, flow, a, b, len };
+    });
+
+    let step = 0, playing = false, timer = null, signals = false;   // step = how many wires are placed (0..8)
+    const cap = root.querySelector("#wd-cap"), count = root.querySelector("#wd-count");
+    const playBtn = root.querySelector("#wd-play"), sigBtn = root.querySelector("#wd-sig");
+    const la = root.querySelector("#wd-la");
+
+    function show(n, animate = true) {
+      step = Math.max(0, Math.min(WIRES.length, n));
+      parts.forEach((p, i) => {
+        const placed = i < step, current = i === step - 1;
+        p.wire.classList.toggle("drawing", animate && !reduce);
+        p.wire.style.strokeDashoffset = placed ? "0" : `${p.len}`;
+        p.wire.classList.toggle("dim", placed && !current && step < WIRES.length && !signals);
+        p.wire.classList.toggle("active", current && step < WIRES.length);
+        [p.a, p.b].forEach((c) => { c.classList.toggle("active", current && step < WIRES.length); c.setAttribute("opacity", placed ? 1 : .35); });
+        if (espLbls[WIRES[i].idx]) espLbls[WIRES[i].idx].setAttribute("style", `fill: ${placed ? "var(--silk)" : "var(--silk-dim)"}; font-size: 10px; font-weight: ${current ? 700 : 400}`);
+      });
+      count.textContent = `${step} / ${WIRES.length} wires`;
+      if (step === 0) {
+        cap.innerHTML = `<i class="sw" style="background: var(--line)"></i><strong>Unplug USB first</strong><span>Then press Play, or Next to place one wire at a time.</span>`;
+      } else if (step === WIRES.length) {
+        cap.innerHTML = `<i class="sw" style="background: var(--ok)"></i><strong>All 8 wires placed</strong><span>Double-check VCC is on 3V3. Press Signals to see what travels on each wire.</span>`;
+      } else {
+        const w = WIRES[step - 1];
+        cap.innerHTML = `<i class="sw" style="background: var(${w.color})"></i><strong>Wire ${step}: display ${w.disp} → ${w.esp}</strong><span>${w.what}</span>`;
+      }
+      glass.setAttribute("fill", parts[7] && step >= 8 ? "var(--scope-paper)" : "var(--scope-grid)");
+    }
+    function stopPlay() { playing = false; clearInterval(timer); playBtn.textContent = "Play"; }
+    function startPlay() {
+      if (step >= WIRES.length) show(0, false);
+      playing = true; playBtn.textContent = "Pause";
+      timer = setInterval(() => { if (step >= WIRES.length) return stopPlay(); show(step + 1); }, reduce ? 2200 : 1700);
+      if (step === 0) show(1);
+    }
+    root.querySelector("#wd-prev").addEventListener("click", () => { stopPlay(); show(step - 1); });
+    root.querySelector("#wd-next").addEventListener("click", () => { stopPlay(); show(step + 1); });
+    root.querySelector("#wd-all").addEventListener("click", () => { stopPlay(); show(WIRES.length); });
+    playBtn.addEventListener("click", () => (playing ? stopPlay() : startPlay()));
+    sigBtn.addEventListener("click", () => {
+      signals = !signals; sigBtn.setAttribute("aria-pressed", String(signals));
+      if (signals) { stopPlay(); show(WIRES.length, false); }
+      root.querySelector(".wd-svg").classList.toggle("signals", signals);
+      la.hidden = !signals;
+      show(step, false);
+      signals ? startLA() : stopLA();
+    });
+
+    // ---- Logic analyzer: one real transfer. CS low, command 0x2C (DC low), then pixel 0xF800 = red (DC high) ----
+    const cv = la.querySelector("canvas"), g = cv.getContext("2d"), laCap = la.querySelector("#wd-la-cap");
+    const BYTES = [{ v: 0x2C, dc: 0, label: "0x2C", note: "command: “write to screen memory”" },
+                   { v: 0xF8, dc: 1, label: "0xF8", note: "pixel data, high byte" },
+                   { v: 0x00, dc: 1, label: "0x00", note: "pixel data, low byte → 0xF800 = one red pixel" }];
+    const slots = [];   // each slot: { cs, dc, bit (null = idle), byte }
+    const idle = (n, cs) => { for (let i = 0; i < n; i++) slots.push({ cs, dc: slots.length ? slots[slots.length - 1].dc : 0, bit: null, byte: -1 }); };
+    idle(3, 1); idle(1, 0);
+    BYTES.forEach((b, bi) => { for (let k = 7; k >= 0; k--) slots.push({ cs: 0, dc: b.dc, bit: (b.v >> k) & 1, byte: bi, k }); if (bi === 0) slots.push({ cs: 0, dc: 1, bit: null, byte: -1 }); });
+    idle(1, 0); idle(3, 1);
+    const LX = 52, SW = (cv.width - LX - 8) / slots.length;
+    const ROWS = [{ name: "CS", c: "--w-cs" }, { name: "DC", c: "--w-dc" }, { name: "SCL", c: "--w-scl" }, { name: "SDA", c: "--w-sda" }];
+    const rowY = (r) => 52 + r * 38, HI = 12;
+    let laRaf, t0;
+    function drawLA(pos) {
+      g.clearRect(0, 0, cv.width, cv.height);
+      g.font = "600 12px 'IBM Plex Mono', monospace"; g.textBaseline = "middle";
+      // byte boxes
+      BYTES.forEach((b, bi) => {
+        const xs = slots.findIndex((s) => s.byte === bi), x = LX + xs * SW, w = SW * 8;
+        g.strokeStyle = css("--term-dim"); g.lineWidth = 1; g.strokeRect(x + .5, 8.5, w - 1, 22);
+        g.fillStyle = css(b.dc ? "--w-dc" : "--term-warn"); g.fillText(`${b.label} ${b.dc ? "data" : "cmd"}`, x + 6, 20);
+      });
+      ROWS.forEach((r, ri) => {
+        const y = rowY(ri);
+        g.fillStyle = css("--term-dim"); g.fillText(r.name, 6, y);
+        g.strokeStyle = css(r.c); g.lineWidth = 2; g.beginPath();
+        slots.forEach((s, i) => {
+          const x = LX + i * SW;
+          let lv;
+          if (r.name === "CS") lv = s.cs; else if (r.name === "DC") lv = s.dc; else if (r.name === "SDA") lv = s.bit ?? 0;
+          if (r.name === "SCL") {
+            const ya = y + HI, yb = y - HI;
+            if (s.bit === null) { i ? g.lineTo(x, ya) : g.moveTo(x, ya); g.lineTo(x + SW, ya); }
+            else { g.lineTo(x, ya); g.lineTo(x + SW / 2, ya); g.lineTo(x + SW / 2, yb); g.lineTo(x + SW, yb); g.lineTo(x + SW, ya); }
+          } else {
+            const yy = lv ? y - HI : y + HI;
+            i ? g.lineTo(x, yy) : g.moveTo(x, yy); g.lineTo(x + SW, yy);
+          }
+        });
+        g.stroke();
+      });
+      // bit values under SDA
+      g.font = "10px 'IBM Plex Mono', monospace"; g.fillStyle = css("--term-dim");
+      slots.forEach((s, i) => { if (s.bit !== null) g.fillText(String(s.bit), LX + i * SW + SW / 2 - 3, rowY(3) + 26); });
+      // playhead
+      const px = LX + pos * SW;
+      g.fillStyle = css("--scope-amber"); g.globalAlpha = .18; g.fillRect(px, 36, SW, cv.height - 40); g.globalAlpha = 1;
+      g.strokeStyle = css("--scope-amber"); g.lineWidth = 1.5; g.beginPath(); g.moveTo(px + .5, 36); g.lineTo(px + .5, cv.height - 4); g.stroke();
+      const s = slots[Math.min(slots.length - 1, Math.floor(pos))];
+      if (s.bit !== null) {
+        const b = BYTES[s.byte];
+        laCap.innerHTML = `<span class="k">CS low · DC ${b.dc ? "high" : "low"} · bit ${s.k} =</span> ${s.bit}<br><span class="k">${b.label}:</span> ${b.note}`;
+      } else {
+        laCap.innerHTML = s.cs ? `<span class="k">CS high:</span> the screen ignores the bus<br><span class="k">SCL stays still, nothing is sent</span>` : `<span class="k">CS low:</span> the screen is listening<br><span class="k">DC switches between command and data</span>`;
+      }
+    }
+    function startLA() {
+      t0 = performance.now();
+      const loop = () => { const pos = reduce ? slots.findIndex((s) => s.byte === 0) + 2 : ((performance.now() - t0) / 220) % slots.length; drawLA(pos); if (!reduce) laRaf = requestAnimationFrame(loop); };
+      loop();
+    }
+    function stopLA() { cancelAnimationFrame(laRaf); }
+
+    show(0, false);
+    return () => { stopPlay(); stopLA(); };
+  }
+
+  // ---------- Bench log (mirrors test-esp/HARDWARE_LOG.md) ----------
+  const LOG = [
+    { n: 1, types: ["install"], title: "Install PlatformIO into the project", where: "Mac · test-esp/.venv",
+      cmd: "cd test-esp && uv sync && uv run pio --version",
+      why: "Get the build and flash tool without installing anything globally.",
+      out: "+ platformio==6.2.0  (and 22 dependencies)\nPlatformIO Core, version 6.2.0",
+      result: "test-esp/.venv created (22 MB); uv.lock pins every version." },
+    { n: 2, types: ["install"], title: "Install the ESP32 platform", where: "Mac · ~/.platformio (shared)",
+      cmd: 'uv run pio pkg install -g --platform "https://github.com/pioarduino/platform-espressif32/releases/download/55.03.312-1/platform-espressif32.zip"',
+      why: "Teaches PlatformIO how to build for and flash ESP32 chips. -g puts it in PlatformIO's shared folder.",
+      out: "Unpacking 100%\nTool Manager: tool-esp_install@5.3.5 has been installed!",
+      result: "Platform espressif32 55.03.312 installed." },
+    { n: 3, types: ["install", "build"], title: "First build of all three lessons", where: "Mac · no board",
+      cmd: "uv run pio run -e 01-hello -e 02-led -e 03-display",
+      why: "Check the code compiles. The first build downloads the compiler and the Arduino framework.",
+      out: "01-hello    SUCCESS  00:16:46   RAM 6.9%  Flash 4.8% (317,128 of 6,553,600 bytes)\n02-led      SUCCESS  00:00:08   RAM 7.0%  Flash 5.0%\n03-display  SUCCESS  00:00:22   RAM 7.4%  Flash 5.7%",
+      result: "No warnings. About 4 GB of toolchain downloaded into ~/.platformio." },
+    { n: 4, types: ["read"], title: "Find the board's serial port", where: "Mac only · run by you, then Claude",
+      cmd: "uv run pio device list",
+      why: "See which serial port appears when the board is plugged in.",
+      out: "/dev/cu.usbserial-A5069RR4\nHardware ID: USB VID:PID=0403:6001 SER=A5069RR4 LOCATION=2-1.4\nDescription: FT232R USB UART",
+      result: "An FTDI FT232R chip. Unusual for an S3 board, so step 7 checks what is behind it." },
+    { n: 5, types: ["read"], title: "List USB devices", where: "Mac only",
+      cmd: 'system_profiler SPUSBDataType | grep -iE "FT232|ESP|303a|JTAG|CH34|CP210"',
+      why: "Look for a second, native-USB port on the board.",
+      out: "(only the FT232R matched)",
+      result: "No native USB port. The board talks only through the FT232R." },
+    { n: 6, types: ["failed"], title: "Ask the chip who it is (first try)", where: "failed before opening the port",
+      cmd: "uv run --project test-esp python -m esptool --port /dev/cu.usbserial-A5069RR4 chip-id",
+      why: "Identify the chip behind the port.",
+      out: "ModuleNotFoundError: No module named 'rich_click'",
+      result: "Wrong Python environment. The board was not touched." },
+    { n: 7, types: ["read", "reset"], title: "Ask the chip who it is", where: "Board · RAM only, flash untouched",
+      cmd: "~/.platformio/penv/bin/python -m esptool --port /dev/cu.usbserial-A5069RR4 chip-id",
+      why: "Restarts the chip into its ROM bootloader, loads a helper into RAM, reads chip info, restarts normally.",
+      out: "esptool v5.4.0\nDetecting chip type... ESP32-S3\nChip type:          ESP32-S3 (QFN56) (revision v0.2)\nFeatures:           Wi-Fi, BT 5 (LE), Dual Core + LP Core, 240MHz, Embedded PSRAM 8MB (AP_3v3)\nCrystal frequency:  40MHz\nMAC:                28:84:85:9e:3b:e4\nUploading stub flasher... Running stub flasher... Stub flasher running.\nWARNING: ESP32-S3 has no chip ID. Reading MAC address instead.\nHard resetting via RTS pin...",
+      result: "A genuine ESP32-S3 with 8 MB PSRAM." },
+    { n: 8, types: ["read", "reset"], title: "Read the flash chip", where: "Board · RAM only, flash untouched",
+      cmd: "~/.platformio/penv/bin/python -m esptool --port /dev/cu.usbserial-A5069RR4 flash-id",
+      why: "Confirm the flash size (the N16 part).",
+      out: "Manufacturer: 68\nDevice: 4018\nDetected flash size: 16MB\nFlash type set in eFuse: quad (4 data lines)\nFlash voltage set by eFuse: 3.3V",
+      result: "16 MB flash. It really is an N16R8." },
+    { n: 9, types: ["flash"], title: "Flash lesson 01", where: "Board · writes flash",
+      cmd: "ESP_PORT=/dev/cu.usbserial-A5069RR4 uv run pio run -e 01-hello -t upload",
+      why: "Compile 01-hello and write bootloader, partition table, boot_app0 and the program. The rest of the flash is untouched.",
+      out: "Writing at 0x0005e730 [██████████████████████████████] 100.0% 178.48kB/178.48kB [2s]\nWrote 321328 bytes (182765 compressed) at 0x00010000 in 2.9 seconds (871.7 kbit/s).\nVerifying written data...\nHash of data verified.\nHard resetting via RTS pin...\n01-hello  SUCCESS  00:00:18.481",
+      result: "Lesson 01 on the board, write verified." },
+    { n: 10, types: ["reset", "read"], title: "Watch the board start", where: "Board · serial at 115200 baud",
+      cmd: "~/.platformio/penv/bin/python scratchpad/readserial.py /dev/cu.usbserial-A5069RR4 9",
+      why: "Restart through RTS and print 9 s of serial output. Same as pio device monitor, which needs an interactive terminal.",
+      out: "ESP-ROM:esp32s3-20210327\nrst:0x1 (POWERON),boot:0xb (SPI_FAST_FLASH_BOOT)\nentry 0x403c88b8\n+---------------- ESP32 identity card ----------------+\n| chip      ESP32-S3 rev 2, 2 cores @ 240 MHz\n| flash     16 MB   (the N16 part: expect 16)\n| psram     8 MB   (the R8 part: expect ~8)\n| free heap 337 KB\n| mac       E43B9E858428\n| sdk       v5.5.5\n+-----------------------------------------------------+\n[  1529][I][main.cpp:60] setup(): RGB LED on GPIO 48. You should see a slow rainbow.\n[  5002][I][main.cpp:76] loop(): alive for 5s, hue=174",
+      result: "The program runs. The MAC prints byte-reversed; fixed in the source, not yet re-flashed." },
+    { n: 11, types: ["observe"], title: "Look at the board", where: "you",
+      cmd: null, why: "The on-board RGB LED cycles through colours.", out: null,
+      result: "PIN_RGB 48 is correct." },
+    { n: 12, types: ["flash"], title: "Flash lesson 02", where: "Board · writes flash · run by you",
+      cmd: "uv run pio run -e 02-led -t upload",
+      why: "Compile 02-led and write it over 01-hello. Program at 0x10000 is now 332,672 bytes. Build finished 14:04:06.",
+      out: "(not captured: you ran it in your own terminal)",
+      result: "The breadboard LED lights up, so GPIO 4 → resistor → LED → GND is wired correctly." },
+    { n: 13, types: ["flash"], title: "Flash lesson 03", where: "Board · writes flash · run by you",
+      cmd: "uv run pio run -e 03-display -t upload",
+      why: "Compile 03-display with the Adafruit GFX and ST7789 libraries and write it over 02-led. Program is now 377,696 bytes. Build finished 14:33:21.",
+      out: "(not captured: you ran it in your own terminal)",
+      result: "Screen works: colour check OK, bench scope at 22 fps. All 8 display wires are correct." },
+    { n: 14, types: ["install", "build"], title: "Build lesson 03b", where: "Mac · no board",
+      cmd: "uv run pio run -e 03b-showcase",
+      why: "Compile the display showcase. The new environment installed its own copy of the display libraries into test-esp/.pio.",
+      out: "Library Manager: Adafruit GFX Library@1.12.6 has been installed!\nLibrary Manager: Adafruit BusIO@1.17.4 has been installed!\nLibrary Manager: Adafruit ST7735 and ST7789 Library@1.11.0 has been installed!\nLibrary Manager: Adafruit seesaw Library@1.7.9 has been installed!\nLibrary Manager: SD@1.3.0 has been installed!\nRAM:   18.3% (used 60,128 of 327,680 bytes)\nFlash:  6.4% (used 418,832 of 6,553,600 bytes)\n03b-showcase   SUCCESS   00:00:23",
+      result: "No warnings. BusIO, seesaw and SD arrived unpinned, as dependencies of the ST7789 library." },
+    { n: 15, types: ["build", "failed"], title: "Pin the library versions", where: "Mac · no board",
+      cmd: "uv run pio run -e 03-display -e 03b-showcase",
+      why: "First try pinned all three extras. That made PlatformIO compile SD, which does not build for this chip. Fixed by pinning only BusIO and ignoring SD and seesaw.",
+      out: "first try:\n*** [.pio/build/03b-showcase/libf37/SD/utility/SdFile.cpp.o] Error 1\n03-display     FAILED\n03b-showcase   FAILED\n\nafter the fix:\n03-display     SUCCESS   Flash 371,172 bytes (identical to before)\n03b-showcase   SUCCESS   Flash 418,832 bytes",
+      result: "Both build. Nothing was sent to the board." },
+    { n: 16, types: ["build"], title: "Build 03b with the push button", where: "Mac · no board",
+      cmd: "uv run pio run -e 03b-showcase",
+      why: "Compile the showcase after adding the GPIO 5 button: interrupt, debounce, click / double-click / long press.",
+      out: "RAM:   18.5% (used 60,776 of 327,680 bytes)\nFlash:  6.4% (used 422,028 of 6,553,600 bytes)\n03b-showcase   SUCCESS   00:00:16",
+      result: "No warnings. Nothing was sent to the board." },
+    { n: 17, types: ["build"], title: "Split 03b into two variations", where: "Mac · no board",
+      cmd: "uv run pio run -e 03b-showcase -e 03b-showcase-button",
+      why: "Keep the BOOT-only showcase as variation 1 and put the push button in variation 2. Each build compiles only its own controls file.",
+      out: "Compiling .pio/build/03b-showcase/src/03b-showcase/controls/boot_only.cpp.o\nRAM:   18.3% (used 60,128 bytes)   Flash 419,200 bytes\nCompiling .pio/build/03b-showcase-button/src/03b-showcase/controls/with_button.cpp.o\nRAM:   18.5% (used 60,776 bytes)   Flash 422,244 bytes\n03b-showcase         SUCCESS   00:00:16\n03b-showcase-button  SUCCESS   00:00:18",
+      result: "No warnings. Variation 1 uses exactly the same RAM as the original BOOT version. Nothing was sent to the board." },
+    { n: 18, types: ["flash"], title: "Flash lesson 03b, variation 1", where: "Board · writes flash · run by you",
+      cmd: "uv run pio run -e 03b-showcase -t upload",
+      why: "Write the BOOT-only showcase over 03-display. Firmware file 426,384 bytes, built 15:08:54.",
+      out: "(not captured: you ran it in your own terminal)",
+      result: "Worked at first, then the screen went dark. Cause not known yet; investigating." },
+    { n: 19, types: ["flash"], title: "Variation 2 on the board, button not reacting", where: "Board · run by you",
+      cmd: "uv run pio run -e 03b-showcase-button -t upload",
+      why: "You report running variation 2. The firmware file was not rebuilt after 15:09:12, so the flash time is unknown.",
+      out: "(not captured: you ran it in your own terminal)",
+      result: "All four scenes cycle, so the dark screen is solved (likely a moved jumper). The push button gets no reaction: checking the press dot, then the start-up log." },
+    { n: 20, types: ["observe"], title: "Cause found: button wire on GPIO 4", where: "you · photo of the bench",
+      cmd: null, why: "The photo showed the ESP32 sits in a screw-terminal expansion board, not in the breadboard, so the guide's “breadboard row” instructions did not apply. The GND wire was right; the signal wire was in socket 4, next to 5.", out: null,
+      result: "Fix: move the signal wire to socket 5. Guide and README now describe wiring to the ESP32's own sockets. GPIO 4 is not driven by variation 2, so nothing was harmed." },
+    { n: 21, types: ["build", "failed"], title: "Build lesson W1 (Wi-Fi scanner)", where: "Mac · no board",
+      cmd: "uv run pio run -e w1-scan -e 03b-showcase -e 03b-showcase-button",
+      why: "First Wi-Fi lesson. Shared screen and button code moved into lib/bench/; both 03b variations rebuilt to prove they still compile. First try clashed with Arduino-ESP32's own global called Network; renamed to ScanResult.",
+      out: "first try:\nsrc/w1-scan/main.cpp:56:11: error: 'Network' does not name a type\nw1-scan FAILED · 03b-showcase SUCCESS · 03b-showcase-button SUCCESS\n\nafter the fix:\nRAM:   14.5% (used 47,660 of 327,680 bytes)\nFlash: 14.7% (used 962,951 of 6,553,600 bytes)\nw1-scan        SUCCESS   00:00:14",
+      result: "No warnings. The Wi-Fi stack adds about 540 KB of flash. Nothing was sent to the board." },
+    { n: 22, types: ["build"], title: "Merge the Wi-Fi labs: build W1 Scan & join", where: "Mac · no board",
+      cmd: "uv run pio run -e wifi-lab",
+      why: "The Wi-Fi track is now 3 labs plus a bonus on one firmware (wifi-lab, replacing the never-flashed w1-scan). W1 adds joining (password over serial into NVS, never logged), reconnects with plain-language reasons, internet time, bench.local and a status view.",
+      out: "first build: 2 format warnings (WiFi.channel() is a 32-bit long), fixed with casts\nRAM:   15.8% (used 51,756 of 327,680 bytes)\nFlash: 16.0% (used 1,051,143 of 6,553,600 bytes)\nwifi-lab       SUCCESS   00:00:13",
+      result: "No warnings. Nothing was sent to the board." },
+  ];
+  const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
+  let logFilter = "all";
+  const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  function renderLog() {
+    const f = document.getElementById("filters");
+    f.replaceChildren();
+    TYPES.forEach((t) => {
+      const b = document.createElement("button"); b.type = "button"; b.id = `filter-${t}`;
+      const count = t === "all" ? LOG.length : LOG.filter((e) => e.types.includes(t)).length;
+      b.textContent = `${t} ${count}`; b.setAttribute("aria-pressed", String(logFilter === t));
+      b.addEventListener("click", () => { logFilter = t; renderLog(); });
+      f.appendChild(b);
+    });
+    const list = document.getElementById("entries");
+    list.innerHTML = LOG.filter((e) => logFilter === "all" || e.types.includes(logFilter)).map((e) => `
+      <li class="${e.types.includes("flash") ? "is-flash" : ""}">
+        <span class="e-num">${String(e.n).padStart(2, "0")}</span>
+        <div class="e-body">
+          <div class="e-top">${e.types.map((t) => `<span class="pill ${t}">${t}</span>`).join("")}<span class="e-title">${esc(e.title)}</span><span class="e-where">${esc(e.where)}</span></div>
+          <p class="e-why">${esc(e.why)}</p>
+          ${e.cmd ? `<div class="e-cmd"><code>${esc(e.cmd)}</code><button type="button" data-copy="${e.n}">Copy</button></div>` : ""}
+          ${e.out ? `<details class="e-out" ${e.types.includes("flash") ? "open" : ""}><summary>Response</summary><pre>${esc(e.out)}</pre></details>` : ""}
+          <p class="e-result"><b>Result</b>${esc(e.result)}</p>
+        </div>
+      </li>`).join("");
+    list.querySelectorAll("button[data-copy]").forEach((btn) => btn.addEventListener("click", () => {
+      const entry = LOG.find((e) => String(e.n) === btn.dataset.copy);
+      navigator.clipboard?.writeText(entry.cmd).then(() => { btn.textContent = "Copied"; setTimeout(() => (btn.textContent = "Copy"), 1400); })
+        .catch(() => { const r = document.createRange(); r.selectNodeContents(btn.previousElementSibling); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); btn.textContent = "Selected"; });
+    }));
+  }
+
+  drawBoard();
+  render();
+  renderLog();
+})();
+</script>
