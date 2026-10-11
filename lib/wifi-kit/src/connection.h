@@ -37,7 +37,7 @@ class Connection {
     prefs_.begin("wifi", /*readOnly=*/true);
     ssid_ = prefs_.getString("ssid", "");
     pass_ = prefs_.getString("pass", "");
-    tz_ = prefs_.getString("tz", kDefaultTz);
+    tz_ = prefs_.isKey("tz") ? prefs_.getString("tz") : String(kDefaultTz);  // isKey: no error log when unset
     prefs_.end();
 
     if (ssid_.isEmpty()) {
@@ -99,8 +99,16 @@ class Connection {
       connectedAt_ = now;
       log_i("Connected to '%s': IP %s, channel %d, %ld dBm", ssid_.c_str(), WiFi.localIP().toString().c_str(),
             static_cast<int>(WiFi.channel()), static_cast<long>(WiFi.RSSI()));
+      // Power save lets the radio doze between router beacons and miss requests (ARP, ping, HTTP).
+      // Fine for a sensor that only sends; a web server has to stay awake to be reachable.
+      WiFi.setSleep(false);
       configTzTime(tz_.c_str(), "pool.ntp.org", "time.cloudflare.com");
-      if (MDNS.begin(kHostname)) log_i("Reachable as %s.local (try: ping %s.local)", kHostname, kHostname);
+      // mDNS follows reconnects by itself, so start it (and add the service) only once.
+      if (!mdnsUp_ && MDNS.begin(kHostname)) {
+        MDNS.addService("http", "tcp", 80);  // lets browsers and apps discover the web page
+        mdnsUp_ = true;
+      }
+      if (mdnsUp_) log_i("Reachable as %s.local (try: ping %s.local, or open http://%s.local)", kHostname, kHostname, kHostname);
       else log_w("mDNS did not start");
       justConnected_ = true;
     }
@@ -179,7 +187,7 @@ class Connection {
   State state_ = State::NoCredentials;
   volatile bool gotIp_ = false, dropped_ = false;
   volatile uint8_t lastReason_ = 0;
-  bool justConnected_ = false;
+  bool justConnected_ = false, mdnsUp_ = false;
   uint32_t startedAt_ = 0, connectedAt_ = 0, failedAt_ = 0, lastSample_ = 0;
   int8_t rssi_[kHistory] = {};
   int head_ = 0, samples_ = 0;

@@ -1,0 +1,7 @@
+{
+  "name": "wifi-kit",
+  "version": "0.1.0",
+  "description": "Shared by the Wi-Fi labs: async scanner, saved-network connection, ping, and the scanner and status screens.",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

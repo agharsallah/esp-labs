@@ -1,4 +1,4 @@
-// The Wi-Fi lab's screens.
+// The screens every Wi-Fi lab shares (W2 adds its own in src/wifi-lab-w2/web_views.h).
 //   List      strongest first: signal bars, name, channel, lock, dBm
 //   Channels  every network as a hump over the channels it occupies (the classic analyser view)
 //   Radar     stronger = closer to the centre, with a sweeping beam
@@ -6,6 +6,7 @@
 #pragma once
 
 #include <Fonts/FreeSans9pt7b.h>
+#include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSansBold24pt7b.h>
 #include <Fonts/FreeSansBold9pt7b.h>
 #include <math.h>
@@ -64,8 +65,6 @@ inline void drawLock(FrameBuffer &fb, int x, int y, uint16_t c) {
 
 // ---- Header and footer shared by all views ----------------------------------------------
 
-constexpr int kViews = 4;
-
 inline uint16_t connectionColor(Connection::State st) {
   switch (st) {
     case Connection::State::Connected: return pal::teal;
@@ -75,7 +74,8 @@ inline uint16_t connectionColor(Connection::State st) {
   }
 }
 
-inline void header(FrameBuffer &fb, const Scanner &s, int view, const char *viewName, Connection::State st) {
+// One dot per view (viewCount of them), the current one bright, right-aligned next to the link dot.
+inline void header(FrameBuffer &fb, const Scanner &s, int view, int viewCount, const char *viewName, Connection::State st) {
   fb.setFont(&FreeSansBold9pt7b);
   fb.setTextColor(pal::ink);
   fb.setCursor(8, 18);
@@ -90,13 +90,14 @@ inline void header(FrameBuffer &fb, const Scanner &s, int view, const char *view
   fb.setTextColor(pal::muted);
   if (s.scans() == 0 && s.scanning()) fb.print("first scan...");
   else fb.printf("%u networks  %lu ms", unsigned(s.networks().size()), static_cast<unsigned long>(s.lastScanMs()));
-  for (int i = 0; i < kViews; i++) fb.fillCircle(266 + i * 10, 20, 3, i == view ? pal::ink : pal::dim);
+  const int firstDot = 298 - (viewCount - 1) * 10;
+  for (int i = 0; i < viewCount; i++) fb.fillCircle(firstDot + i * 10, 20, 3, i == view ? pal::ink : pal::dim);
   // Wi-Fi link indicator: teal joined, amber joining, coral failed, grey not set up
   fb.fillCircle(312, 20, 4, connectionColor(st));
   fb.drawFastHLine(0, 28, kW, pal::dim);
 }
 
-inline void footer(FrameBuffer &fb, const char *hint, bool autoScan, const Scanner &s) {
+inline void footer(FrameBuffer &fb, const char *hint, bool autoScan, const Scanner &s, uint32_t intervalS) {
   fb.fillRect(0, kH - 11, kW, 11, pal::night);
   fb.setFont(nullptr);
   fb.setTextSize(1);
@@ -111,7 +112,8 @@ inline void footer(FrameBuffer &fb, const char *hint, bool autoScan, const Scann
     for (int i = 0; i < dots; i++) fb.print('.');
   } else {
     fb.setTextColor(autoScan ? pal::teal : pal::muted);
-    fb.print(autoScan ? "auto 10 s" : "auto off");
+    if (autoScan) fb.printf("auto %lu s", static_cast<unsigned long>(intervalS));
+    else fb.print("auto off");
   }
 }
 
