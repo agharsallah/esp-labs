@@ -15,6 +15,18 @@
 #define PIN_RGB 48
 #endif
 
+// The BOOT button already on the board. It only matters at power-on (hold it to enter flash mode);
+// once our program runs, GPIO 0 is a normal input. Pressed = LOW. Used from lesson 03b.
+#ifndef PIN_BOOT_BTN
+#define PIN_BOOT_BTN 0
+#endif
+
+// Lesson 03b: external push button. GPIO 5 -> one leg, the diagonally opposite leg -> GND.
+// The internal pull-up makes the pin read HIGH when up and LOW when pressed.
+#ifndef PIN_BUTTON
+#define PIN_BUTTON 5
+#endif
+
 // Lesson 02: external LED. GPIO 4 -> 220-330 ohm resistor -> LED long leg (+), short leg (-) -> GND.
 #ifndef PIN_LED
 #define PIN_LED 4
