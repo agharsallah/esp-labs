@@ -1,16 +1,17 @@
-// Wi-Fi lab: one firmware that grows with each Wi-Fi lesson.
-//   W1 Scan & join (this version)   scanner views + join your network + status view
-//   W2 Phone control (next)         web dashboard, set-up page, updates from the browser
-//   W3 Internet & Hardware Diary    HTTPS + JSON, posting bench entries to the API
+// Wi-Fi lab W1: scan & join.  uv run pio run -e wifi-lab-w1 -t upload
+// The ESP32 lists every 2.4 GHz network nearby, then joins yours: pick it from the scan table and
+// type the password once (stored on the chip in NVS, never in code or the log). Once joined: internet
+// time, bench.local and a live signal chart. `ping` tests the network from the board's side.
 //
-// Wiring: the screen from lesson 03, push button on GPIO 5 and BOOT (both do the same).
+// Wiring: the screen from lesson 03. The push button on GPIO 5 is optional: it does exactly what
+// BOOT does, and with nothing wired its internal pull-up keeps it quiet.
 //
-// Views: networks · channels · radar · status (opens by itself once joined)
-// Button: click = next view · double-click = scan now · long press = auto-scan on/off
-// Serial: scan | view <1-4> | auto on|off | join <n> | forget | reconnect | status | tz <TZ> | help
+// Views: networks · channels · radar · status
+// Button or BOOT: click = next view · double-click = scan now · long press = auto-scan on/off
+// Serial: scan | view <1-4> | auto on|off | join <n> | forget | reconnect | status | tz <TZ> |
+//         ping [ip] | help
 //
-// Joining: type `join 3` (3 = the number in the scan table), then the password on the next line.
-// The password goes to NVS on the chip. It is never in code, git or the log (only its length).
+// The saved network is shared with W2 (same NVS namespace), so switching labs keeps it.
 #include <Arduino.h>
 #include <WiFi.h>
 
@@ -18,19 +19,25 @@
 #include "color.h"
 #include "connection.h"
 #include "display.h"
+#include "pinger.h"
 #include "pins.h"
 #include "scanner.h"
 #include "views.h"
 
 namespace {
 
-constexpr uint32_t kAutoScanMs = 10'000;  // pause between automatic scans
-constexpr uint32_t kPageFlipMs = 4'000;   // list view: next page after this long
+constexpr uint32_t kAutoScanMs = 10'000;  // pause between automatic scans when not joined
+// When joined, every scan takes the radio off the router's channel for ~3 s. Scan less often then.
+constexpr uint32_t kAutoScanJoinedMs = 60'000;
+constexpr uint32_t kPageFlipMs = 4'000;  // list view: next page after this long
 constexpr int kStatusView = 3;
+const char *const kViewNames[] = {"networks", "channels", "radar", "status"};
+constexpr int kViews = sizeof(kViewNames) / sizeof(kViewNames[0]);
 
 Display display;
 Scanner scanner;
 Connection connection;
+Pinger pinger;
 Button external(PIN_BUTTON, "button");
 Button boot(PIN_BOOT_BTN, "BOOT");
 
@@ -42,8 +49,6 @@ struct {
   String pendingSsid;  // set by `join <n>`: the next serial line is the password
   bool awaitingPassword = false;
 } state;
-
-const char *const kViewNames[] = {"networks", "channels", "radar", "status"};
 
 // ---- Serial output ---------------------------------------------------------------------
 
@@ -67,28 +72,32 @@ void printStatus() {
     case State::Connecting: Serial.printf("Joining '%s'...\n", connection.ssid().c_str()); break;
     case State::Failed: Serial.printf("Could not join '%s': %s\n", connection.ssid().c_str(), Connection::reasonHint(connection.lastReason())); break;
     case State::Connected:
-      Serial.printf("Joined '%s' | IP %s | %s.local | ch %d | %ld dBm | time %s | tz %s\n", connection.ssid().c_str(),
+      Serial.printf("Joined '%s' | IP %s | %s.local | ch %d | %ld dBm | time %s\n", connection.ssid().c_str(),
                     WiFi.localIP().toString().c_str(), Connection::kHostname, static_cast<int>(WiFi.channel()),
-                    static_cast<long>(WiFi.RSSI()), connection.timeSynced() ? "synced" : "not yet",
-                    connection.timezone().c_str());
+                    static_cast<long>(WiFi.RSSI()), connection.timeSynced() ? "synced" : "not yet");
       break;
   }
 }
 
 void printHelp() {
   Serial.println();
-  Serial.println("Commands: scan | view <1-4> | auto on|off | join <#> | forget | reconnect | status | tz <TZ> | help");
-  Serial.println("Button (GPIO 5) or BOOT: click = next view, double-click = scan now, long press = auto-scan on/off");
+  Serial.println("Commands: scan | view <1-4> | auto on|off | join <#> | forget | reconnect | status | tz <TZ>");
+  Serial.println("          ping (the router) | ping <ip> (e.g. your computer: can the board reach it?) | help");
+  Serial.println("Button (GPIO 5, optional) or BOOT: click = next view, double-click = scan now, long press = auto-scan on/off");
 }
 
-// ---- Actions ---------------------------------------------------------------------------
+// ---- Actions (shared by the buttons and serial) -----------------------------------------
+
+uint32_t autoScanInterval() {
+  return connection.state() == Connection::State::Connected ? kAutoScanJoinedMs : kAutoScanMs;
+}
 
 void scanNow(const char *why) {
   if (scanner.start()) log_i("scan started (%s)", why);
 }
 
 void setView(int v) {
-  state.view = (v % views::kViews + views::kViews) % views::kViews;
+  state.view = (v % kViews + kViews) % kViews;
   state.page = 0;
   state.pageFlippedAt = millis();
   log_i("view %d: %s", state.view + 1, kViewNames[state.view]);
@@ -150,12 +159,19 @@ void handleCommand(String raw) {
   if (lower == "forget") return connection.forget();
   if (lower == "reconnect") return connection.connect();
   if (lower == "status") return printStatus();
+  if (lower == "ping" || lower.startsWith("ping ")) {
+    IPAddress target = WiFi.gatewayIP();
+    if (connection.state() != Connection::State::Connected) log_w("ping needs a network: join one first");
+    else if (lower.length() > 5 && !target.fromString(line.substring(5))) log_w("not an IP address: %s", line.substring(5).c_str());
+    else pinger.start(target);
+    return;
+  }
   if (lower.startsWith("join ")) return startJoin(lower.substring(5).toInt());
   if (lower.startsWith("tz ")) return connection.setTimezone(line.substring(3));
   if (lower.startsWith("view ")) {
     const long v = lower.substring(5).toInt();
-    if (v < 1 || v > views::kViews) {
-      log_w("view needs 1-%d, got '%s'", views::kViews, lower.substring(5).c_str());
+    if (v < 1 || v > kViews) {
+      log_w("view needs 1-%d, got '%s'", kViews, lower.substring(5).c_str());
       return;
     }
     return setView(v - 1);
@@ -187,13 +203,15 @@ void setup() {
     log_e("No memory for the frame buffer. Stopping.");
     return;
   }
+  rgbLedWrite(PIN_RGB, 0, 0, 0);
   external.begin();
   boot.begin();
   scanner.begin();
   connection.begin();
-  log_i("Wi-Fi lab W1: station mode, MAC %s. Radio: 2.4 GHz only.", WiFi.macAddress().c_str());
+  log_i("wifi-lab-w1: MAC %s. Radio: 2.4 GHz only.", WiFi.macAddress().c_str());
   printHelp();
-  scanNow("start-up");
+  // A scan can't start while the radio is busy joining; the loop scans once we're settled.
+  if (connection.state() != Connection::State::Connecting) scanNow("start-up");
 }
 
 void loop() {
@@ -202,22 +220,26 @@ void loop() {
     delay(1000);
     return;
   }
+  const uint32_t now = millis();
+
   pollSerial();
   handleButton(external);
   handleButton(boot);
   connection.loop();
   if (connection.takeJustConnected()) setView(kStatusView);
 
-  const uint32_t now = millis();
   if (scanner.poll()) {
     if (scanner.failed()) log_w("scan failed, will retry");
     else log_i("scan %lu done: %u networks in %lu ms", static_cast<unsigned long>(scanner.scans()),
                unsigned(scanner.networks().size()), static_cast<unsigned long>(scanner.lastScanMs()));
     printResults();
   }
-  // Don't scan while joining: the radio needs to stay on the router's channel.
+  // No automatic scans while joining: the radio must stay on the router's channel.
   const bool joining = connection.state() == Connection::State::Connecting;
-  if (state.autoScan && !joining && !scanner.scanning() && now - scanner.finishedAt() >= kAutoScanMs) scanNow("auto");
+  // millis() here, not `now`: a scan that finished during poll() above has a finish time later
+  // than `now`, and `now - finishedAt` would wrap around to a huge number and scan again at once.
+  if (state.autoScan && !joining && !scanner.scanning() && millis() - scanner.finishedAt() >= autoScanInterval())
+    scanNow("auto");
 
   if (state.view == 0 && now - state.pageFlippedAt >= kPageFlipMs) {
     state.page++;
@@ -232,7 +254,7 @@ void loop() {
     case 2: views::radar(fb, nets, now / 1000.0f, scanner.scanning()); break;
     default: views::status(fb, connection, now / 1000.0f); break;
   }
-  views::header(fb, scanner, state.view, kViewNames[state.view], connection.state());
-  views::footer(fb, "click: view  double: scan  hold: auto", state.autoScan, scanner);
+  views::header(fb, scanner, state.view, kViews, kViewNames[state.view], connection.state());
+  views::footer(fb, "click: view  double: scan  hold: auto", state.autoScan, scanner, autoScanInterval() / 1000);
   display.push();
 }
