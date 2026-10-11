@@ -6,8 +6,9 @@ and paste the result into HARDWARE_LOG.md.
     uv run python tools/read_serial.py /dev/cu.usbserial-A5069RR4 10            # just listen
     uv run python tools/read_serial.py /dev/cu.usbserial-A5069RR4 10 --reset    # restart, then listen
 
-Without --reset the board keeps running untouched: DTR and RTS stay released, and on the
-usual ESP32 auto-reset circuit that leaves the EN (reset) pin alone.
+Without --reset we leave DTR and RTS released, which normally leaves the EN (reset) pin
+alone. Some USB-serial chips still pulse those lines while the port opens (seen with this
+bench's FTDI FT232R on macOS), which restarts the board once. Harmless, but expect it.
 """
 
 import argparse
