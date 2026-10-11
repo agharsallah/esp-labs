@@ -1,0 +1,5 @@
+# PlatformIO build output and local package cache
+.pio/
+.venv/
+# Local overrides (serial port, etc.)
+.env

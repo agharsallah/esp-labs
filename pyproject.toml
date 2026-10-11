@@ -1,0 +1,12 @@
+[project]
+name = "test-esp"
+version = "0.1.0"
+description = "Hands-on ESP32-S3 learning sessions (PlatformIO + Arduino framework)."
+requires-python = ">=3.14"
+dependencies = [
+  # The build/flash/monitor CLI. Run it as `uv run pio ...` so it stays inside this folder's venv.
+  "platformio==6.2.0",
+]
+
+[tool.uv]
+package = false

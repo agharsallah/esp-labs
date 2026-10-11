@@ -1,0 +1,42 @@
+// The one place that says which wire goes where.
+// Change a number here (or pass -DPIN_xxx=N as a build flag) and every lesson follows.
+//
+// Pins to keep away from on the ESP32-S3-N16R8:
+//   0, 3, 45, 46   strapping pins: they decide how the chip boots
+//   19, 20         native USB D- / D+
+//   26-32          wired to the flash chip
+//   33-37          wired to the octal PSRAM (that's the "R8" in N16R8)
+//   43, 44         UART0 TX / RX: the serial monitor on the "COM" port
+#pragma once
+
+// On-board addressable RGB LED (WS2812). Most N16R8 DevKitC clones use 48;
+// v1.1 boards use 38. If lesson 01 shows no colour, try 38.
+#ifndef PIN_RGB
+#define PIN_RGB 48
+#endif
+
+// Lesson 02: external LED. GPIO 4 -> 220-330 ohm resistor -> LED long leg (+), short leg (-) -> GND.
+#ifndef PIN_LED
+#define PIN_LED 4
+#endif
+
+// Lesson 03: 1.9" ST7789 SPI display. These are the S3's native SPI2 (FSPI) pins, the fastest route.
+// Module label -> ESP32-S3 pin
+#ifndef PIN_TFT_SCLK
+#define PIN_TFT_SCLK 12  // SCL / SCK / CLK
+#endif
+#ifndef PIN_TFT_MOSI
+#define PIN_TFT_MOSI 11  // SDA / MOSI / DIN
+#endif
+#ifndef PIN_TFT_CS
+#define PIN_TFT_CS 10    // CS
+#endif
+#ifndef PIN_TFT_DC
+#define PIN_TFT_DC 9     // DC / RS / A0
+#endif
+#ifndef PIN_TFT_RST
+#define PIN_TFT_RST 8    // RES / RST
+#endif
+#ifndef PIN_TFT_BL
+#define PIN_TFT_BL 7     // BLK / BL / LED (backlight)
+#endif
