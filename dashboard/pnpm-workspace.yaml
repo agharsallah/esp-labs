@@ -1,0 +1,7 @@
+# Its own pnpm project: this file stops pnpm from treating the dashboard as part of the
+# hardware-diary monorepo workspace one level up.
+packages: []
+# Deterministic installs: `pnpm add` writes exact versions.
+savePrefix: ""
+allowBuilds:
+  esbuild: true
