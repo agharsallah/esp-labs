@@ -156,25 +156,92 @@ flowchart LR
 
 ## Wi-Fi track
 
-The ESP32-S3 radio is 2.4 GHz only (802.11 b/g/n): 5 GHz networks never show up. All Wi-Fi labs grow **one firmware**, `wifi-lab` (`uv run pio run -e wifi-lab -t upload`). Each lab adds features instead of starting over.
+The ESP32-S3 radio is 2.4 GHz only (802.11 b/g/n): 5 GHz networks never show up. Each lab is **its own firmware with its own command**: `uv run pio run -e wifi-lab-w1 -t upload`, `-e wifi-lab-w2`, and so on. The code they share (scanner, connection, ping, screens) lives in [`lib/wifi-kit`](lib/wifi-kit/src), so a later lab adds features instead of copying. The saved network is shared too: switching labs keeps it.
+
+Every lab needs the screen from lesson 03. The **push button on pin 5 is optional**: it does exactly what BOOT does, and with nothing wired the chip's internal pull-up keeps the pin quiet.
 
 ```mermaid
 flowchart LR
   W1["W1 · Scan & join<br/>scanner, join, status view"] --> W2["W2 · Phone control<br/>web dashboard, set-up page, OTA"]
-  W1 --> W3["W3 · Internet & Hardware Diary<br/>HTTPS, JSON, post to the API"]
+  W1 --> W3["W3 · Internet & AI<br/>HTTPS + JSON weather, AI oracle via LiteLLM"]
   W1 -.-> W4["W4 · Radio lab (bonus)<br/>channel activity, ESP-NOW"]
+  W3 -.-> W5["W5 · Hardware Diary<br/>post to this repo's API"]
 ```
 
 ### Lab W1: Scan & join
 
-Same wiring as 03b variation 2 (screen, push button on pin 5, BOOT).
+`uv run pio run -e wifi-lab-w1 -t upload` · code in [`src/wifi-lab-w1`](src/wifi-lab-w1/main.cpp). Screen from lesson 03; push button on pin 5 optional (BOOT does the same).
 
 - **Views:** networks (bars, name, channel, lock, dBm) · channels (each network as a hump over the ~4.4 channels its 22 MHz signal covers; 1, 6 and 11 don't overlap) · radar (stronger = closer) · status (clock from internet time, IP, `bench.local`, 60 s signal chart; opens by itself once joined).
 - **Joining:** in the serial monitor, `join <#>` with the number from the scan table, then the password on the next line. It is stored in NVS on the chip, never in code, git or the log (only its length is logged). It rejoins after power-off; `forget` erases it.
-- **Button or BOOT:** click = next view, double-click = scan now, hold = auto-scan every 10 s on/off.
-- **Serial:** `scan`, `view <1-4>`, `auto on|off`, `join <#>`, `forget`, `reconnect`, `status`, `tz <POSIX TZ>` (default Central European time), `help`.
+- **Button or BOOT:** click = next view, double-click = scan now, hold = auto-scan on/off (every 10 s, every 60 s once joined: each scan takes the radio off your router's channel for ~3 s).
+- **Serial:** `scan`, `view <1-4>`, `auto on|off`, `join <#>`, `forget`, `reconnect`, `status`, `tz <POSIX TZ>` (default Central European time), `ping` (the router) or `ping <ip>` (e.g. your computer), `help`.
 - **Disconnects** are logged with a plain-language reason ("wrong password?", "network not found"); it retries every 30 s.
 - The monitor shows your neighbours' network names and what you type, including the password. Keep that out of anything shared; this repo's log records counts only.
+
+### Lab W2: Phone control
+
+`uv run pio run -e wifi-lab-w2 -t upload` · code in [`src/wifi-lab-w2`](src/wifi-lab-w2/main.cpp). Same wiring as W1. Two variations, like 03b. **Variation 1 · on your Wi-Fi** is everything from W1, plus:
+
+- **`http://bench.local`**: a phone page with status, screen view, brightness, auto-scan, a message for the screen, the LED colour, the networks, live button events and admin actions.
+- **REST API** under `/api` (list at `/api`) and a **WebSocket** at `/ws` that pushes status every second, scan results, button presses and update progress.
+- **Set-up network:** with no saved Wi-Fi (or after a minute of failed joins) the board also opens `bench-setup`. Its password is shown on the screen only. Join it from a phone and the set-up page opens by itself (captive portal); pick a network and type its password.
+- **Firmware updates over HTTP** (`POST /api/ota`): written to the other app slot and verified before the reboot, so a failed upload changes nothing. The screen shows the progress.
+- **Admin token:** reboot, forget Wi-Fi and firmware updates need `Authorization: Bearer <token>`. The board creates the token on first boot and keeps it in NVS; serial `token` shows it, `token new` replaces it. Everything else is open on your local network.
+- **Serial:** new commands `setup` (open the set-up network), `token`, `token new`.
+
+**Variation 2 · from anywhere** (`uv run pio run -e wifi-lab-w2-remote -t upload`): the same firmware plus a remote link. The board dials **out** to your dashboard server and keeps a secure WebSocket open (`wss://…/device`, signed in with its admin token), so you can drive it from anywhere and nothing opens on your router. The server needs a public https address: your Mac plus a tunnel (`pnpm remote` and `pnpm tunnel:cloudflare` or `pnpm tunnel:ngrok`), or the same app on a hosted server (VPS, Fly.io, Render…). The board only needs the address: serial `relay wss://<host>`, saved on the chip. The dashboard asks for a sign-in key (`DASHBOARD_KEY`) because it is public. A teal ring around the screen's link dot means the server is connected. Firmware updates stay with variation 1 for now. Details: [dashboard/README.md](dashboard/README.md#remote-control-relay-mode).
+
+```mermaid
+flowchart LR
+  You["Phone / laptop, anywhere"] -->|"https + key"| Public["public https address<br/>(tunnel or hosted server)"]
+  Board["ESP32 wifi-lab-w2-remote"] -->|"wss /device + token<br/>dials out"| Public
+  Public --> Server["Node dashboard server"]
+```
+
+**If the page won't open** (what we found on this bench, in order):
+
+1. Type the full address with `http://`: the board has no `https`.
+2. Serial `ping` (the router) and `ping <your computer's IP>`. Router answers but your computer doesn't: the router keeps Wi-Fi devices apart. On a FRITZ!Box: WLAN → Sicherheit → tick "WLAN-Geräte dürfen untereinander kommunizieren".
+3. Works on the phone but not in the Mac's browser: System Settings → Privacy & Security → Local Network → allow the browser (Chrome and Firefox need it; Safari doesn't).
+
+**Desktop dashboard:** [`dashboard/`](dashboard/README.md) is a React + Node app (its own pnpm project). The Node server holds the token in `.env`, validates every request, relays the board's live stream and keeps 10 minutes of history; the React app shows live signal and temperature charts and every control above.
+
+```sh
+cd test-esp/dashboard && cp .env.example .env   # ESP_TOKEN = serial command `token`
+pnpm install && pnpm dev                         # http://localhost:5173
+```
+
+### Lab W3: Internet & AI
+
+`uv run pio run -e wifi-lab-w3 -t upload` · code in [`src/wifi-lab-w3`](src/wifi-lab-w3/main.cpp). Same wiring; push button optional. Uses the Wi-Fi network W1/W2 saved.
+
+The board becomes an internet client. Every request runs in a worker task (`worker.h`), so the screen keeps animating while it waits, and the footer shows how the last one went (time, size).
+
+- **Weather** from [Open-Meteo](https://open-meteo.com) (no account, no key): `city Hamburg` looks the city up and saves it on the chip; the weather refreshes every 15 minutes. One HTTPS request brings now, the next 24 hours and 7 days in about 1.7 KB of JSON; an ArduinoJson filter keeps only what the screen draws.
+- **Views:** now (animated sky, temperature, feels-like, wind, humidity) · forecast (temperature line, and rain chance bars on their own scale) · week (each day's low-to-high range on one shared scale) · oracle · status.
+- **The Bench Oracle:** the board sends an AI model what it knows about the moment as JSON: place, time, weather, its own temperature and signal. The request offers one function, `show_on_bench {title, lines, color, scene}`, and forces the model to call it, so the answer is always JSON the board can draw: a haiku (double-click in the oracle view, or hold the button anywhere) or an answer (`ask should I bike to work?`). The LED takes the colour the model picked; time and tokens show under the answer.
+- **Any provider, through LiteLLM:** the board speaks one OpenAI-style API to the [AI gateway](ai-gateway/README.md) on your Mac (`ai url http://<Mac IP>:4000`, `ai key <LITELLM_MASTER_KEY>`). `ai-gateway/config.yaml` maps names to models: `oracle` (Claude Opus), `oracle-fast` (Claude Haiku), and whatever you add (OpenAI, Gemini, a local Ollama model). `ai model <name>` switches without reflashing. Provider keys stay in the gateway's `.env`; the board stores only the gateway key (NVS, never logged, last 4 characters shown; `ai key forget` erases it). At most one question per 10 s, and never on its own.
+- **Serial:** `city <name>`, `weather`, `oracle`, `ask <question>`, `ai`, `ai url <url>`, `ai key <key>`, `ai key forget`, `ai model <name>`, `led off`, `view <1-5>`, `status`, `ping [ip]`, `tz <TZ>`, `reconnect`, `forget`, `help`.
+
+```mermaid
+sequenceDiagram
+  participant L as loop() (screen)
+  participant W as worker task
+  participant M as api.open-meteo.com
+  participant G as LiteLLM gateway (your Mac)
+  participant P as AI provider
+  L->>W: Weather job (place)
+  W->>M: GET /v1/forecast (TLS, CA bundle)
+  M-->>W: 1.7 KB JSON
+  W-->>L: Weather struct (mailbox)
+  L->>W: Oracle job (context JSON, gateway, key, model name)
+  W->>G: POST /v1/chat/completions + forced show_on_bench function
+  G->>P: the provider's own API (name → provider/model, key from .env)
+  P-->>G: function call
+  G-->>W: OpenAI-style answer: arguments {title, lines, color, scene}
+  W-->>L: answer: draw it, light the LED
+```
 
 ## Between lessons
 
