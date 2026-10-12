@@ -812,3 +812,22 @@ rfid-lab  RAM 9.4% (30,772 B)  Flash 6.7% (438,307 B)  SUCCESS, no warnings
 ```
 
 **Waiting for your go:** flash the fix (`uv run pio run -e rfid-lab -t upload`). Before that, `chip` on the current firmware tells you whether the chip answers again by itself.
+
+### 38. rfid-lab: the LED shows every card read · `build` · no board
+
+Your request: the LED must be on when a card is read. Before, the on-board RGB LED gave a 150 ms white flash for a new card only, then a dim teal (about 15 % brightness).
+
+- **Bright green flash (300 ms)** every time a card is read: a new card on the reader, or any command that reaches the card (`dump`, `read`, `write`, `credits`, and `inventory` once per card it finds). The edge-lab experiments don't flash it: they read the card hundreds of times.
+- **Steady green** while a card lies on the reader.
+- **Red** when the reader chip stops answering (VersionReg 00h/FFh), so a loose wire shows at a glance.
+- **Off** with no card. The LED is only rewritten when its colour changes.
+
+```sh
+uv run pio run -e rfid-lab
+```
+
+```text
+rfid-lab  RAM 9.4% (30,780 B)  Flash 6.7%  SUCCESS, no warnings
+```
+
+**Waiting for your go:** flash it (`uv run pio run -e rfid-lab -t upload`); it includes the entry 37 fixes. Nothing was sent to the board.

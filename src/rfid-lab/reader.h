@@ -201,7 +201,7 @@ class Reader {
       s.rate = rate;
       s.stats = chip_.stats();
       if (found) s.seenAt = millis(), s.uid = u, s.collisions = c;
-      if (isNew) s.taps++, s.present = true;
+      if (isNew) s.taps++, s.reads++, s.present = true;
       if (gone) s.present = false;
     });
   }
@@ -420,6 +420,7 @@ class Reader {
       for (int i = 0; i < c.n; i++) Serial.printf("  collision at level %u bit %u -> chose 1", c.at[i].level, c.at[i].bit);
       Serial.println();
       found[n++] = u;
+      publish([&](Snapshot &s) { s.reads++; });  // one LED flash per card found
     }
     publish([&](Snapshot &s) {
       s.inventoryN = n;
@@ -432,7 +433,10 @@ class Reader {
 
   bool card(iso14443a::Uid &u) {
     const rc522::Status s = iso14443a::wakeAndSelect(chip_, u);
-    if (s == rc522::Status::Ok) return true;
+    if (s == rc522::Status::Ok) {
+      publish([&](Snapshot &sn) { sn.reads++; });  // the LED flashes for every read
+      return true;
+    }
     if (s == rc522::Status::ChipSilent) say(true, "the chip isn't answering: check wires, reset");
     else say(true, "no card: hold it on the reader (%s)", rc522::statusName(s));
     return false;

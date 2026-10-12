@@ -919,9 +919,9 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
             "Flash, then open the monitor (the first two commands above). <b>Checkpoint 1:</b> VersionReg 0x92 (or 0x91, or a clone value).",
             "Type <code>selftest</code>. <b>Checkpoint 2:</b> “passed” (NXP chip) or “consistent” (a clone).",
             "Type <code>loopback</code>, then <code>regs</code>. <b>Checkpoint 3:</b> 0 bytes wrong, and the register values from the table.",
-            "Click to the <b>chip</b> view and compare it with “What the screen shows”: teal square, passed, 4 MHz, bus counters climbing. That's the goal. Lay the card on the reader for a second as a preview of R2: the LED flashes and the card view would show its UID.",
+            "Click to the <b>chip</b> view and compare it with “What the screen shows”: teal square, passed, 4 MHz, bus counters climbing. That's the goal. Lay the card on the reader for a second as a preview of R2: the on-board LED flashes bright green and stays green while it lies there.",
           ],
-          note: "Many RC522 boards come with the header loose: push-in pins lose contact, so solder it or press it in firmly. IRQ is optional: without it the firmware polls, and the chip view says “polling” (R6 compares both). The card's position doesn't change any of R1's results. But handling it near the reader is the moment loose header pins lose contact: if VersionReg turns 00h/FFh afterwards, the firmware notices within 2 s, tries a hard reset and tells you whether it was a hang or a wire.",
+          note: "The on-board RGB LED tells you what the reader sees: a bright green flash each time a card is read, steady green while one lies on the reader, red if the reader chip stops answering (a wire), off otherwise. Many RC522 boards come with the header loose: push-in pins lose contact, so solder it or press it in firmly. IRQ is optional: without it the firmware polls, and the chip view says “polling” (R6 compares both). The card's position doesn't change any of R1's results. But handling it near the reader is the moment loose header pins lose contact: if VersionReg turns 00h/FFh afterwards, the firmware notices within 2 s, tries a hard reset and tells you whether it was a hang or a wire.",
         },
         {
           ...common, id: "R2", title: "Wake a card", rfidView: 1,
@@ -937,7 +937,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           panels: [{ title: "The field, in 3D", fn: "field3d", intro: "A model of your reader and card: drag to turn it, move the card up and down, change the gain, and press Send WUPA to watch one wake-up. The chart under it shows why the range ends where it does." }, { title: "Follow one wake-up, step by step", fn: "seq", flows: ["wake", "select"], intro: "What happens in the first millisecond after a card arrives, from the ESP32's SPI writes to the card's answer. The same frames appear in your sniffer." }, screens(1)],
           commands: [
             { c: "(click to the card view)", where: "button", card: "off", does: "One click on the push button or BOOT goes to the next view; the dots at the top show which one.", see: "Rings around the antenna and “Hold a card or tag flat on the reader”, plus how many taps so far.", fix: "" },
-            { c: "lay the card flat on the reader", where: "hands", card: "on", does: "The reader task polls ~12 times a second; the first poll that finds the card wakes it, reads its UID, then halts it.", see: "The on-board LED flashes white, then stays teal. The card view shows the UID, type, ATQA/SAK and a read rate that fills to 100 %. The monitor prints <code>card 9C:4F:… · MIFARE Classic 1K · ATQA 0004 SAK 08</code> and the frames.", fix: "Nothing? Run R1's <code>chip</code> again; then try the card flat in the middle of the antenna." },
+            { c: "lay the card flat on the reader", where: "hands", card: "on", does: "The reader task polls ~12 times a second; the first poll that finds the card wakes it, reads its UID, then halts it.", see: "The on-board LED flashes bright green, then stays green while the card lies there. The card view shows the UID, type, ATQA/SAK and a read rate that fills to 100 %. The monitor prints <code>card 9C:4F:… · MIFARE Classic 1K · ATQA 0004 SAK 08</code> and the frames.", fix: "Nothing? Run R1's <code>chip</code> again; then try the card flat in the middle of the antenna." },
             { c: "lift the card slowly", where: "hands", card: "move", does: "The field gets weaker with height; polls start to miss.", see: "The read rate turns amber, then coral. After 3 misses in a row (~0.3 s) the monitor says <code>card removed</code>.", fix: "" },
             { c: "(click to the trace view)", where: "button", card: "any", does: "The sniffer: the frames of the last wake-up, with times in ms.", see: "<code>&gt; 52 WUPA</code>, <code>&lt; 04 00 ATQA</code>, <code>&gt; 93 20 ANTICOLL CL1</code>, <code>&lt; UID + BCC</code>, <code>&gt; SELECT CL1</code>, <code>&lt; SAK</code>, <code>&gt; HLTA</code>.", fix: "“Sniffer off”: type <code>trace on</code>." },
             { c: "trace off / trace on", card: "any", does: "The sniffer is on by default and prints each new card's frames in the monitor. Off silences the monitor and the trace view.", see: "<code>sniffer off</code> / <code>sniffer on</code> at the bottom right.", fix: "" },
@@ -946,7 +946,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           ],
           steps: [
             "Same wiring and firmware as R1. Click to the <b>card</b> view.",
-            "Lay the white card flat on the reader. <b>Checkpoint:</b> LED flash, UID, MIFARE Classic 1K, read rate 100 %.",
+            "Lay the white card flat on the reader. <b>Checkpoint:</b> the LED flashes bright green and stays green; UID, MIFARE Classic 1K, read rate 100 %.",
             "Click to the <b>trace</b> view and find the 7 frames; compare with the step-by-step diagram above.",
             "Lift the card slowly and note the height where the read rate drops: your range.",
             "Repeat at the edge of range with <code>gain 0</code> and <code>gain 7</code>, then <code>gain 4</code>. Compare with the 3D model's prediction.",
@@ -4074,7 +4074,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       if (!now) { if (before) log("[I][reader.h] pollOnce(): card removed"); st.rate = 0; return; }
       if (now !== before) {
         const u = cards[now].uid;
-        st.taps++; st.flashUntil = performance.now() + 200; st.rate = 100;
+        st.taps++; st.flashUntil = performance.now() + 300; st.rate = 100;
         st.coll = on === "both" ? 23 : 0;
         st.frames = wakeFrames(u, st.coll);
         log(`[I][reader.h] pollOnce(): card ${id(u)} · MIFARE Classic 1K · ATQA 0004 SAK 08${st.coll ? " · collision resolved" : ""}`);
@@ -4084,6 +4084,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
     function need() {
       const s = selected();
       if (!s) { say("no card: hold it on the reader (no answer)", true); return null; }
+      st.flashUntil = performance.now() + 300; // the LED flashes for every read
       return cards[s];
     }
     // ---- Commands (the same words as src/rfid-lab/main.cpp) ----
@@ -4239,7 +4240,8 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       drawRfidScreen(g, C, { ...st, uid: s ? cards[s].uid : null, coll: s ? st.coll : 0 }, now / 1000, reduce);
       row.querySelectorAll("[data-v]").forEach((b, i) => b.setAttribute("aria-current", String(i === st.view)));
       row.querySelector(".auto-flag").textContent = `${RFID_VIEWS[st.view]} view · ${st.polling ? "polling" : "paused"}`;
-      rgbDot.setAttribute("fill", now < st.flashUntil ? "var(--silk)" : s ? "var(--rfid)" : "var(--silk-dim)");
+      rgbDot.setAttribute("fill", now < st.flashUntil ? "var(--ok)" : s ? "var(--ok)" : "var(--silk-dim)");
+      rgbDot.setAttribute("r", now < st.flashUntil ? 10 : 7);
       raf = requestAnimationFrame(draw);
     }
     // ---- Inputs ----
@@ -4262,7 +4264,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
     log("VersionReg 0x92: MFRC522 v2.0", "");
     log(lesson.id === "R1" ? "Type selftest, loopback or regs (no card needed), or use the buttons below." : "Type help, or use the buttons: lay the card on the reader first.", "");
     raf = requestAnimationFrame(draw);
-    return () => { stopped = true; cancelAnimationFrame(raf); clearTimeout(clickTimer); rgbDot.setAttribute("fill", "var(--silk-dim)"); };
+    return () => { stopped = true; cancelAnimationFrame(raf); clearTimeout(clickTimer); rgbDot.setAttribute("fill", "var(--silk-dim)"); rgbDot.setAttribute("r", 7); };
   }
 
   const RFID_PANELS = { spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge, screens: rfidScreens };
@@ -4449,6 +4451,11 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       why: "Your first R1 run. The reader chip answered B2h: an FM17522 clone, not an NXP MFRC522, so the datasheet's self-test table can't apply to it. Then, after the card was moved, the chip stopped answering: the self-test read VersionReg 00h before it even started.",
       out: "00:17:08  VersionReg 0xB2: FM17522 (clone)\n00:17:59  VersionReg 0xB2: FM17522 (clone)\n00:17:56  unknown command 'chip'   (a backspace inside the line)\n00:18:22  card removed\n00:18:32  Self-test, chip 0x00, FIFO level 0: 64 × 00\n          self-test: no reference for chip 0x00 (a clone)\nfix build: rfid-lab  Flash 6.7% (438,307 B)  SUCCESS, no warnings",
       result: "Likely a header pin losing contact while the card was handled. Fixed in the firmware (built, not flashed): a 2 s VersionReg watchdog that hard-resets a silent chip and says hang or wire, a reset command, a self-test that refuses a silent chip and compares two runs on clones, and backspace in serial input." },
+    { n: 38, types: ["build"], title: "rfid-lab: the LED shows every card read", where: "Mac · no board",
+      cmd: "uv run pio run -e rfid-lab",
+      why: "Your request: the LED must be on when a card is read. Before, it gave a short white flash only for a new card, then a dim teal.",
+      out: "rfid-lab  RAM 9.4%  Flash 6.7% (438,4xx B)  SUCCESS, no warnings",
+      result: "Bright green flash on every read (new card, dump/read/write/credits reaching the card, inventory once per card), steady green while the card lies there, red when the reader chip stops answering, off with no card. Built with the entry 37 fixes; not flashed yet." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";

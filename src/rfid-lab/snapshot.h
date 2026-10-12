@@ -47,6 +47,7 @@ struct Snapshot {
   iso14443a::Uid uid;
   iso14443a::Collisions collisions;  // from the last selection
   uint32_t seenAt = 0, taps = 0;
+  uint32_t reads = 0;                // every successful card read: a new card, or a command reaching it
   uint8_t rate = 0;                  // % of the last 20 polls that found a card
   iso14443a::Uid inventory[4];
   int inventoryN = -1;               // -1 = not run

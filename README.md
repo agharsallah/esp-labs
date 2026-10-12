@@ -285,6 +285,8 @@ flowchart LR
 
 **Views** (click to cycle, double-click runs the view's action, hold pauses polling): chip · card · trace · memory · credits · edge.
 
+**On-board RGB LED:** a bright green flash every time a card is read (a new card, or a command reaching it) · steady green while a card is on the reader · red when the reader chip stops answering · off with no card.
+
 | Step               | Serial commands                                                                                           | What you learn                                                                                                                                                                                                         |
 | ------------------ | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | R1 Wire & talk     | `chip`, `reset`, `selftest`, `loopback`, `regs`, `spi <MHz>`, `gain <0-7>`, `irq on\|off`, `timeout <us>` | the SPI address byte, registers, the FIFO, the datasheet self-test (64 bytes, section 16.1.1; clones such as the FM17522 run it twice and compare), what 00h / FFh mean, a 2 s watchdog that hard-resets a silent chip |

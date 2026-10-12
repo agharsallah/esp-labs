@@ -7,6 +7,9 @@
 //   SDA->15  SCK->16  MOSI->17  MISO->18  IRQ->13 (optional)  GND->GND  RST->14  3.3V->3V3
 // The push button on GPIO 5 is optional: it does exactly what BOOT does.
 //
+// On-board RGB LED: bright green flash = a card was just read · steady green = a card is on the
+// reader · red = the reader chip isn't answering (wiring) · off = no card.
+//
 // Views: chip · card · trace · memory · credits · edge
 // Button or BOOT: click = next view · double-click = this view's action · long press = pause polling
 // Serial: help (lists everything)
@@ -204,6 +207,23 @@ void pollSerial() {
   }
 }
 
+// The on-board LED says what the reader sees. Sent only when the colour changes: each write is a
+// whole WS2812 frame on GPIO 48.
+void showLed(bool justRead) {
+  static uint32_t flashUntil = 0, shown = 0xFFFFFFFF;
+  if (justRead) flashUntil = millis() + 300;
+  // version 0 = the reader task hasn't reported yet (the first ~50 ms after power-on): not "silent".
+  const bool chipSilent = state.snap.version != 0 && (state.snap.chipVersion == 0x00 || state.snap.chipVersion == 0xFF);
+  uint8_t r = 0, g = 0, b = 0;
+  if (chipSilent) r = 90;                            // red: the reader chip isn't answering
+  else if (millis() < flashUntil) r = 40, g = 220, b = 70;  // bright green flash: a card was just read
+  else if (state.snap.present) g = 90, b = 25;       // steady green: a card is on the reader
+  const uint32_t colour = (uint32_t(r) << 16) | (uint32_t(g) << 8) | b;
+  if (colour == shown) return;
+  shown = colour;
+  rgbLedWrite(PIN_RGB, r, g, b);
+}
+
 void handleButton(Button &b) {
   switch (b.poll()) {
     case Button::Event::Click: setView(state.view + 1); break;
@@ -241,14 +261,9 @@ void loop() {
   pollSerial();
   handleButton(external);
   handleButton(boot);
-  const bool wasPresent = state.snap.present;
+  const uint32_t readsBefore = state.snap.reads;
   reader.update(state.snap);
-  // The on-board LED follows the card: teal while one is in the field, a white flash on a new tap.
-  static uint32_t flashUntil = 0;
-  if (state.snap.present && !wasPresent) flashUntil = millis() + 150;
-  if (millis() < flashUntil) rgbLedWrite(PIN_RGB, 60, 60, 60);
-  else if (state.snap.present) rgbLedWrite(PIN_RGB, 0, 40, 30);
-  else rgbLedWrite(PIN_RGB, 0, 0, 0);
+  showLed(state.snap.reads != readsBefore);
 
   const float t = millis() / 1000.0f;
   fb.fillScreen(pal::night);
