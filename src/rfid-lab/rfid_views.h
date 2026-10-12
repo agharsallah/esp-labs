@@ -98,8 +98,10 @@ inline void chip(FrameBuffer &fb, const Snapshot &s, float t) {
   char v[32];
   snprintf(v, sizeof(v), "%02Xh %s", s.chipVersion, alive ? "" : "no answer");
   stat(fb, 104, 38, "VersionReg", v, alive ? pal::teal : pal::coral);
-  const char *st = s.selfTest < 0 ? "not run" : s.selfTest == 1 ? "passed" : s.selfTest == 2 ? "no reference" : "FAILED";
-  stat(fb, 220, 38, "self-test", st, s.selfTest == 1 ? pal::teal : s.selfTest == 0 ? pal::coral : pal::muted);
+  // -1 not run · 0 failed · 1 passed (NXP table) · 2 not supported (clone) · 3 consistent (clone, 2 runs agree)
+  const char *const kSelfTest[] = {"not run", "FAILED", "passed", "not supported", "consistent"};
+  const char *st = kSelfTest[s.selfTest + 1];
+  stat(fb, 220, 38, "self-test", st, s.selfTest == 1 || s.selfTest == 3 ? pal::teal : s.selfTest == 0 ? pal::coral : pal::muted);
   snprintf(v, sizeof(v), "%lu MHz", static_cast<unsigned long>(s.spiHz / 1'000'000));
   stat(fb, 104, 80, "SPI clock (max 10)", v, s.spiHz > 10'000'000 ? pal::amber : pal::ink);
   snprintf(v, sizeof(v), "%s", s.irqMode ? "IRQ wire" : "polling");

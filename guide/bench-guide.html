@@ -530,7 +530,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
 
 
   <dl class="overview" aria-label="On the bench now">
-    <div class="now"><dt>On the board now</dt><dd>03-display<small>11 flashes · screen works · built, not flashed: wifi-lab-w1, wifi-lab-w2, wifi-lab-w2-remote, wifi-lab-w3, rfid-lab</small></dd></div>
+    <div class="now"><dt>On the board now</dt><dd>rfid-lab<small>12 flashes · flashed by you · reader chip FM17522 clone (B2h) · built, not flashed: wifi-lab-w1, wifi-lab-w2, wifi-lab-w2-remote, wifi-lab-w3</small></dd></div>
     <div><dt>Connection</dt><dd>/dev/cu.usbserial-A5069RR4<small>FTDI FT232R · VID:PID 0403:6001</small></dd></div>
     <div><dt>Chip</dt><dd>ESP32-S3 rev v0.2<small>16 MB flash · 8 MB PSRAM · MAC 28:84:85:9E:3B:E4</small></dd></div>
     <div><dt>Verified</dt><dd class="flag">RGB · LED · screen · showcase<small>all seen working by you · display at 22 fps</small></dd></div>
@@ -892,7 +892,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           goalLine: "Prove that the ESP32 and the reader chip talk to each other reliably over SPI, before any card is involved. Keep the card and the tag away for now.",
           goalCheck: [
             "The monitor says <code>VersionReg 0x92: MFRC522 v2.0</code> (or 0x91, or a clone's value), not 0x00 or 0xFF.",
-            "<code>selftest</code> ends with <code>self-test passed: 64/64 bytes match</code> (a clone chip says “no reference”: that's fine too).",
+            "<code>selftest</code> ends with <code>self-test passed: 64/64 bytes match</code> on a genuine NXP chip (91h/92h), or <code>self-test consistent: 2 runs, same 64 bytes</code> on a clone such as the FM17522 (88h/B2h).",
             "<code>loopback</code> says <code>0 of 3200 bytes wrong</code>.",
             "On the <b>chip</b> view: the square glows teal and the bus counters keep climbing.",
           ],
@@ -906,8 +906,9 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           commands: [
             { c: "uv run pio run -e rfid-lab -t upload", where: "mac", card: "off", does: "Builds the firmware and writes it to the board (no new downloads: it only uses the display libraries you already have).", see: "<code>Hard resetting via RTS pin…</code>. The screen starts on the <b>card</b> view: rings, “Hold a card or tag”.", fix: "“Failed to connect”: hold BOOT, tap RST, release BOOT, run it again." },
             { c: "uv run pio device monitor", where: "mac", card: "off", does: "Opens the serial monitor. Opening it restarts the board, so you see the start-up lines.", see: "<code>RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz</code> then <code>VersionReg 0x92: MFRC522 v2.0</code> and the command list.", fix: "<code>0x00</code>: the chip isn't powered or MISO is stuck low: check 3.3V, GND, RST. <code>0xFF</code>: nobody drives MISO: check MISO (18) and SDA (15)." },
-            { c: "chip", card: "any", does: "Reads VersionReg (37h) once more: the 2-byte transfer shown above, live.", see: "The same <code>VersionReg 0x92</code> line. Run it a few times: it must never change.", fix: "Changes from run to run = a loose wire. Press the header in, or solder it." },
-            { c: "selftest", card: "off", does: "The datasheet's digital self-test (section 16.1.1): resets the chip, has it compute a fixed sequence, and compares the 64 bytes with the datasheet's table. About half a second.", see: "4 rows of 16 bytes with no <code>!</code> marks, then <code>self-test passed: 64/64 bytes match</code>. The chip view says <b>passed</b>.", fix: "<code>!</code> after some bytes = those differ: re-seat SCK/MOSI/MISO and run again. “no reference” = a clone chip (0x88, 0xB2, 0x12): it works, the datasheet just has no table for it." },
+            { c: "chip", card: "any", does: "Reads VersionReg (37h) once more: the 2-byte transfer shown above, live.", see: "The same line as at start-up (<code>0x92</code>, or e.g. <code>0xB2: FM17522 (clone)</code>). Run it a few times, and again after moving the card around: it must never change.", fix: "It changes, or turns into 00h/FFh after you touched the reader = a loose wire. Press the RC522's header in or solder it, then <code>reset</code>." },
+            { c: "reset", card: "any", does: "Pulses the RST wire (a hard reset of the chip), sets it up again and reads VersionReg. The firmware also checks VersionReg by itself every 2 s and does this on its own when the chip goes quiet.", see: "<code>hard reset: VersionReg 0x92</code> (or your clone's value). If the chip had gone quiet: <code>chip back after a hard reset</code> = it had hung; <code>still 0x00 after a reset</code> = a wire.", fix: "Still 00h/FFh: power off, press the header pins in (or solder them), check 3.3V, GND, MISO (18), SDA (15)." },
+            { c: "selftest", card: "any", does: "The datasheet's digital self-test (section 16.1.1): resets the chip and has it compute a fixed 64-byte sequence. A genuine NXP chip (91h/92h) is compared with the datasheet's table. A clone has no table, so the test runs twice and the two runs are compared. Polling pauses while it runs, so the card can stay where it is.", see: "4 rows of 16 bytes with no <code>!</code> marks, then <code>self-test passed: 64/64 bytes match</code> (NXP) or <code>self-test consistent: 2 runs, same 64 bytes</code> (clone). The chip view says <b>passed</b> or <b>consistent</b>.", fix: "<code>self-test skipped: chip silent (0x00)</code> = the chip wasn't answering before the test even started: a wire, see <code>reset</code>. <code>!</code> marks = bytes that differ: re-seat SCK/MOSI/MISO and run again. <code>doesn't run the self-test</code> = some clones simply don't have it; loopback is the test that counts then." },
             { c: "loopback", card: "any", does: "Writes 64-byte patterns into the chip's FIFO and reads them back, 50 times: 3,200 bytes each way.", see: "<code>FIFO loopback: 0 of 3200 bytes wrong at 4 MHz</code> in teal at the bottom right of the screen.", fix: "Any errors at 4 MHz = a bad contact on SCK, MOSI or MISO, or wires much longer than 20 cm." },
             { c: "regs", card: "any", does: "Prints 15 registers with their bits and what they mean.", see: "<code>VersionReg 92h</code>, <code>TxControlReg 83h</code> (antenna on), <code>RFCfgReg 40h</code> (33 dB gain), <code>TPrescalerReg A9h</code> + <code>TReloadReg 03 E8</code> (a 25 ms timer: 1,000 ticks of 25 µs).", fix: "TxControlReg 80h = antenna off: the chip was reset without our set-up. Unplug and replug the board." },
             { c: "spi 20, then loopback, then spi 4", card: "any", does: "Optional peek at the edge lab: runs the bus at 20 MHz, twice the chip's rating, then back to the default.", see: "Maybe a few wrong bytes at 20 MHz, maybe none: it depends on your wires. The chip view's SPI clock turns amber above 10.", fix: "Always finish with <code>spi 4</code>. The R6 edge lab measures this properly." },
@@ -916,11 +917,11 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
             "Unplug USB. Keep the screen wired as in lesson 03. Add the RC522 with 8 female-to-male jumpers as in the table: SDA, SCK, MOSI and MISO go to 15, 16, 17, 18, side by side in the same order as on the module.",
             "Check twice: the module's 3.3V goes to <b>3V3</b>, never 5V. The MFRC522 runs on 2.5–3.6 V and its pins are not 5 V tolerant.",
             "Flash, then open the monitor (the first two commands above). <b>Checkpoint 1:</b> VersionReg 0x92 (or 0x91, or a clone value).",
-            "Type <code>selftest</code>. <b>Checkpoint 2:</b> “self-test passed”.",
+            "Type <code>selftest</code>. <b>Checkpoint 2:</b> “passed” (NXP chip) or “consistent” (a clone).",
             "Type <code>loopback</code>, then <code>regs</code>. <b>Checkpoint 3:</b> 0 bytes wrong, and the register values from the table.",
             "Click to the <b>chip</b> view and compare it with “What the screen shows”: teal square, passed, 4 MHz, bus counters climbing. That's the goal. Lay the card on the reader for a second as a preview of R2: the LED flashes and the card view would show its UID.",
           ],
-          note: "Many RC522 boards come with the header loose: push-in pins lose contact, so solder it or press it in firmly. IRQ is optional: without it the firmware polls, and the chip view says “polling” (R6 compares both). Keep the card away while testing the chip: polling for it adds traffic but no errors.",
+          note: "Many RC522 boards come with the header loose: push-in pins lose contact, so solder it or press it in firmly. IRQ is optional: without it the firmware polls, and the chip view says “polling” (R6 compares both). The card's position doesn't change any of R1's results. But handling it near the reader is the moment loose header pins lose contact: if VersionReg turns 00h/FFh afterwards, the firmware notices within 2 s, tries a hard reset and tells you whether it was a hang or a wire.",
         },
         {
           ...common, id: "R2", title: "Wake a card", rfidView: 1,
@@ -3839,7 +3840,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
         g.globalAlpha = still ? 0.9 : 0.55 + 0.4 * Math.sin(t * 3); g.fillStyle = C.teal; g.fillRect(cx - 9, cy - 9, 18, 18); g.globalAlpha = 1;
         T(cx - 20, cy + 23, "MFRC522", C.muted);
         stat(104, 38, "VersionReg", "92h", C.teal);
-        stat(220, 38, "self-test", ["not run", "FAILED", "passed", "no reference"][s.selfTest + 1], s.selfTest === 1 ? C.teal : s.selfTest === 0 ? C.coral : C.muted);
+        stat(220, 38, "self-test", ["not run", "FAILED", "passed", "not supported", "consistent"][s.selfTest + 1], s.selfTest === 1 || s.selfTest === 3 ? C.teal : s.selfTest === 0 ? C.coral : C.muted);
         stat(104, 80, "SPI clock (max 10)", `${s.mhz} MHz`, s.mhz > 10 ? C.amber : C.ink);
         stat(220, 80, "waits by", s.irq ? "IRQ wire" : "polling");
         const db = [18, 23, 18, 23, 33, 38, 43, 48][s.gain];
@@ -3935,7 +3936,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
     { when: "The first view to check after wiring (R1). Double-click runs the self-test.", parts: [
       [22, 60, "The chip. Its centre glows teal while the chip answers; it can't glow if VersionReg reads 00h or FFh."],
       [96, 42, "VersionReg: 92h = MFRC522 v2.0, 91h = v1.0, other values = a clone. 00h or FFh means nothing answered: check the wiring."],
-      [212, 42, "Self-test: “not run” until you type selftest (or double-click); then “passed”, “FAILED”, or “no reference” for clone chips."],
+      [212, 42, "Self-test: “not run” until you type selftest (or double-click). Then “passed” (NXP chip, matches the datasheet), “consistent” (clone, two runs agree), “not supported” (a clone without it) or “FAILED”."],
       [96, 84, "SPI clock: 4 MHz by default. Turns amber above the chip's 10 MHz rating (spi &lt;MHz&gt;)."],
       [212, 84, "How the reader task waits for the chip: “IRQ wire”, or “polling” if IRQ isn't wired (the firmware switches by itself and says so)."],
       [96, 132, "Receiver gain, 18 to 48 dB (gain &lt;0-7&gt;); 33 dB by default."],
@@ -4030,7 +4031,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
     parent.append(row, field, frame, cap);
     const term = terminal(parent, "$ uv run pio device monitor", true);
     const quick = document.createElement("div"); quick.className = "quick";
-    const QUICK = { R1: ["chip", "selftest", "loopback", "regs"], R2: ["trace off", "trace on", "gain 0", "gain 7", "gain 4"], R3: ["inventory", "help"], R4: ["dump", "read 0", "read 1"], R5: ["write 4 hello bench", "write 3 test", "credits init 50", "credits use 3", "credits add 10"], R6: ["edge spi", "edge timeout", "edge timing", "edge stress 500"] }[lesson.id] || ["help"];
+    const QUICK = { R1: ["chip", "reset", "selftest", "loopback", "regs"], R2: ["trace off", "trace on", "gain 0", "gain 7", "gain 4"], R3: ["inventory", "help"], R4: ["dump", "read 0", "read 1"], R5: ["write 4 hello bench", "write 3 test", "credits init 50", "credits use 3", "credits add 10"], R6: ["edge spi", "edge timeout", "edge timing", "edge stress 500"] }[lesson.id] || ["help"];
     quick.innerHTML = QUICK.map((c) => `<button type="button" class="btn">${c}</button>`).join("");
     parent.appendChild(quick);
     const g = frame.querySelector("canvas").getContext("2d");
@@ -4131,10 +4132,11 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       const [cmd, ...rest] = line.split(/\s+/); const arg = rest.join(" "); const c = cmd.toLowerCase(), a = arg.toLowerCase();
       const n = parseInt(arg, 10);
       if (c === "help" || c === "?") {
-        ["R1 chip    chip | selftest | loopback | regs | spi <MHz> | gain <0-7> | irq on|off | timeout <us>", "R2 wake    poll on|off | trace on|off", "R3 who     inventory", "R4 memory  dump | read <block>", "R5 write   write <block> <text> | credits | credits init|add|use <n>", "R6 edge    edge spi | gain | timeout | timing | irq | crc | stress [n]", "           view <1-6> | help"].forEach((x) => log(x, ""));
+        ["R1 chip    chip | reset | selftest | loopback | regs | spi <MHz> | gain <0-7> | irq on|off | timeout <us>", "R2 wake    poll on|off | trace on|off", "R3 who     inventory", "R4 memory  dump | read <block>", "R5 write   write <block> <text> | credits | credits init|add|use <n>", "R6 edge    edge spi | gain | timeout | timing | irq | crc | stress [n]", "           view <1-6> | help"].forEach((x) => log(x, ""));
         return;
       }
       if (c === "chip") { log("RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz", ""); log("VersionReg 0x92: MFRC522 v2.0", ""); return; }
+      if (c === "reset") { log("RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz", ""); log("VersionReg 0x92: MFRC522 v2.0", ""); return say("hard reset: VersionReg 0x92"); }
       if (c === "selftest") {
         st.view = 0;
         return busyFor("self-test", 600, () => {
@@ -4442,6 +4444,11 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       why: "A new RFID & NFC theme for the RC522 with its white card and key tag: our own MFRC522 driver in lib/rfid-kit (registers, ISO 14443-A, MIFARE Classic, a frame sniffer), one rfid-lab firmware for six steps, an edge lab, and a guide chapter with a 3D field and 3D memory map.",
       out: "first build: return log_w(...) in void functions (again) -> warn() helper\nrfid-lab  RAM 9.4% (30,764 B)  Flash 6.7% (436,695 B)  SUCCESS, no warnings\nhost test: all rfid format checks passed (CRC_A 50 00 -> 57 CD, 30 00 -> 02 A8, 60 00 -> F5 7B; access bits FF 07 80; value blocks)\nguide: R1-R6 render, three.js 0.160.0 loads, no page errors, no sideways scroll at 390 px",
       result: "Built and checked on the Mac. No new libraries and nothing installed. Not flashed: rfid-lab waits for your wiring and your go. Nothing was sent to the board." },
+    { n: 37, types: ["flash", "read", "build"], title: "rfid-lab on the board: an FM17522 clone, and a chip that went quiet", where: "board · flashed and read by you",
+      cmd: "uv run pio run -e rfid-lab -t upload   (by you)\nuv run pio device monitor: chip · chip · selftest\nuv run pio run -e rfid-lab   (the fix, Mac only)",
+      why: "Your first R1 run. The reader chip answered B2h: an FM17522 clone, not an NXP MFRC522, so the datasheet's self-test table can't apply to it. Then, after the card was moved, the chip stopped answering: the self-test read VersionReg 00h before it even started.",
+      out: "00:17:08  VersionReg 0xB2: FM17522 (clone)\n00:17:59  VersionReg 0xB2: FM17522 (clone)\n00:17:56  unknown command 'chip'   (a backspace inside the line)\n00:18:22  card removed\n00:18:32  Self-test, chip 0x00, FIFO level 0: 64 × 00\n          self-test: no reference for chip 0x00 (a clone)\nfix build: rfid-lab  Flash 6.7% (438,307 B)  SUCCESS, no warnings",
+      result: "Likely a header pin losing contact while the card was handled. Fixed in the firmware (built, not flashed): a 2 s VersionReg watchdog that hard-resets a silent chip and says hang or wire, a reset command, a self-test that refuses a silent chip and compares two runs on clones, and backspace in serial input." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";

@@ -17,7 +17,7 @@
 class Reader {
  public:
   enum class Job : uint8_t {
-    Chip, SelfTest, Loopback, Regs, Spi, Gain, Irq, Timeout, Poll, Trace,
+    Chip, Reset, SelfTest, Loopback, Regs, Spi, Gain, Irq, Timeout, Poll, Trace,
     Inventory, Dump, Read, Write, Credits, CreditsInit, CreditsAdd, CreditsUse,
     EdgeSpi, EdgeGain, EdgeTimeout, EdgeTiming, EdgeIrq, EdgeCrc, EdgeStress,
   };
@@ -64,10 +64,56 @@ class Reader {
         perform(r);
         printTrace(mark);
         afterJob();
-      } else if (polling_) {
-        pollOnce();
+      } else {
+        // Every 2 s: is the chip still answering? Then poll for cards (pointless while it's silent).
+        if (millis() - lastHealth_ >= 2000) health();
+        if (polling_ && !chipLost_) pollOnce();
       }
     }
+  }
+
+  // ---- Is the chip still there? -------------------------------------------------------------
+  // VersionReg never changes on a working chip. 00h or FFh means nobody answers on MISO: a wire
+  // lost contact, the chip lost power, or it hung. A hard reset tells the last case apart.
+
+  static bool alive(uint8_t v) { return v != 0x00 && v != 0xFF; }
+
+  void health() {
+    lastHealth_ = millis();
+    const uint8_t v = chip_.read(rc522::VersionReg);
+    if (alive(v)) {
+      if (chipLost_) {
+        chipLost_ = false;
+        publish([&](Snapshot &s) { s.chipVersion = v; });
+        say(false, "chip answering again: VersionReg 0x%02X", v);
+      }
+      return;
+    }
+    if (chipLost_) return;  // already reported; keep checking quietly
+    chipLost_ = true;
+    publish([&](Snapshot &s) { s.chipVersion = v, s.present = false; });
+    present_ = false;
+    say(true, "chip stopped answering (VersionReg 0x%02X): hard reset", v);
+    chip_.hardReset();
+    const uint8_t again = chip_.read(rc522::VersionReg);
+    if (alive(again)) {
+      chipLost_ = false;
+      publish([&](Snapshot &s) { s.chipVersion = again; });
+      say(true, "chip back after a hard reset (0x%02X): it had hung", again);
+    } else {
+      say(true, "still 0x%02X after a reset: check 3.3V, GND, MISO", again);
+      Serial.println("The chip doesn't answer on SPI. 0x00: no power or MISO held low (3.3V, GND). 0xFF: MISO (18) or SDA (15)");
+      Serial.println("not connected. Press the RC522's header pins in (or solder them), then type: reset");
+    }
+  }
+
+  void reset() {
+    busy("reset");
+    chip_.hardReset();
+    const uint8_t v = chip_.read(rc522::VersionReg);
+    chipLost_ = !alive(v);
+    printChip(v);
+    say(!alive(v), "hard reset: VersionReg 0x%02X", v);
   }
 
   // ---- Publishing --------------------------------------------------------------------------
@@ -166,6 +212,7 @@ class Reader {
     using J = Job;
     switch (r.job) {
       case J::Chip: return printChip(chip_.read(rc522::VersionReg));
+      case J::Reset: return reset();
       case J::SelfTest: return selfTest();
       case J::Loopback: return loopback();
       case J::Regs: return regs();
@@ -248,6 +295,40 @@ class Reader {
         0x86, 0x96, 0x83, 0x38, 0xCF, 0x9D, 0x5B, 0x6D, 0xDC, 0x15, 0xBA, 0x3E, 0x7D, 0x95, 0x3B, 0x2F};
     busy("self-test");
     const uint8_t version = chip_.read(rc522::VersionReg);
+    if (!alive(version)) {
+      publish([&](Snapshot &s) { s.selfTest = 0, s.chipVersion = version; });
+      return say(true, "self-test skipped: chip silent (0x%02X). Check wires, reset", version);
+    }
+    const uint8_t *ref = version == 0x91 ? v1 : version == 0x92 ? v2 : nullptr;
+    // A genuine NXP chip is compared with the datasheet's table. A clone has no table, so it runs
+    // twice and the two runs are compared: a healthy chip gives the same 64 bytes every time.
+    uint8_t got[64] = {}, again[64] = {};
+    const int level = runSelfTest(got);
+    const int level2 = ref ? 64 : runSelfTest(again);
+    const uint8_t *compare = ref ? ref : again;
+    int wrong = 0;
+    Serial.printf("\nSelf-test (datasheet 16.1.1), chip 0x%02X %s, FIFO level %d:\n", version, rc522::versionName(version), level);
+    for (int i = 0; i < 64; i++) {
+      const bool bad = got[i] != compare[i];
+      wrong += bad;
+      Serial.printf("%02X%c%s", got[i], bad ? '!' : ' ', i % 16 == 15 ? "\n" : "");
+    }
+    Serial.println(ref ? "(! = differs from the datasheet's table)" : "(no datasheet table for this chip: ! = differs between two runs)");
+    int8_t result;
+    if (ref) result = wrong == 0 ? 1 : 0;
+    else if (level < 64 || level2 < 64) result = 2;  // this clone doesn't run the self-test
+    else result = wrong == 0 ? 3 : 0;
+    publish([&](Snapshot &s) { s.selfTest = result; });
+    switch (result) {
+      case 1: return say(false, "self-test passed: 64/64 bytes match");
+      case 3: return say(false, "self-test consistent: 2 runs, same 64 bytes");
+      case 2: return say(true, "clone 0x%02X doesn't run the self-test (FIFO %d)", version, level);
+      default: return say(true, "self-test FAILED: %d of 64 bytes differ (!)", wrong);
+    }
+  }
+
+  // Steps 1-7 of section 16.1.1. Returns how many bytes the chip put in the FIFO (64 when it ran).
+  int runSelfTest(uint8_t out[64]) {
     chip_.softReset();                                  // 1. soft reset
     uint8_t zeros[25] = {};
     chip_.write(rc522::FIFOLevelReg, 0x80);
@@ -259,24 +340,10 @@ class Reader {
     int level = 0;
     for (int i = 0; i < 100 && level < 64; i++, delay(1)) level = chip_.read(rc522::FIFOLevelReg) & 0x7F;
     chip_.write(rc522::CommandReg, rc522::Idle);
-    uint8_t got[64] = {};
-    chip_.readMany(rc522::FIFODataReg, got, 64);        // 7. the 64 result bytes
+    chip_.readMany(rc522::FIFODataReg, out, 64);        // 7. the 64 result bytes
     chip_.write(rc522::AutoTestReg, 0x00);
     chip_.hardReset();                                  // back to normal operation
-
-    const uint8_t *ref = version == 0x91 ? v1 : version == 0x92 ? v2 : nullptr;
-    int wrong = 0;
-    Serial.printf("\nSelf-test (datasheet 16.1.1), chip 0x%02X, FIFO level %d:\n", version, level);
-    for (int i = 0; i < 64; i++) {
-      const bool bad = ref && got[i] != ref[i];
-      wrong += bad;
-      Serial.printf("%02X%c%s", got[i], bad ? '!' : ' ', i % 16 == 15 ? "\n" : "");
-    }
-    const int8_t result = ref == nullptr ? 2 : wrong == 0 ? 1 : 0;
-    publish([&](Snapshot &s) { s.selfTest = result; });
-    if (result == 2) say(true, "self-test: no reference for chip 0x%02X (a clone)", version);
-    else if (result == 1) say(false, "self-test passed: 64/64 bytes match");
-    else say(true, "self-test FAILED: %d of 64 bytes differ (!)", wrong);
+    return level;
   }
 
   void loopback() {
@@ -366,7 +433,8 @@ class Reader {
   bool card(iso14443a::Uid &u) {
     const rc522::Status s = iso14443a::wakeAndSelect(chip_, u);
     if (s == rc522::Status::Ok) return true;
-    say(true, "no card: hold it on the reader (%s)", rc522::statusName(s));
+    if (s == rc522::Status::ChipSilent) say(true, "the chip isn't answering: check wires, reset");
+    else say(true, "no card: hold it on the reader (%s)", rc522::statusName(s));
     return false;
   }
 
@@ -560,7 +628,8 @@ class Reader {
   std::mutex mutex_;
   Snapshot snap_;
   // Poll state, only touched by the task.
-  bool polling_ = true, present_ = false;
+  bool polling_ = true, present_ = false, chipLost_ = false;
+  uint32_t lastHealth_ = 0;
   int misses_ = 0;
   uint32_t window_ = 0;
   iso14443a::Uid current_;

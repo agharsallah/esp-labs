@@ -82,7 +82,7 @@ void viewAction() {
 
 void printHelp() {
   Serial.println();
-  Serial.println("R1 chip    chip | selftest | loopback | regs | spi <MHz> | gain <0-7> | irq on|off | timeout <us>");
+  Serial.println("R1 chip    chip | reset | selftest | loopback | regs | spi <MHz> | gain <0-7> | irq on|off | timeout <us>");
   Serial.println("R2 wake    poll on|off | trace on|off   (the card view shows what's in the field)");
   Serial.println("R3 who     inventory   (lay the card and the tag on the reader together)");
   Serial.println("R4 memory  dump | read <block>");
@@ -116,6 +116,7 @@ void handleCommand(const String &raw) {
 
   if (cmd == "help" || cmd == "?") return printHelp();
   if (cmd == "chip") return submit(J::Chip);
+  if (cmd == "reset") return submit(J::Reset);
   if (cmd == "selftest") return submit(J::SelfTest);
   if (cmd == "loopback") return submit(J::Loopback);
   if (cmd == "regs") return submit(J::Regs);
@@ -192,6 +193,11 @@ void pollSerial() {
     if (c == '\n' || c == '\r') {
       if (!buffer.isEmpty()) handleCommand(buffer);
       buffer = "";
+    } else if (c == 0x08 || c == 0x7F) {
+      // Backspace: the monitor sends it as a character; without this, "chiq<BS>p" would arrive as is.
+      if (!buffer.isEmpty()) buffer.remove(buffer.length() - 1);
+    } else if (uint8_t(c) < 0x20) {
+      // Other control characters (arrow keys send escape sequences): ignore.
     } else if (buffer.length() < 96) {
       buffer += c;
     }

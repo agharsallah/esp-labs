@@ -37,7 +37,7 @@ struct Snapshot {
   uint32_t version = 0;
   // chip
   uint8_t chipVersion = 0;
-  int8_t selfTest = -1;     // -1 not run · 0 failed · 1 passed · 2 no reference for this chip
+  int8_t selfTest = -1;     // -1 not run · 0 failed · 1 passed · 2 clone without self-test · 3 clone, 2 runs agree
   uint32_t spiHz = 0, timeoutUs = 0;
   uint8_t gain = 4;
   bool irqMode = false, irqPin = false;

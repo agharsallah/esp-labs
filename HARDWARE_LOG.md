@@ -6,18 +6,19 @@ Every command that installs software, talks to the board, or flashes it, with wh
 
 ## Overview
 
-| What                      | Value                                                                                                                                    |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                             |
-| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                          |
-| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                               |
-| PSRAM                     | 8 MB, embedded in the chip                                                                                                               |
-| MAC                       | 28:84:85:9E:3B:E4                                                                                                                        |
-| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                              |
-| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                   |
-| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                    |
-| **Firmware on board now** | **`03-display`** (screen works again). Built, not flashed: `wifi-lab-w1`, `wifi-lab-w2`, `wifi-lab-w2-remote`, `wifi-lab-w3`, `rfid-lab` |
-| Flashes so far            | 11 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again by you)                             |
+| What                      | Value                                                                                                                                                                 |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                          |
+| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                       |
+| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                            |
+| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                            |
+| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                     |
+| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                           |
+| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                |
+| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                             |
+| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                 |
+| **Firmware on board now** | **`rfid-lab`** (first version, flashed by you). Built, not flashed: the rfid-lab fix from entry 37, `wifi-lab-w1`, `wifi-lab-w2`, `wifi-lab-w2-remote`, `wifi-lab-w3` |
+| Flashes so far            | 12 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab by you)                                                |
 
 ### What is installed on the Mac
 
@@ -773,3 +774,41 @@ guide: every RFID lesson renders, three.js 0.160.0 loads from jsDelivr, no page 
 ```
 
 **Waiting for your wiring and your go:** `uv run pio run -e rfid-lab -t upload`. No new libraries, nothing installed. Nothing was sent to the board.
+
+### 37. rfid-lab on the board: an FM17522 clone, and a chip that went quiet · `flash` + `read` + `build`
+
+You flashed `rfid-lab` (`uv run pio run -e rfid-lab -t upload`) and ran R1 in the monitor. Your output:
+
+```text
+00:17:08  VersionReg 0xB2: FM17522 (clone)
+00:17:39  VersionReg 0xB2: FM17522 (clone)
+00:17:56  unknown command 'chip' (type help)
+00:17:59  VersionReg 0xB2: FM17522 (clone)
+00:18:22  card removed
+00:18:32  Self-test (datasheet 16.1.1), chip 0x00, FIFO level 0:   64 × 00
+          self-test: no reference for chip 0x00 (a clone)
+```
+
+What it means:
+
+- **The reader chip is a clone.** B2h is an FM17522 (Fudan), not NXP's MFRC522 (91h/92h). The datasheet's self-test table is for NXP chips only, so the old firmware could never say "passed" on this board.
+- **The chip went quiet between 00:17:59 and 00:18:32.** The self-test reads VersionReg before it starts, and it read 00h: nothing was driving MISO. The only thing that happened in between was handling the card. With polling on (the default), a silent chip also produces `card removed` after 3 missed polls. Most likely a header pin lost contact. Polling itself can't interfere: polls and commands run one after the other in the same task.
+- **`unknown command 'chip'`:** a backspace typed in the monitor arrived as a character inside the line.
+
+Fix (built on the Mac, not flashed):
+
+- a VersionReg watchdog every 2 s: if the chip goes silent it says so, hard-resets it, and reports "it had hung" or "still 0x00: check 3.3V, GND, MISO"
+- a new `reset` command (RST pulse, set-up, VersionReg)
+- `selftest` refuses to run on a silent chip, and on clones runs twice and compares (result "consistent", or "not supported" if the clone has no self-test)
+- backspace and other control characters handled in serial input
+- guide R1: the self-test card says "card doesn't matter", new `reset` card, the clone results
+
+```sh
+uv run pio run -e rfid-lab
+```
+
+```text
+rfid-lab  RAM 9.4% (30,772 B)  Flash 6.7% (438,307 B)  SUCCESS, no warnings
+```
+
+**Waiting for your go:** flash the fix (`uv run pio run -e rfid-lab -t upload`). Before that, `chip` on the current firmware tells you whether the chip answers again by itself.
