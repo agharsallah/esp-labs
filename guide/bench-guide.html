@@ -478,6 +478,36 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
 .mem-bytes i.txt { background: var(--ok); color: var(--surface); }
 .mem-scroll { overflow-x: auto; }
 .spi-ctl { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.goalbox { margin-top: 14px; border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 8px; padding: 10px 14px; background: var(--bg); max-width: 72ch; }
+.goalbox b { font: 600 11.5px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ok); }
+.goalbox p { margin: 2px 0 0; }
+.goalbox .gl { margin-top: 8px; font: 600 11.5px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.goalbox ul { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 3px; font-size: 14.5px; }
+.goalbox code, .panel-intro code, .cmds code, .cmds dd code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surface); padding: 0 4px; border-radius: 4px; overflow-wrap: anywhere; }
+.panel-intro { margin: -2px 0 12px; color: var(--muted); max-width: 72ch; font-size: 14px; }
+.panel-intro code { background: var(--bg); }
+ol.cmds { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: c; }
+ol.cmds > li { counter-increment: c; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--bg); min-width: 0; }
+.cmd-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; }
+.cmd-head::before { content: counter(c); font: 600 12px var(--font-mono); color: var(--muted); min-width: 1.4em; }
+.cmd-head code { font: 600 13px var(--font-mono); background: var(--surface); border: 1px solid var(--line); padding: 2px 8px; border-radius: 6px; }
+.cmd-head .where { font: 11px var(--font-mono); color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 1px 8px; }
+.cs { font: 600 11px var(--font-mono); border-radius: 999px; padding: 2px 9px 2px 7px; border: 1px solid var(--cs, var(--line)); color: var(--ink); display: inline-flex; align-items: center; gap: 6px; }
+.cs::before { content: ""; width: 14px; height: 9px; border-radius: 2px; border: 1.5px solid var(--cs, var(--muted)); background: var(--cs-fill, transparent); }
+.cs-off { --cs: var(--muted); } .cs-any { --cs: var(--line); color: var(--muted); }
+.cs-on, .cs-still { --cs: var(--rfid); --cs-fill: var(--rfid); } .cs-both { --cs: var(--copper); --cs-fill: var(--copper); } .cs-move { --cs: var(--warn); --cs-fill: var(--warn); }
+ol.cmds dl { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 3px 10px; margin: 0; font-size: 14px; }
+ol.cmds dt { font: 600 11px var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding-top: 2px; }
+ol.cmds dd { margin: 0; min-width: 0; }
+@media (max-width: 560px) { ol.cmds dl { grid-template-columns: minmax(0, 1fr); } ol.cmds dt { padding-top: 6px; } }
+.scr-tabs { flex-wrap: wrap; margin-bottom: 10px; }
+.scr { position: relative; width: 100%; max-width: 480px; }
+.scr-marks { position: absolute; inset: 0; pointer-events: none; }
+.scr-marks span { position: absolute; transform: translate(-50%, -50%); width: 18px; height: 18px; border-radius: 50%; background: var(--copper); color: var(--surface); font: 700 10.5px var(--font-mono); display: grid; place-items: center; box-shadow: 0 0 0 2px var(--pcb); transition: transform .15s, background .15s; }
+.scr-marks span.hl { transform: translate(-50%, -50%) scale(1.35); background: var(--ok); }
+ol.scr-list { margin: 8px 0 0; padding-left: 26px; display: grid; gap: 4px; font-size: 14px; }
+ol.scr-list li { padding: 2px 6px; border-radius: 6px; }
+ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft); outline: none; }
 .spi-ctl select { font: 12.5px var(--font-mono); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: var(--surface); color: var(--ink); }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
@@ -835,6 +865,8 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
     { id: "W4", track: "wifi", title: "Radio lab (bonus)", status: "planned", disabled: true },
     { id: "W5", track: "wifi", title: "Hardware Diary", status: "planned", disabled: true },
     // ----- RFID track (firmware: rfid-lab, driver: lib/rfid-kit) -----
+    // Each lesson: goalLine + goalCheck (how you know you're done), commands (what to type, with the
+    // card where, what you should see, what to do if not), and panels (fn → RFID_PANELS).
     ...(() => {
       const pins = [
         { pin: "3V3", idx: 0, role: "VCC", side: "L", kind: "power" },
@@ -851,38 +883,73 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
         { pin: "0", role: "BOOT", side: "R" },
       ];
       const common = { track: "rfid", status: "built, not flashed", pins, boot: true, sim: "rfid", cmd: "uv run pio run -e rfid-lab -t upload" };
+      const screens = (view) => ({ title: "What the screen shows", fn: "screens", view, intro: "The board's screen has six views. A click on the push button (or BOOT) goes to the next one, a double-click runs the action written at the bottom left, a long press pauses card polling. Pick a view to see what each part means; the numbers match the list below it." });
       return [
         {
           ...common, id: "R1", title: "Wire & talk", rfidView: 0,
           heading: "Wire the reader and talk to its chip",
           goal: "Its own firmware (rfid-lab) with our own driver in lib/rfid-kit: no RFID library, so every byte is ours to see. Eight wires put the RC522 on the S3's second SPI bus, so it never shares with the screen. The first conversation is with the chip itself, not a card: its version register, the self-test from the datasheet, and 3,200 bytes through its FIFO and back.",
+          goalLine: "Prove that the ESP32 and the reader chip talk to each other reliably over SPI, before any card is involved. Keep the card and the tag away for now.",
+          goalCheck: [
+            "The monitor says <code>VersionReg 0x92: MFRC522 v2.0</code> (or 0x91, or a clone's value), not 0x00 or 0xFF.",
+            "<code>selftest</code> ends with <code>self-test passed: 64/64 bytes match</code> (a clone chip says “no reference”: that's fine too).",
+            "<code>loopback</code> says <code>0 of 3200 bytes wrong</code>.",
+            "On the <b>chip</b> view: the square glows teal and the bus counters keep climbing.",
+          ],
           learn: ["SPI address byte", "registers", "FIFO", "datasheet self-test", "two SPI buses", "reading a bus fault"],
           wiring: [["SDA", "GPIO 15", "chip select (NSS) in SPI mode, not I2C data"], ["SCK", "GPIO 16", "SPI clock, from the ESP32"], ["MOSI", "GPIO 17", "data ESP32 → chip"], ["MISO", "GPIO 18", "data chip → ESP32"], ["IRQ", "GPIO 13", "optional: the chip says “done”"], ["GND", "GND", "the right header's top pin"], ["RST", "GPIO 14", "reset; low = power-down"], ["3.3V", "3V3", "the second 3V3 pin. Never 5V"]],
           wiringHead: ["RC522 pin", "ESP32-S3", "Role"], wiringTitle: "RC522 wiring (8 new wires, the screen stays as it is)",
-          panels: [{ title: "One register read, bit by bit", fn: "spi" }],
+          panels: [
+            { title: "One register read, bit by bit", fn: "spi", intro: "Every command in this lesson is built from transfers like this one. It is what a logic analyser would show on the four SPI wires while the ESP32 reads one register: 16 clock ticks, two bytes. The first byte goes out on MOSI and says <b>which</b> register and <b>read or write</b>; during the second byte the chip answers on MISO. <code>chip</code> does exactly this with VersionReg. Use ◀ ▶ to step bit by bit, pick another register, or choose a fault to see what a loose wire turns the answer into: that is how you'll read 00h or FFh in your own monitor." },
+            screens(0),
+          ],
+          commands: [
+            { c: "uv run pio run -e rfid-lab -t upload", where: "mac", card: "off", does: "Builds the firmware and writes it to the board (no new downloads: it only uses the display libraries you already have).", see: "<code>Hard resetting via RTS pin…</code>. The screen starts on the <b>card</b> view: rings, “Hold a card or tag”.", fix: "“Failed to connect”: hold BOOT, tap RST, release BOOT, run it again." },
+            { c: "uv run pio device monitor", where: "mac", card: "off", does: "Opens the serial monitor. Opening it restarts the board, so you see the start-up lines.", see: "<code>RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz</code> then <code>VersionReg 0x92: MFRC522 v2.0</code> and the command list.", fix: "<code>0x00</code>: the chip isn't powered or MISO is stuck low: check 3.3V, GND, RST. <code>0xFF</code>: nobody drives MISO: check MISO (18) and SDA (15)." },
+            { c: "chip", card: "any", does: "Reads VersionReg (37h) once more: the 2-byte transfer shown above, live.", see: "The same <code>VersionReg 0x92</code> line. Run it a few times: it must never change.", fix: "Changes from run to run = a loose wire. Press the header in, or solder it." },
+            { c: "selftest", card: "off", does: "The datasheet's digital self-test (section 16.1.1): resets the chip, has it compute a fixed sequence, and compares the 64 bytes with the datasheet's table. About half a second.", see: "4 rows of 16 bytes with no <code>!</code> marks, then <code>self-test passed: 64/64 bytes match</code>. The chip view says <b>passed</b>.", fix: "<code>!</code> after some bytes = those differ: re-seat SCK/MOSI/MISO and run again. “no reference” = a clone chip (0x88, 0xB2, 0x12): it works, the datasheet just has no table for it." },
+            { c: "loopback", card: "any", does: "Writes 64-byte patterns into the chip's FIFO and reads them back, 50 times: 3,200 bytes each way.", see: "<code>FIFO loopback: 0 of 3200 bytes wrong at 4 MHz</code> in teal at the bottom right of the screen.", fix: "Any errors at 4 MHz = a bad contact on SCK, MOSI or MISO, or wires much longer than 20 cm." },
+            { c: "regs", card: "any", does: "Prints 15 registers with their bits and what they mean.", see: "<code>VersionReg 92h</code>, <code>TxControlReg 83h</code> (antenna on), <code>RFCfgReg 40h</code> (33 dB gain), <code>TPrescalerReg A9h</code> + <code>TReloadReg 03 E8</code> (a 25 ms timer: 1,000 ticks of 25 µs).", fix: "TxControlReg 80h = antenna off: the chip was reset without our set-up. Unplug and replug the board." },
+            { c: "spi 20, then loopback, then spi 4", card: "any", does: "Optional peek at the edge lab: runs the bus at 20 MHz, twice the chip's rating, then back to the default.", see: "Maybe a few wrong bytes at 20 MHz, maybe none: it depends on your wires. The chip view's SPI clock turns amber above 10.", fix: "Always finish with <code>spi 4</code>. The R6 edge lab measures this properly." },
+          ],
           steps: [
             "Unplug USB. Keep the screen wired as in lesson 03. Add the RC522 with 8 female-to-male jumpers as in the table: SDA, SCK, MOSI and MISO go to 15, 16, 17, 18, side by side in the same order as on the module.",
             "Check twice: the module's 3.3V goes to <b>3V3</b>, never 5V. The MFRC522 runs on 2.5–3.6 V and its pins are not 5 V tolerant.",
-            "Flash with the command above (or tell Claude “go”). Open <code>uv run pio device monitor</code>.",
-            "The first lines say <code>VersionReg 0x92: MFRC522 v2.0</code> (or 0x91, or a clone such as 0x88). <code>0x00</code> or <code>0xFF</code> means nothing answered: the bit-by-bit diagram above shows which wire each one points to.",
-            "Type <code>selftest</code>: all 64 bytes must match the datasheet's table. Then <code>loopback</code> (3,200 bytes through the FIFO) and <code>regs</code> (the registers with their bits).",
-            "Click to the <b>chip</b> view: double-click runs the self-test again.",
+            "Flash, then open the monitor (the first two commands above). <b>Checkpoint 1:</b> VersionReg 0x92 (or 0x91, or a clone value).",
+            "Type <code>selftest</code>. <b>Checkpoint 2:</b> “self-test passed”.",
+            "Type <code>loopback</code>, then <code>regs</code>. <b>Checkpoint 3:</b> 0 bytes wrong, and the register values from the table.",
+            "Click to the <b>chip</b> view and compare it with “What the screen shows”: teal square, passed, 4 MHz, bus counters climbing. That's the goal. Lay the card on the reader for a second as a preview of R2: the LED flashes and the card view would show its UID.",
           ],
-          note: "Many RC522 boards come with the header loose: push-in pins lose contact, so solder it or press it in firmly. Clone chips (0x88, 0xB2, 0x12) work, but the datasheet has no self-test table for them, so it says “no reference”. IRQ is optional: without it the firmware polls (R6 compares both).",
+          note: "Many RC522 boards come with the header loose: push-in pins lose contact, so solder it or press it in firmly. IRQ is optional: without it the firmware polls, and the chip view says “polling” (R6 compares both). Keep the card away while testing the chip: polling for it adds traffic but no errors.",
         },
         {
           ...common, id: "R2", title: "Wake a card", rfidView: 1,
           heading: "The field, and the first hello",
           goal: "The reader's antenna makes a 13.56 MHz magnetic field. The card has no battery: its coil harvests that field, its chip wakes up, and it answers by loading the field in a rhythm the reader can hear. First in 3D, then frame by frame, then for real in the sniffer.",
+          goalLine: "See a card wake up and answer, read its identity, and find your reader's range.",
+          goalCheck: [
+            "The card view shows your card's UID, “MIFARE Classic 1K”, ATQA 00 04 and SAK 08.",
+            "The trace view lists the wake-up frames: WUPA, ATQA, ANTICOLL, UID + BCC, SELECT, SAK, HLTA.",
+            "You know roughly at what height the read rate starts dropping (your range).",
+          ],
           learn: ["13.56 MHz near field", "inductive coupling", "100 % ASK pauses", "load modulation", "REQA · WUPA · ATQA", "a polling task", "sniffing frames"],
-          panels: [{ title: "The field, in 3D", fn: "field3d" }, { title: "Follow one wake-up, step by step", fn: "seq", flows: ["wake", "select"] }],
+          panels: [{ title: "The field, in 3D", fn: "field3d", intro: "A model of your reader and card: drag to turn it, move the card up and down, change the gain, and press Send WUPA to watch one wake-up. The chart under it shows why the range ends where it does." }, { title: "Follow one wake-up, step by step", fn: "seq", flows: ["wake", "select"], intro: "What happens in the first millisecond after a card arrives, from the ESP32's SPI writes to the card's answer. The same frames appear in your sniffer." }, screens(1)],
+          commands: [
+            { c: "(click to the card view)", where: "button", card: "off", does: "One click on the push button or BOOT goes to the next view; the dots at the top show which one.", see: "Rings around the antenna and “Hold a card or tag flat on the reader”, plus how many taps so far.", fix: "" },
+            { c: "lay the card flat on the reader", where: "hands", card: "on", does: "The reader task polls ~12 times a second; the first poll that finds the card wakes it, reads its UID, then halts it.", see: "The on-board LED flashes white, then stays teal. The card view shows the UID, type, ATQA/SAK and a read rate that fills to 100 %. The monitor prints <code>card 9C:4F:… · MIFARE Classic 1K · ATQA 0004 SAK 08</code> and the frames.", fix: "Nothing? Run R1's <code>chip</code> again; then try the card flat in the middle of the antenna." },
+            { c: "lift the card slowly", where: "hands", card: "move", does: "The field gets weaker with height; polls start to miss.", see: "The read rate turns amber, then coral. After 3 misses in a row (~0.3 s) the monitor says <code>card removed</code>.", fix: "" },
+            { c: "(click to the trace view)", where: "button", card: "any", does: "The sniffer: the frames of the last wake-up, with times in ms.", see: "<code>&gt; 52 WUPA</code>, <code>&lt; 04 00 ATQA</code>, <code>&gt; 93 20 ANTICOLL CL1</code>, <code>&lt; UID + BCC</code>, <code>&gt; SELECT CL1</code>, <code>&lt; SAK</code>, <code>&gt; HLTA</code>.", fix: "“Sniffer off”: type <code>trace on</code>." },
+            { c: "trace off / trace on", card: "any", does: "The sniffer is on by default and prints each new card's frames in the monitor. Off silences the monitor and the trace view.", see: "<code>sniffer off</code> / <code>sniffer on</code> at the bottom right.", fix: "" },
+            { c: "gain 0, gain 7, then gain 4", card: "move", does: "Receiver gain 18 dB (0), 48 dB (7), default 33 dB (4). Hold the card at the edge of your range for each.", see: "The read rate at the same height changes with gain, but only up to a point: far away the card has no power, whatever the gain.", fix: "Finish with <code>gain 4</code>." },
+            { c: "poll off / poll on (or a long press)", card: "any", does: "Pauses and resumes card polling.", see: "The card view says “polling paused”; new cards are ignored until <code>poll on</code>.", fix: "" },
+          ],
           steps: [
             "Same wiring and firmware as R1. Click to the <b>card</b> view.",
-            "Lay the white card flat on the reader: the LED flashes white, the UID appears, the read rate fills up. Lift it slowly and watch the rate drop before the card disappears: that is your range.",
-            "Click to the <b>trace</b> view: the sniffer shows the frames of the last wake-up (WUPA, ATQA, ANTICOLL, SELECT, SAK, HLTA).",
-            "In the monitor, <code>trace on</code> prints each new card's frames with their times in ms. Find the same frames in the step-by-step diagram.",
-            "Try the key tag. Then <code>gain 0</code> (18 dB) and <code>gain 7</code> (48 dB): does the range change? The 3D view predicts when it won't.",
-            "Long-press the button (or <code>poll off</code>) to pause polling; <code>poll on</code> resumes.",
+            "Lay the white card flat on the reader. <b>Checkpoint:</b> LED flash, UID, MIFARE Classic 1K, read rate 100 %.",
+            "Click to the <b>trace</b> view and find the 7 frames; compare with the step-by-step diagram above.",
+            "Lift the card slowly and note the height where the read rate drops: your range.",
+            "Repeat at the edge of range with <code>gain 0</code> and <code>gain 7</code>, then <code>gain 4</code>. Compare with the 3D model's prediction.",
+            "Try the key tag: its own UID, same type.",
           ],
           note: "The reader polls about 12 times a second in its own task on core 0, so the screen never waits. A card counts as removed only after 3 missed polls in a row (~0.3 s), so one weak poll at the edge of range doesn't make it flicker. The 3D model is simplified on purpose: measure your real range in R6.",
         },
@@ -890,14 +957,24 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
           ...common, id: "R3", title: "Who's there", rfidView: 1,
           heading: "Two cards at once: anticollision",
           goal: "Lay the card and the tag on the reader together. Both answer at the same instant, bit by bit, and where their UIDs differ the reader hears a collision. Anticollision walks down the bits like a binary tree: pick a branch, ask again with that prefix, select the card that's left, halt it, repeat until nobody answers.",
+          goalLine: "Find both cards at once, and point to the exact bit where their UIDs collided.",
+          goalCheck: [
+            "<code>inventory</code> lists 2 cards with both UIDs.",
+            "It names the collision bit, and the walk-through above lands on the same bit with your two UIDs.",
+          ],
           learn: ["bit collisions", "binary tree walk", "NVB", "BCC", "cascade levels", "SAK", "HALT · WUPA"],
-          panels: [{ title: "Anticollision: a walk down the bits", fn: "anticoll" }],
+          panels: [{ title: "Anticollision: a walk down the bits", fn: "anticoll", intro: "The two rows are the UID bits of two cards, in the order they travel (least significant bit of byte 0 first). Step through: where the bits differ the reader hears a collision, picks 1, and only the matching card keeps answering. Type your own UIDs from the monitor." }, screens(1)],
+          commands: [
+            { c: "lay the card and the tag together", where: "hands", card: "both", does: "Both cards wake on the same WUPA. The poll resolves the collision and selects one of them.", see: "The card view shows one UID (always the same one) and an amber line: <code>collision at bit 23</code> (your bit will differ).", fix: "Only one card found? Overlap them more: both must sit inside the antenna's loop." },
+            { c: "inventory (or double-click on the card view)", card: "both", does: "Switches the field off for 10 ms so every card restarts, then REQA → select → halt, again and again until nobody answers.", see: "<code>#1 9C:4F:6A:0D … collision at level 1 bit 23 -&gt; chose 1</code>, <code>#2 9C:4F:2A:1B …</code>, then <code>inventory: 2 cards in the field</code>.", fix: "<code>select failed (collision)</code>: move the cards a little and run it again." },
+            { c: "inventory with one card, then none", card: "move", does: "Same walk, nothing to resolve.", see: "<code>1 card</code> without a collision line, then <code>0 cards</code>.", fix: "" },
+          ],
           steps: [
             "Lay the card and the tag on the reader together, overlapping.",
-            "Type <code>inventory</code> (or double-click on the card view). The field goes off for 10 ms so every card restarts, then the reader finds them one by one.",
-            "Read the output: each UID, and where the walk branched, e.g. <code>collision at level 1 bit 23 -> chose 1</code>.",
-            "Type both UIDs into the diagram above and step through: the collision lands on the same bit.",
-            "Leave both on the reader: the card view always shows the same one. The walk always picks 1 at a collision, so the same card wins every time.",
+            "Watch the card view: one UID, and the collision bit in amber.",
+            "Type <code>inventory</code> (or double-click on the card view). <b>Checkpoint:</b> 2 cards, and the collision bit.",
+            "Type both UIDs into the walk-through above and step to step 2: the collision lands on the same bit.",
+            "Leave both on the reader: the card view always shows the same card. The walk always picks 1 at a collision, so the same card wins every time.",
           ],
           note: "Bits travel least-significant first, so “bit 23” is bit 6 of the third UID byte. Our driver is tested for two cards at once: with three or more, the chip's collision position after the first branch is harder to trust. 7-byte UIDs take two cascade levels; the first part starts with 88h, the cascade tag.",
         },
@@ -905,14 +982,24 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
           ...common, id: "R4", title: "Inside the card", rfidView: 3,
           heading: "Open the card's memory",
           goal: "A MIFARE Classic 1K holds 1,024 bytes: 16 sectors × 4 blocks × 16 bytes. Every sector has its own lock, the trailer: two keys plus access bits that say who may read or write each block. Open each sector of your own card with the factory key and dump it.",
+          goalLine: "Dump your own card's whole memory and explain block 0 and one sector trailer byte by byte.",
+          goalCheck: [
+            "<code>dump</code> ends with <code>dump: 16 sectors read</code>, and the memory view is all coloured (no grey “closed” sectors).",
+            "In the dump you can point to the UID in block 0 and to <code>FF 07 80 69</code> in a trailer, and the decoder above explains what FF 07 80 allows.",
+          ],
           learn: ["sectors & blocks", "sector trailers", "access bits (stored twice)", "3-pass authentication", "encrypted frames", "manufacturer block"],
-          panels: [{ title: "The card's memory, in 3D", fn: "memory3d" }, { title: "Access bits decoder", fn: "access" }, { title: "Authenticate and read, step by step", fn: "seq", flows: ["read"] }],
+          panels: [{ title: "The card's memory, in 3D", fn: "memory3d", intro: "Each cabinet is a sector, each slab a block, the top slab the trailer with its lock. Click a sector, then Authenticate: only then can its blocks be read." }, { title: "Access bits decoder", fn: "access", intro: "Bytes 6–8 of every trailer decide who may do what in that sector. Tick the bits or type the three bytes from your dump." }, { title: "Authenticate and read, step by step", fn: "seq", flows: ["read"], intro: "What one <code>read 4</code> does on the bus and in the air." }, screens(3)],
+          commands: [
+            { c: "dump (or double-click on the memory view)", card: "still", does: "For each of the 16 sectors: authenticate with the factory key A, read its 4 blocks, decode the trailer. About 1.5 s; keep the card still.", see: "64 lines (block, 16 bytes, ASCII, meaning), then <code>dump: 16 sectors read</code>. The memory view: block 0 amber, empty blocks dark, trailers coral.", fix: "Grey “closed” sectors: their key isn't the factory key (a card someone set up): the lab leaves those alone. “no card”: it moved; run it again." },
+            { c: "read 0", card: "on", does: "Authenticates sector 0 and reads block 0 only.", see: "UID (4 bytes), BCC, then 08 04 00 (SAK, ATQA), then the maker's bytes.", fix: "" },
+            { c: "read 1 (with trace on)", card: "on", does: "The same for block 1, with the sniffer showing the frames.", see: "<code>AUTH key A</code> marked as done inside the chip, then <code>READ</code> and 16 bytes, both “[encrypted on air]”.", fix: "" },
+          ],
           steps: [
-            "Hold the white card on the reader. Type <code>dump</code> (or double-click on the memory view).",
-            "Read block 0: the UID, its BCC, SAK and ATQA, then the maker's bytes. Every 4th block is a trailer: key A reads back as 00 (the card never reveals it), then <code>FF 07 80 69</code>, then key B.",
-            "Enter <code>FF 07 80</code> in the access-bits decoder above: the data blocks get 000, the trailer 001.",
-            "The memory view colours each block: maker, empty, data, value, trailer. In the 3D view, click a sector to open it.",
-            "<code>trace on</code>, then <code>read 1</code>: the sniffer shows <code>AUTH key A</code>, then a <code>READ</code> marked “encrypted on air”.",
+            "Hold the white card on the reader and keep it still. Type <code>dump</code> (or double-click on the memory view). <b>Checkpoint:</b> 16 sectors read.",
+            "In the dump, read block 0: UID, BCC, SAK, ATQA, maker's bytes.",
+            "Find a trailer (blocks 3, 7, 11…): key A reads as 00 (the card never reveals it), then <code>FF 07 80 69</code>, then key B.",
+            "Type <code>FF 07 80</code> into the access-bits decoder above: data blocks 000, trailer 001.",
+            "<code>read 1</code> with the trace view open: the AUTH and the encrypted READ.",
           ],
           note: "Authentication runs inside the MFRC522 (its MFAuthent command): the ESP32 hands over the key and never sees the handshake, and the key never goes into the trace. The firmware only uses the factory key, on cards you own, and never writes block 0 or a trailer: a trailer with broken access bits locks its sector for good.",
         },
@@ -920,15 +1007,28 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
           ...common, id: "R5", title: "Write & count", rfidView: 4,
           heading: "Write a label, keep a count",
           goal: "Write your own 16 bytes into a data block and read them back. Then use MIFARE's built-in arithmetic: a value block stores a number three times (once inverted) and the card itself adds or subtracts, then commits the result in one step. A backup block keeps the value from before.",
+          goalLine: "Write text to your card and keep a credit counter on it that the card itself updates.",
+          goalCheck: [
+            "<code>write 4 hello bench</code> says “written and read back”.",
+            "After <code>credits init 50</code> and <code>credits use 3</code>, the credits view shows 47 with backup 50.",
+            "<code>dump</code> shows block 4 as data and blocks 8 and 9 as value blocks.",
+          ],
           learn: ["block writes · ACK / NAK", "read-back checks", "value block format", "INCREMENT · DECREMENT · TRANSFER", "backup blocks", "guard rails"],
-          panels: [{ title: "A value block, byte by byte", fn: "value" }, { title: "credits use 3, step by step", fn: "seq", flows: ["credits"] }],
+          panels: [{ title: "A value block, byte by byte", fn: "value", intro: "How the card stores a number so that it can check it itself. Change the value and watch which bytes move." }, { title: "credits use 3, step by step", fn: "seq", flows: ["credits"], intro: "The four card commands behind one <code>credits use 3</code>." }, screens(4)],
+          commands: [
+            { c: "write 4 hello bench", card: "on", does: "Opens sector 1, checks its access bits allow key A writes, writes 16 bytes (text padded with zeros), reads them back.", see: "Block 4's bytes, <code>|hello bench.....|</code> and <code>written and read back</code>.", fix: "<code>READ BACK DIFFERS</code>: the card moved mid-write; run it again." },
+            { c: "write 3 test", card: "any", does: "Tries to write a sector trailer.", see: "Refused before anything is sent: <code>not writable here (block 0 and trailers are off limits)</code>.", fix: "" },
+            { c: "credits init 50", card: "on", does: "Writes 50 as a value block into block 8 and the same into the backup, block 9.", see: "The credits view: 50, backup 50, a coin stack.", fix: "" },
+            { c: "credits use 3 (then credits add 10)", card: "on", does: "Copies the value into the backup, then the card subtracts (or adds) and commits with TRANSFER.", see: "47, backup 50; then 57, backup 47.", fix: "<code>no credits on this card yet</code>: run credits init first." },
+            { c: "credits use 999", card: "on", does: "The firmware checks the balance first.", see: "<code>only 57 credits, can't use 999</code>: nothing is sent to the card.", fix: "" },
+            { c: "credits", card: "on", does: "Reads blocks 8 and 9 and decodes them.", see: "The current value and the backup.", fix: "" },
+          ],
           steps: [
-            "Card on the reader. <code>write 4 hello bench</code>: block 4 gets 16 bytes (padded with zeros), then the firmware reads them back and compares.",
-            "<code>write 3 test</code> is refused: block 3 is a trailer. So is block 0.",
-            "<code>credits init 50</code> turns blocks 8 and 9 into value blocks holding 50.",
-            "<code>credits use 3</code>, then <code>credits add 10</code>. On the credits view the coin stack follows; the backup shows the value before the last change.",
-            "Step through the diagram above: RESTORE + TRANSFER copy the value into the backup, then DECREMENT + TRANSFER. The card checks the value format itself.",
-            "<code>dump</code> again: block 4 shows as data, blocks 8 and 9 as value blocks.",
+            "Card on the reader. <code>write 4 hello bench</code>. <b>Checkpoint:</b> written and read back.",
+            "<code>write 3 test</code>: refused, a trailer. So is block 0.",
+            "<code>credits init 50</code>, then <code>credits use 3</code>. <b>Checkpoint:</b> 47, backup 50.",
+            "<code>credits add 10</code>: 57, backup 47. Step through the diagram above to see the four card commands.",
+            "<code>dump</code> again: block 4 is data, blocks 8 and 9 are value blocks.",
           ],
           note: "Credits on a MIFARE Classic are a learning toy, not money: anyone with the key can rewrite the block. Payment and transit systems use cards with modern cryptography (such as MIFARE DESFire) and check every transaction on a server.",
         },
@@ -936,15 +1036,29 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
           ...common, id: "R6", title: "Edge lab", rfidView: 5,
           heading: "Find the limits on your own bench",
           goal: "Seven experiments that each push one setting until something breaks: the SPI clock, receiver gain against distance, how fast the card answers, how long each step takes, polling against the IRQ wire, the chip's CRC unit against the ESP32, and hundreds of reads in a row. Each one draws a chart on the screen and prints a table you can paste below.",
+          goalLine: "Measure where your own bench breaks, and compare it with the datasheet.",
+          goalCheck: [
+            "You know the highest SPI clock with 0 errors, your card's reply time, and the read success rate held still.",
+            "Your tables are pasted into the Experiments panel above, next to the example.",
+          ],
           learn: ["measured vs datasheet", "SPI signal integrity", "timeouts & reply time", "IRQ vs polling", "offloading", "reliability statistics"],
-          panels: [{ title: "Experiments", fn: "edge" }],
+          panels: [{ title: "Experiments", fn: "edge", intro: "One tab per experiment: what it pushes, what to look for, the example result, and a box for your own table." }, screens(5)],
+          commands: [
+            { c: "edge spi", card: "any", does: "FIFO loopback at 1 to 40 MHz, then a chip reset. About 1 s.", see: "A table of % wrong per MHz and a bar chart; the 10 MHz bar is outlined (the datasheet limit).", fix: "" },
+            { c: "edge crc", card: "any", does: "300 checksums by the chip and by the ESP32.", see: "0 mismatches; the chip much slower (SPI round trips).", fix: "" },
+            { c: "edge irq", card: "any", does: "30 WUPAs polling, 30 sleeping on the IRQ wire. Run it with the card on, then off.", see: "SPI accesses per command for each; the gap grows a lot with no card.", fix: "“IRQ never fired”: the IRQ wire (13) is loose." },
+            { c: "edge timeout", card: "still", does: "Shrinks the chip's wait timer from 25 ms to 40 µs. About 5 s.", see: "100 % down to ~100 µs, then 0 %: the card's reply time.", fix: "All 0 %: the card wasn't on the reader." },
+            { c: "edge timing", card: "still", does: "40 full cycles, each step timed.", see: "min / avg / max µs for WUPA, SELECT, AUTH, READ.", fix: "“no complete cycle”: hold the card still." },
+            { c: "edge gain", card: "still", does: "30 tries at each gain step, at one height. Run it close, then at ~3 cm.", see: "% found per gain: all 100 close up; low gains fail first further away.", fix: "" },
+            { c: "edge stress 500", card: "move", does: "500 full read cycles (~10 s). Lift or tilt the card slowly while it runs.", see: "Counts per outcome: ok, absent, CRC, protocol… and reads per second.", fix: "" },
+          ],
           steps: [
-            "Card on the reader and kept still (a book on top helps). Click to the <b>edge</b> view.",
-            "<code>edge spi</code>: 1 to 40 MHz. Where do bytes start coming back wrong? The chip is rated for 10 MHz; your wires decide the rest.",
-            "<code>edge timeout</code>: shrink the chip's timer from 25 ms to 40 µs. Below some point the card can't answer in time: that is its reply time.",
-            "<code>edge gain</code> with the card at 1 cm, then at 3 cm: the found rate at each gain step.",
-            "<code>edge timing</code>, <code>edge irq</code> and <code>edge crc</code>, then <code>edge stress 500</code> while you slowly lift the card.",
-            "Paste each table into the matching tab below: your numbers appear next to the example.",
+            "Card on the reader and kept still (a book on top helps). Click to the <b>edge</b> view: double-click there runs the next experiment.",
+            "<code>edge spi</code>, <code>edge crc</code>, <code>edge irq</code> (card on, then off).",
+            "<code>edge timeout</code> and <code>edge timing</code> with the card still. <b>Checkpoint:</b> your card's reply time.",
+            "<code>edge gain</code> close, then at about 3 cm.",
+            "<code>edge stress 500</code> while you slowly lift the card.",
+            "Paste each table into the matching tab above.",
           ],
           note: "Double-click on the edge view runs the next experiment. edge spi resets the chip afterwards, in case a fast, garbled write changed a setting. Pull the IRQ wire and run edge irq: the firmware notices and falls back to polling.",
         },
@@ -1143,6 +1257,7 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
         ${base.variants ? `<div class="variants" role="tablist" aria-label="Variations">${base.variants.map((v) => `<button type="button" role="tab" id="var-${v.key}" aria-selected="${v.key === l.variantKey}"><b>${v.label}</b><span>${v.short}</span></button>`).join("")}</div>` : ""}
         <h2>${l.heading}</h2>
         <p class="goal">${l.goal}</p>
+        ${l.goalCheck ? `<div class="goalbox"><b>Goal</b><p>${l.goalLine}</p><p class="gl">You're done when</p><ul>${l.goalCheck.map((c) => `<li>${c}</li>`).join("")}</ul></div>` : ""}
         <ul class="learn">${l.learn.map((x) => `<li>${x}</li>`).join("")}</ul>
         <div class="cmd"><code id="cmd-${l.id}">${l.cmd}</code><button type="button" id="copy-${l.id}">Copy</button></div>
       </div>
@@ -1151,12 +1266,13 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
       ${l.webConcepts ? `<div class="panel"><h3>How the pieces talk</h3><div id="web-concepts"></div></div>` : ""}
       ${l.remoteConcepts ? `<div class="panel"><h3>How remote control works</h3><div id="remote-concepts"></div></div>` : ""}
       ${l.httpsConcepts ? `<div class="panel"><h3>Follow one request, step by step</h3><div id="https-concepts"></div></div>` : ""}
-      ${(l.panels || []).map((p, i) => `<div class="panel"><h3>${p.title}</h3><div id="rpanel-${i}"></div></div>`).join("")}
+      ${(l.panels || []).map((p, i) => `<div class="panel"><h3>${p.title}</h3>${p.intro ? `<p class="panel-intro">${p.intro}</p>` : ""}<div id="rpanel-${i}"></div></div>`).join("")}
       ${l.roadmap ? `<div class="panel"><h3>The Wi-Fi track</h3><div id="wifi-roadmap"></div></div>` : ""}
       ${l.fullWiring ? `<div class="panel"><h3>Wiring on the ESP32: screen + button</h3><div class="wd" id="full-wiring"></div></div>` : ""}
       ${l.compare ? `<div class="panel"><h3>Screen vs button</h3><div id="compare"></div></div>` : ""}
       ${l.buttonDiagram ? `<div class="panel"><h3>How the button is wired</h3><div class="wd" id="btn-diagram"></div></div>` : ""}
       ${wiring}
+      ${l.commands ? commandsPanel(l) : ""}
       <div class="panel"><h3>Steps</h3>
         <ol class="check">${l.steps.map((s, i) => `<li><label><input type="checkbox" id="tick-${tk(i)}" ${ticks[tk(i)] ? "checked" : ""}><span>${s}</span></label></li>`).join("")}</ol>
         <p class="note">${l.note}</p>
@@ -1188,6 +1304,18 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
     const stopPanels = (l.panels || []).map((p, i) => RFID_PANELS[p.fn](document.getElementById(`rpanel-${i}`), p, l) || (() => {}));
     lessonEl.querySelectorAll(".variants button").forEach((b) => b.addEventListener("click", () => { store.set(`esp-variant-${base.id}`, b.id.replace("var-", "")); render(); }));
     stopSim = () => { stopMain(); stopDiagram(); stopButton(); stopFull(); stopConcepts(); stopWeb(); stopRemote(); stopHttps(); stopPanels.forEach((f) => f()); };
+  }
+
+  // "Commands, in order": what to type, where the card should be, what it does, what you should see.
+  const CARD_STATE = { off: "card away", any: "card: doesn't matter", on: "card on the reader", both: "card + tag together", still: "card on, held still", move: "card on, then move it" };
+  const WHERE = { mac: "Mac terminal", button: "push button / BOOT", hands: "with your hands" };
+  function commandsPanel(l) {
+    return `<div class="panel"><h3>Commands, in order</h3>
+      <p class="panel-intro">Type these in the serial monitor (<code>uv run pio device monitor</code>) unless the grey tag says otherwise. The coloured tag says where the card should be while it runs.</p>
+      <ol class="cmds">${l.commands.map((c) => `<li>
+        <div class="cmd-head"><code>${c.c}</code><span class="where">${WHERE[c.where] || "serial monitor"}</span><span class="cs cs-${c.card}">${CARD_STATE[c.card]}</span></div>
+        <dl><dt>Does</dt><dd>${c.does}</dd><dt>You should see</dt><dd>${c.see}</dd>${c.fix ? `<dt>If not</dt><dd>${c.fix}</dd>` : ""}</dl>
+      </li>`).join("")}</ol></div>`;
   }
 
   function chipFor(text) {
@@ -3276,7 +3404,7 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
       { name: "VersionReg", a: 0x37, v: 0x92, what: "92h = MFRC522 version 2.0" },
       { name: "ComIrqReg", a: 0x04, v: 0x14, what: "14h after reset: IdleIRq + LoAlertIRq" },
       { name: "TxControlReg", a: 0x14, v: 0x83, what: "83h: both antenna drivers on (bits 1-0)" },
-      { name: "RFCfgReg", a: 0x26, v: 0x48, what: "48h: receiver gain 100b = 33 dB" },
+      { name: "RFCfgReg", a: 0x26, v: 0x40, what: "40h: receiver gain 100b = 33 dB (48h straight after a reset)" },
     ];
     const FAULTS = { none: "wired correctly", miso: "MISO wire loose", power: "no 3.3 V", ss: "SDA (chip select) wire loose" };
     root.innerHTML = `<div class="wd">
@@ -3687,15 +3815,212 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
     return () => {};
   }
 
-  const RFID_PANELS = { spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge };
+  // ---------- The rfid-lab screen, drawn like src/rfid-lab/rfid_views.h ----------
+  // One drawer for both the simulator and the "What the screen shows" panel. `s` is a plain state:
+  // { view, uid (array or null), rate, taps, polling, coll, selfTest, gain, irq, mhz, trace, frames,
+  //   dump {uid, mem} | null, credits {v, b} | null, edge (an EDGE entry) | null, busy, progress, note, noteBad }
+  const RFID_VIEWS = ["chip", "card", "trace", "memory", "credits", "edge"];
+  const RFID_HINTS = ["double: self-test", "double: inventory", "double: sniffer on/off", "double: dump", "double: +1 credit", "double: next test"];
+  function rfidPalette() {
+    return { paper: css("--scope-paper"), ink: css("--scope-ink"), muted: css("--scope-muted"), dim: css("--scope-dim"), teal: css("--scope-trace"), amber: css("--scope-amber"), coral: css("--scope-coral"), blue: css("--scope-blue"), card: css("--card-white"), chip: css("--pcb") };
+  }
+  function drawRfidScreen(g, C, s, t, still = false) {
+    const W = 320, H = 170, id = (u, sep = ":") => u.map(hx).join(sep);
+    const T = (x, y, str, col, font = "8px 'IBM Plex Mono', monospace") => { g.font = font; g.fillStyle = col; g.fillText(str, x, y); };
+    const BOLD = "bold 12px Archivo, sans-serif", SANS = "11px Archivo, sans-serif";
+    const stat = (x, y, label, value, col = C.ink) => { T(x, y + 7, label, C.muted); T(x, y + 24, value, col, BOLD); };
+    g.fillStyle = C.paper; g.fillRect(0, 0, W, H);
+    const views = [
+      () => { // chip
+        const cx = 52, cy = 92;
+        g.fillStyle = C.muted;
+        for (let i = 0; i < 8; i++) { const o = -21 + i * 6; g.fillRect(cx + o, cy - 34, 2, 6); g.fillRect(cx + o, cy + 28, 2, 6); g.fillRect(cx - 34, cy + o, 6, 2); g.fillRect(cx + 28, cy + o, 6, 2); }
+        g.fillStyle = C.chip; g.fillRect(cx - 28, cy - 28, 56, 56);
+        g.globalAlpha = still ? 0.9 : 0.55 + 0.4 * Math.sin(t * 3); g.fillStyle = C.teal; g.fillRect(cx - 9, cy - 9, 18, 18); g.globalAlpha = 1;
+        T(cx - 20, cy + 23, "MFRC522", C.muted);
+        stat(104, 38, "VersionReg", "92h", C.teal);
+        stat(220, 38, "self-test", ["not run", "FAILED", "passed", "no reference"][s.selfTest + 1], s.selfTest === 1 ? C.teal : s.selfTest === 0 ? C.coral : C.muted);
+        stat(104, 80, "SPI clock (max 10)", `${s.mhz} MHz`, s.mhz > 10 ? C.amber : C.ink);
+        stat(220, 80, "waits by", s.irq ? "IRQ wire" : "polling");
+        const db = [18, 23, 18, 23, 33, 38, 43, 48][s.gain];
+        T(104, 129, "receiver gain", C.muted);
+        g.strokeStyle = C.dim; g.strokeRect(104.5, 133.5, 100, 8); g.fillStyle = C.blue; g.fillRect(105, 134, ((db - 18) * 98) / 30, 7);
+        T(210, 140, `${db} dB`, C.ink);
+        const ops = 1200 + Math.floor(t * 61);
+        T(250, 129, "bus", C.muted); T(250, 140, `${ops} SPI ops`, C.ink); T(250, 151, `${Math.floor(ops / 17)} cmds`, C.ink);
+      },
+      () => { // card
+        const ax = 70, ay = 100;
+        for (let i = 0; i < 4; i++) {
+          const k = still ? i / 4 : (t * 0.6 + i * 0.25) % 1;
+          g.strokeStyle = C.blue; g.globalAlpha = 1 - k; g.beginPath(); g.arc(ax, ay, 14 + k * 52, 0, 7); g.stroke();
+        }
+        g.globalAlpha = 1; g.strokeStyle = C.amber; g.strokeRect(ax - 22, ay - 16, 44, 32); g.strokeRect(ax - 18, ay - 12, 36, 24);
+        if (!s.uid) { T(146, 76, "Hold a card or tag", C.ink, SANS); T(146, 96, "flat on the reader", C.ink, SANS); T(146, 112, `${s.polling ? "polling 12x/s" : "polling paused"}, ${s.taps} taps so far`, C.muted); return; }
+        const bob = still ? 0 : Math.sin(t * 2) * 2;
+        g.fillStyle = C.card; g.fillRect(ax - 30, ay - 52 + bob, 60, 38);
+        g.strokeStyle = C.muted; g.strokeRect(ax - 26, ay - 48 + bob, 34, 24);
+        g.fillStyle = C.amber; g.fillRect(ax + 14, ay - 42 + bob, 8, 8);
+        T(146, 43, "UID", C.muted); T(146, 58, id(s.uid, " "), C.teal, BOLD); T(146, 72, "MIFARE Classic 1K", C.ink);
+        stat(146, 80, "ATQA", "00 04"); stat(210, 80, "SAK", "08"); stat(262, 80, "UID size", "4 B");
+        T(146, 129, "found in the last 20 polls", C.muted);
+        g.strokeStyle = C.dim; g.strokeRect(146.5, 133.5, 120, 8); g.fillStyle = s.rate >= 90 ? C.teal : s.rate >= 50 ? C.amber : C.coral; g.fillRect(147, 134, (s.rate * 118) / 100, 7);
+        T(272, 140, `${s.rate}%`, C.ink);
+        if (s.coll) T(146, 153, `collision at bit ${s.coll}`, C.amber);
+      },
+      () => { // trace
+        if (!s.trace) return T(8, 46, "Sniffer off. Serial: trace on", C.muted);
+        if (!s.frames.length) return T(8, 46, "Nothing yet: tap a card.", C.muted);
+        s.frames.slice(-10).forEach((f, i) => {
+          const y = 42 + i * 12;
+          T(4, y, f.t.toFixed(1).padStart(6), C.muted); T(44, y, f.dir === ">" ? ">" : "<", f.dir === ">" ? C.amber : C.teal);
+          T(54, y, hxs(f.bytes.slice(0, 9)) + (f.bytes.length > 9 ? " .." : ""), f.crypto ? C.muted : C.ink); T(228, y, f.name.replace(" (short)", "").slice(0, 15), f.dir === ">" ? C.amber : C.teal);
+        });
+        T(4, 154, "ms   > reader to card   < card to reader", C.dim);
+      },
+      () => { // memory
+        if (!s.dump) { T(8, 50, "No dump yet.", C.ink); T(8, 64, "Hold a card and double-click,", C.muted); T(8, 76, "or type: dump", C.muted); return; }
+        const col = { maker: C.amber, empty: C.dim, data: C.teal, value: C.blue, trailer: C.coral };
+        for (let sec = 0; sec < 16; sec++) {
+          T(8 + sec * 18 + (sec < 10 ? 6 : 3), 41, String(sec), C.muted);
+          for (let b = 0; b < 4; b++) { g.fillStyle = col[blockKind(s.dump.mem[sec * 4 + b], sec * 4 + b)]; g.fillRect(8 + sec * 18, 44 + b * 18, 16, 16); }
+        }
+        ["maker", "empty", "data", "value", "trailer"].forEach((k, i) => { g.fillStyle = col[k]; g.fillRect(8 + i * 60, 124, 7, 7); T(18 + i * 60, 131, k, C.muted); });
+        T(8, 146, `${id(s.dump.uid)}  16 sectors x 4 blocks x 16 B`, C.ink);
+      },
+      () => { // credits
+        if (!s.credits) { T(110, 56, "No credits read yet.", C.ink); T(110, 70, "credits init 50   (serial)", C.muted); T(110, 82, "then: credits add 5 / use 3", C.muted); return; }
+        const coins = Math.max(0, Math.min(8, Math.floor(s.credits.v / 10) + (s.credits.v > 0 ? 1 : 0)));
+        for (let i = 0; i < coins; i++) { const y = 140 - i * 9 + (i === coins - 1 && !still ? Math.sin(t * 3) * 1.5 : 0); g.fillStyle = C.amber; g.fillRect(28, y, 56, 8); }
+        T(110, 47, "credits (block 8, a value block)", C.muted);
+        T(110, 82, String(s.credits.v), C.ink, "bold 28px Archivo, sans-serif");
+        T(110, 103, `backup ${s.credits.b} (block 9)`, C.muted);
+        T(110, 123, "The card does the maths: you send", C.muted); T(110, 134, "\"add 5\", it computes, TRANSFER commits.", C.muted);
+      },
+      () => { // edge
+        const e = s.edge;
+        if (!e) { T(8, 46, "No experiment yet. Serial:", C.ink); EDGE.forEach((x, i) => T(14, 60 + i * 12, `${x.cmd.padEnd(16)} ${x.label}`, C.muted)); return; }
+        T(8, 41, e.label, C.ink);
+        const data = e.example, top = e.max || Math.max(...data.map((r) => r[1])) * 1.1, base = 136, hMax = 84, slot = (W - 16) / data.length, bw = slot - 4;
+        g.fillStyle = C.dim; g.fillRect(8, base, W - 16, 1);
+        data.forEach(([l, v], i) => {
+          const h = (v / top) * hMax, x = 8 + i * slot + 2;
+          g.fillStyle = C.blue; g.fillRect(x, base - h, bw, h);
+          if (e.mark === l) { g.strokeStyle = C.ink; g.strokeRect(x - 2, base - hMax - 2, bw + 4, hMax + 4); }
+          g.font = "8px 'IBM Plex Mono', monospace";
+          T(x + (bw - g.measureText(String(v)).width) / 2, base - h - 3, String(v), C.ink);
+          T(x + (bw - g.measureText(l).width) / 2, base + 9, l, C.muted);
+        });
+        T(8, 156, e.key === "spi" ? "errors from 16 MHz (spec: 10)" : e.key === "timeout" ? "card answers within 100 us" : "the conclusion, in one line", C.teal);
+      },
+    ];
+    views[s.view](t);
+    // Header: title, view dots, card-present dot. Footer: button hint, last result or progress.
+    T(8, 18, "RFID", C.ink, BOLD); T(42, 18, RFID_VIEWS[s.view], C.muted, SANS);
+    for (let i = 0; i < 6; i++) { g.fillStyle = i === s.view ? C.ink : C.dim; g.beginPath(); g.arc(236 + i * 10, 18, 3, 0, 7); g.fill(); }
+    g.fillStyle = s.uid ? C.teal : C.dim; g.beginPath(); g.arc(304, 18, 5, 0, 7); g.fill();
+    if (s.uid) { g.strokeStyle = C.teal; g.beginPath(); g.arc(304, 18, 8, 0, 7); g.stroke(); }
+    g.fillStyle = C.dim; g.fillRect(0, 28, W, 1);
+    g.fillStyle = C.paper; g.fillRect(0, H - 11, W, 11);
+    T(6, H - 3, `click: view  ${RFID_HINTS[s.view]}`, C.muted);
+    const right = s.busy ? `${s.busy} ${Math.round(s.progress)}%` : s.note.slice(0, 34);
+    g.font = "8px 'IBM Plex Mono', monospace";
+    T(W - 6 - g.measureText(right).width, H - 3, right, s.busy ? C.amber : s.noteBad ? C.coral : C.teal);
+    if (s.busy) { g.fillStyle = C.amber; g.fillRect(0, H - 1, (W * s.progress) / 100, 1); }
+  }
+
+  // ---------- "What the screen shows": each view with numbered callouts ----------
+  // [x, y] in screen pixels (320 x 170), then what that part means.
+  const SCREEN_DOCS = [
+    { when: "The first view to check after wiring (R1). Double-click runs the self-test.", parts: [
+      [22, 60, "The chip. Its centre glows teal while the chip answers; it can't glow if VersionReg reads 00h or FFh."],
+      [96, 42, "VersionReg: 92h = MFRC522 v2.0, 91h = v1.0, other values = a clone. 00h or FFh means nothing answered: check the wiring."],
+      [212, 42, "Self-test: “not run” until you type selftest (or double-click); then “passed”, “FAILED”, or “no reference” for clone chips."],
+      [96, 84, "SPI clock: 4 MHz by default. Turns amber above the chip's 10 MHz rating (spi &lt;MHz&gt;)."],
+      [212, 84, "How the reader task waits for the chip: “IRQ wire”, or “polling” if IRQ isn't wired (the firmware switches by itself and says so)."],
+      [96, 132, "Receiver gain, 18 to 48 dB (gain &lt;0-7&gt;); 33 dB by default."],
+      [242, 126, "Bus counters: SPI accesses and commands. They keep climbing, about 12 polls a second: the reader task is alive."],
+      [304, 36, "Card dot: teal with a ring while a card is in the field. Same on every view."],
+      [4, 164, "Footer, left: what a double-click does on this view."],
+      [316, 164, "Footer, right: the last result. Teal = fine, coral = a problem, amber with a growing line = busy."],
+    ] },
+    { when: "The view the board starts on. Shows the card in the field right now. Double-click runs inventory.", parts: [
+      [14, 100, "The antenna and its field: always animating, card or not."],
+      [36, 48, "A card appears here when one is in the field; the small square is its chip."],
+      [136, 40, "The UID: the card's serial number, as the anticollision read it."],
+      [136, 69, "The card type, decoded from SAK."],
+      [136, 90, "ATQA (00 04) and SAK (08): the card's answers to wake-up and select. UID size: 4, 7 or 10 bytes."],
+      [136, 133, "Read rate: how many of the last 20 polls found the card. 100 % = solid; amber or coral = edge of range."],
+      [136, 151, "Only with two cards on the reader: the bit where their UIDs first differ (R3)."],
+    ] },
+    { when: "The sniffer: the frames of the last card wake-up or command. Double-click turns it on or off.", parts: [
+      [20, 30, "Time in ms since the first frame of this exchange."],
+      [46, 30, "> reader to card (amber), < card to reader (teal)."],
+      [110, 30, "The bytes on the air. Grey bytes were encrypted on the air (after authentication); you see the plain text."],
+      [262, 30, "What the frame is: WUPA, ATQA, ANTICOLL, SELECT, SAK, HLTA, READ…"],
+    ] },
+    { when: "The last dump, block by block. Double-click runs dump (hold the card still).", parts: [
+      [308, 37, "One column per sector, 0 to 15."],
+      [17, 52, "Block 0 (amber): the maker's block with the UID. Read-only."],
+      [100, 70, "Data blocks: dark = all zeros, green = something written, blue = a value block (credits)."],
+      [100, 106, "The bottom row: each sector's trailer (keys + access bits), coral. The lab never writes these."],
+      [300, 143, "Which card this dump is from."],
+    ] },
+    { when: "The credit counter in blocks 8 and 9 (R5). Double-click adds 1 credit.", parts: [
+      [96, 136, "One coin per 10 credits (up to 8)."],
+      [100, 70, "The value in block 8, as the card computed it."],
+      [100, 100, "The backup in block 9: the value before the last change."],
+    ] },
+    { when: "The last edge-lab experiment as a bar chart (R6). Double-click runs the next experiment.", parts: [
+      [64, 37, "Which experiment."],
+      [312, 92, "One bar per setting tried, all on one scale; the value is written above each bar."],
+      [145, 46, "An outlined bar marks the reference: the datasheet limit or the default."],
+      [158, 154, "The conclusion in one line, also printed in the monitor with the full table."],
+    ] },
+  ];
+  function rfidScreens(root, panel) {
+    const C = rfidPalette();
+    const card = { uid: RF.card.uid, mem: exampleCard(true) };
+    const EX = {
+      view: 0, uid: null, rate: 100, taps: 3, polling: true, coll: 0, selfTest: 1, gain: 4, irq: true, mhz: 4, trace: true,
+      frames: [], dump: card, credits: { v: 47, b: 50 }, edge: EDGE[0], busy: null, progress: 0, note: "self-test passed: 64/64 bytes", noteBad: false,
+    };
+    const u = RF.card.uid, b = bccOf(u);
+    EX.frames = [[">", [0x52], "WUPA", 0], ["<", [0x04, 0x00], "ATQA", 0.371], [">", [0x93, 0x20], "ANTICOLL CL1", 0.64], ["<", [...u, b], "UID + BCC", 1.2], [">", withCrc([0x93, 0x70, ...u, b]), "SELECT CL1", 1.5], ["<", withCrc([0x08]), "SAK", 2.58], [">", withCrc([0x50, 0x00]), "HLTA", 2.79]]
+      .map(([dir, bytes, name, t]) => ({ dir, bytes, name, t }));
+    root.innerHTML = `<div class="scene-dots scr-tabs" role="group" aria-label="Screen view">${RFID_VIEWS.map((v, i) => `<button type="button" data-v="${i}">${i + 1} · ${v}</button>`).join("")}</div>
+      <div class="screen-frame"><div class="scr"><canvas width="320" height="170" role="img"></canvas><div class="scr-marks" aria-hidden="true"></div></div></div>
+      <p class="sim-cap" data-o="when"></p><ol class="scr-list"></ol>`;
+    const cv = root.querySelector("canvas"), g = cv.getContext("2d"), marks = root.querySelector(".scr-marks"), list = root.querySelector(".scr-list"), when = root.querySelector('[data-o="when"]');
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let view = panel.view ?? 0, hl = -1, raf;
+    function show() {
+      const d = SCREEN_DOCS[view];
+      root.querySelectorAll("[data-v]").forEach((x) => x.setAttribute("aria-current", String(+x.dataset.v === view)));
+      cv.setAttribute("aria-label", `Example of the ${RFID_VIEWS[view]} view. The list below explains each numbered part.`);
+      when.textContent = d.when;
+      marks.innerHTML = d.parts.map(([x, y], i) => `<span style="left:${(x / 320) * 100}%;top:${(y / 170) * 100}%" data-i="${i}">${i + 1}</span>`).join("");
+      list.innerHTML = d.parts.map(([, , text], i) => `<li data-i="${i}" tabindex="0">${text}</li>`).join("");
+      const on = (i) => { hl = i; marks.querySelectorAll("span").forEach((m) => m.classList.toggle("hl", +m.dataset.i === i)); list.querySelectorAll("li").forEach((m) => m.classList.toggle("hl", +m.dataset.i === i)); };
+      list.querySelectorAll("li").forEach((li) => { li.addEventListener("mouseenter", () => on(+li.dataset.i)); li.addEventListener("focus", () => on(+li.dataset.i)); li.addEventListener("mouseleave", () => on(-1)); });
+    }
+    root.querySelectorAll("[data-v]").forEach((x) => x.addEventListener("click", () => { view = +x.dataset.v; hl = -1; show(); }));
+    const frame = (now) => {
+      // The card view shows a card present; every other view shows the state after R1-R6.
+      drawRfidScreen(g, C, { ...EX, view, uid: view === 1 || view === 2 ? RF.card.uid : view === 3 ? RF.card.uid : null, coll: view === 1 ? 23 : 0, note: ["self-test passed: 64/64 bytes", "", "", "dump: 16 sectors read", "credits: 47", "SPI sweep: errors from 16 MHz"][view] }, now / 1000, reduce);
+      raf = requestAnimationFrame(frame);
+    };
+    show();
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }
+
   // ---------- Sim R1-R6: the rfid-lab screen + serial monitor (example data) ----------
   function simRfid(parent, lesson) {
     const W = 320, H = 170, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const VIEWS = ["chip", "card", "trace", "memory", "credits", "edge"];
-    const HINTS = ["double: self-test", "double: inventory", "double: sniffer on/off", "double: dump", "double: +1 credit", "double: next test"];
     const row = document.createElement("div"); row.className = "boot-row";
     row.innerHTML = `<button type="button" class="boot-btn" aria-label="Push button: click next view, double-click this view's action, hold to pause polling">BUTTON</button>
-      <div class="scene-dots" role="group" aria-label="Views">${VIEWS.map((v, i) => `<button type="button" data-v="${i}">${i + 1}</button>`).join("")}</div><span class="auto-flag"></span>`;
+      <div class="scene-dots" role="group" aria-label="Views">${RFID_VIEWS.map((v, i) => `<button type="button" data-v="${i}">${i + 1}</button>`).join("")}</div><span class="auto-flag"></span>`;
     const field = document.createElement("div"); field.className = "quick";
     field.innerHTML = `<button type="button" class="btn" data-f="card">lay the card</button><button type="button" class="btn" data-f="tag">lay the tag</button><button type="button" class="btn" data-f="both">both</button><button type="button" class="btn" data-f="none">remove</button>`;
     const frame = document.createElement("div"); frame.className = "screen-frame";
@@ -3705,11 +4030,11 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
     parent.append(row, field, frame, cap);
     const term = terminal(parent, "$ uv run pio device monitor", true);
     const quick = document.createElement("div"); quick.className = "quick";
-    const QUICK = { R1: ["selftest", "loopback", "regs", "spi 20"], R2: ["trace on", "gain 0", "gain 7", "poll off"], R3: ["inventory", "help"], R4: ["dump", "read 0", "read 1"], R5: ["write 4 hello bench", "write 3 test", "credits init 50", "credits use 3", "credits add 10"], R6: ["edge spi", "edge timeout", "edge timing", "edge stress 500"] }[lesson.id] || ["help"];
+    const QUICK = { R1: ["chip", "selftest", "loopback", "regs"], R2: ["trace off", "trace on", "gain 0", "gain 7", "gain 4"], R3: ["inventory", "help"], R4: ["dump", "read 0", "read 1"], R5: ["write 4 hello bench", "write 3 test", "credits init 50", "credits use 3", "credits add 10"], R6: ["edge spi", "edge timeout", "edge timing", "edge stress 500"] }[lesson.id] || ["help"];
     quick.innerHTML = QUICK.map((c) => `<button type="button" class="btn">${c}</button>`).join("");
     parent.appendChild(quick);
     const g = frame.querySelector("canvas").getContext("2d");
-    const C = { paper: css("--scope-paper"), ink: css("--scope-ink"), muted: css("--scope-muted"), dim: css("--scope-dim"), teal: css("--scope-trace"), amber: css("--scope-amber"), coral: css("--scope-coral"), blue: css("--scope-blue"), card: css("--card-white"), chip: css("--pcb") };
+    const C = rfidPalette();
     const cards = { card: { uid: RF.card.uid, mem: exampleCard(false) }, tag: { uid: RF.tag.uid, mem: exampleCard(false) } };
     cards.tag.mem[0] = [...RF.tag.uid, bccOf(RF.tag.uid), 0x08, 0x04, 0x00, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69];
     const st = { view: lesson.rfidView ?? 1, on: "none", polling: true, trace: true, taps: 0, rate: 0, selfTest: -1, gain: 4, irq: true, mhz: 4, timeout: 25000, frames: [], dump: null, credits: null, edge: null, note: "", noteBad: false, busy: null, progress: 0, coll: 0, nextEdge: 0, flashUntil: 0 };
@@ -3822,7 +4147,7 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
       if (c === "loopback") return say(`FIFO loopback: ${st.mhz > 16 ? 41 : 0} of 3200 bytes wrong at ${st.mhz} MHz`, st.mhz > 16);
       if (c === "regs") {
         log("  addr  register        value  bits      meaning", "");
-        [["01", "CommandReg", 0x00, "bits 3-0: running command (0 = idle)"], ["04", "ComIrqReg", 0x14, "Tx Rx Idle HiA LoA Err Timer"], ["06", "ErrorReg", 0x00, "WrErr Temp - Ovfl Coll CRC Parity Proto"], ["14", "TxControlReg", 0x83, "bits 1-0: antenna drivers TX2 TX1"], ["26", "RFCfgReg", st.gain << 4, "bits 6-4: receiver gain"], ["2B", "TPrescalerReg", 0xa9, "timer prescaler (A9h = 25 us ticks)"], ["37", "VersionReg", 0x92, "91h v1.0 · 92h v2.0"]]
+        [["01", "CommandReg", 0x00, "bits 3-0: running command (0 = idle)"], ["04", "ComIrqReg", 0x14, "Tx Rx Idle HiA LoA Err Timer"], ["06", "ErrorReg", 0x00, "WrErr Temp - Ovfl Coll CRC Parity Proto"], ["14", "TxControlReg", 0x83, "bits 1-0: antenna drivers TX2 TX1"], ["26", "RFCfgReg", st.gain << 4, "bits 6-4: receiver gain"], ["2A", "TModeReg", 0x80, "bit 7 TAuto"], ["2B", "TPrescalerReg", 0xa9, "timer prescaler (A9h = 25 us ticks)"], ["2C", "TReloadRegH", 0x03, "timer reload, high byte"], ["2D", "TReloadRegL", 0xe8, "timer reload, low byte"], ["36", "AutoTestReg", 0x40, "40h normal, 09h self-test"], ["37", "VersionReg", 0x92, "91h v1.0 · 92h v2.0"]]
           .forEach(([ad, name, v, what]) => log(`  ${ad}h   ${name.padEnd(15)} ${hx(v)}h    ${v.toString(2).padStart(8, "0")}  ${what}`, ""));
         log("  SPI address bytes: read = 0x80 | reg << 1, write = reg << 1 (e.g. VersionReg read = 0xEE)", "");
         return;
@@ -3855,7 +4180,10 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
         const card = need(); if (!card) return;
         const b = card.mem[n], ascii = b.map((x) => (x >= 32 && x < 127 ? String.fromCharCode(x) : ".")).join("");
         log(`  ${String(n).padStart(3)}  ${hxs(b)}  |${ascii}|  ${blockKind(b, n) === "value" ? "value block" : ""}`, "");
-        if (st.trace) { log(`  ${(0).toFixed(3).padStart(8)} ms  reader > ${hxs([0x60, n])}${" ".repeat(35)} 3-pass auth inside the chip: ok`, ""); log(`  ${(2.4).toFixed(3).padStart(8)} ms  reader > ${hxs(withCrc([0x30, n])).padEnd(40)} READ [encrypted on air]`, ""); log(`  ${(4.6).toFixed(3).padStart(8)} ms    card > ${(hxs(b.slice(0, 9)) + " ..").padEnd(40)} 16 bytes + CRC [encrypted on air]`, ""); }
+        if (st.trace) {
+          st.frames = [{ t: 0, dir: ">", bytes: [0x60, n], name: "AUTH key A: ok" }, { t: 2.4, dir: ">", bytes: withCrc([0x30, n]), name: "READ", crypto: true }, { t: 4.6, dir: "<", bytes: [...b, ...crcA(b)], name: "16 bytes + CRC", crypto: true }];
+          log(`  ${(0).toFixed(3).padStart(8)} ms  reader > ${hxs([0x60, n])}${" ".repeat(35)} 3-pass auth inside the chip: ok`, ""); log(`  ${(2.4).toFixed(3).padStart(8)} ms  reader > ${hxs(withCrc([0x30, n])).padEnd(40)} READ [encrypted on air]`, ""); log(`  ${(4.6).toFixed(3).padStart(8)} ms    card > ${(hxs(b.slice(0, 9)) + " ..").padEnd(40)} 16 bytes + CRC [encrypted on air]`, "");
+        }
         return say(`block ${n} read`);
       }
       if (c === "write") {
@@ -3896,122 +4224,20 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
       if (c === "view") { if (!(n >= 1 && n <= 6)) return log("[W][main.cpp] warn(): view <1-6>", "w"); return setView(n - 1); }
       log(`[W][main.cpp] handleCommand(): unknown command '${line}' (type help)`, "w");
     }
-    function setView(v) { st.view = (v + 6) % 6; log(`[I][main.cpp] setView(): view ${st.view + 1}: ${VIEWS[st.view]}`); }
+    function setView(v) { st.view = (v + 6) % 6; log(`[I][main.cpp] setView(): view ${st.view + 1}: ${RFID_VIEWS[st.view]}`); }
     function action() {
       if (st.view === 0) run("selftest"); else if (st.view === 1) run("inventory"); else if (st.view === 2) run(`trace ${st.trace ? "off" : "on"}`);
       else if (st.view === 3) run("dump"); else if (st.view === 4) run(st.credits ? "credits add 1" : "credits init 50");
       else { run(`edge ${EDGE[st.nextEdge].key}`); st.nextEdge = (st.nextEdge + 1) % EDGE.length; }
     }
 
-    // ---- Drawing: the same six views as rfid_views.h ----
-    const T = (x, y, s, col, font = "8px 'IBM Plex Mono', monospace") => { g.font = font; g.fillStyle = col; g.fillText(s, x, y); };
-    const BOLD = "bold 12px Archivo, sans-serif", SANS = "11px Archivo, sans-serif";
-    function header() {
-      T(8, 18, "RFID", C.ink, BOLD); T(42, 18, VIEWS[st.view], C.muted, SANS);
-      for (let i = 0; i < 6; i++) { g.fillStyle = i === st.view ? C.ink : C.dim; g.beginPath(); g.arc(236 + i * 10, 18, 3, 0, 7); g.fill(); }
-      g.fillStyle = selected() ? C.teal : C.dim; g.beginPath(); g.arc(304, 18, 5, 0, 7); g.fill();
-      g.fillStyle = C.dim; g.fillRect(0, 28, W, 1);
-    }
-    function footer() {
-      g.fillStyle = C.paper; g.fillRect(0, H - 11, W, 11);
-      T(6, H - 3, `click: view  ${HINTS[st.view]}`, C.muted);
-      const right = st.busy ? `${st.busy} ${Math.round(st.progress)}%` : st.note.slice(0, 34);
-      g.font = "8px 'IBM Plex Mono', monospace";
-      T(W - 6 - g.measureText(right).width, H - 3, right, st.busy ? C.amber : st.noteBad ? C.coral : C.teal);
-      if (st.busy) { g.fillStyle = C.amber; g.fillRect(0, H - 1, (W * st.progress) / 100, 1); }
-    }
-    const stat = (x, y, label, value, col = C.ink) => { T(x, y + 7, label, C.muted); T(x, y + 24, value, col, BOLD); };
-    function viewChip(t) {
-      const cx = 52, cy = 92;
-      g.fillStyle = C.muted;
-      for (let i = 0; i < 8; i++) { const o = -21 + i * 6; g.fillRect(cx + o, cy - 34, 2, 6); g.fillRect(cx + o, cy + 28, 2, 6); g.fillRect(cx - 34, cy + o, 6, 2); g.fillRect(cx + 28, cy + o, 6, 2); }
-      g.fillStyle = C.chip; g.fillRect(cx - 28, cy - 28, 56, 56);
-      g.globalAlpha = 0.55 + 0.4 * Math.sin(t * 3); g.fillStyle = C.teal; g.fillRect(cx - 9, cy - 9, 18, 18); g.globalAlpha = 1;
-      T(cx - 20, cy + 23, "MFRC522", C.muted);
-      stat(104, 38, "VersionReg", "92h", C.teal);
-      stat(220, 38, "self-test", ["not run", "FAILED", "passed"][st.selfTest + 1], st.selfTest === 1 ? C.teal : C.muted);
-      stat(104, 80, "SPI clock (max 10)", `${st.mhz} MHz`, st.mhz > 10 ? C.amber : C.ink);
-      stat(220, 80, "waits by", st.irq ? "IRQ wire" : "polling");
-      const db = [18, 23, 18, 23, 33, 38, 43, 48][st.gain];
-      T(104, 129, "receiver gain", C.muted);
-      g.strokeStyle = C.dim; g.strokeRect(104.5, 133.5, 100, 8); g.fillStyle = C.blue; g.fillRect(105, 134, ((db - 18) * 98) / 30, 7);
-      T(210, 140, `${db} dB`, C.ink);
-    }
-    function viewCard(t) {
-      const ax = 70, ay = 100;
-      for (let i = 0; i < 4; i++) {
-        const k = reduce ? i / 4 : (t * 0.6 + i * 0.25) % 1;
-        g.strokeStyle = C.blue; g.globalAlpha = 1 - k; g.beginPath(); g.arc(ax, ay, 14 + k * 52, 0, 7); g.stroke();
-      }
-      g.globalAlpha = 1; g.strokeStyle = C.amber; g.strokeRect(ax - 22, ay - 16, 44, 32); g.strokeRect(ax - 18, ay - 12, 36, 24);
-      const s = selected();
-      if (!s) { T(146, 76, "Hold a card or tag", C.ink, SANS); T(146, 96, "flat on the reader", C.ink, SANS); T(146, 112, `${st.polling ? "polling 12x/s" : "polling paused"}, ${st.taps} taps so far`, C.muted); return; }
-      const bob = reduce ? 0 : Math.sin(t * 2) * 2;
-      g.fillStyle = C.card; g.fillRect(ax - 30, ay - 52 + bob, 60, 38);
-      g.strokeStyle = C.muted; g.strokeRect(ax - 26, ay - 48 + bob, 34, 24);
-      g.fillStyle = C.amber; g.fillRect(ax + 14, ay - 42 + bob, 8, 8);
-      const u = cards[s].uid;
-      T(146, 43, "UID", C.muted); T(146, 58, id(u, " "), C.teal, BOLD); T(146, 72, "MIFARE Classic 1K", C.ink);
-      stat(146, 80, "ATQA", "00 04"); stat(210, 80, "SAK", "08"); stat(262, 80, "UID size", "4 B");
-      T(146, 129, "found in the last 20 polls", C.muted);
-      g.strokeStyle = C.dim; g.strokeRect(146.5, 133.5, 120, 8); g.fillStyle = C.teal; g.fillRect(147, 134, (st.rate * 118) / 100, 7);
-      T(272, 140, `${st.rate}%`, C.ink);
-      if (st.coll) T(146, 153, `collision at bit ${st.coll}`, C.amber);
-    }
-    function viewTrace() {
-      if (!st.trace) return T(8, 46, "Sniffer off. Serial: trace on", C.muted);
-      if (!st.frames.length) return T(8, 46, "Nothing yet: tap a card.", C.muted);
-      st.frames.slice(-10).forEach((f, i) => {
-        const y = 42 + i * 12;
-        T(4, y, f.t.toFixed(1).padStart(6), C.muted); T(44, y, f.dir === ">" ? ">" : "<", f.dir === ">" ? C.amber : C.teal);
-        T(54, y, hxs(f.bytes.slice(0, 9)) + (f.bytes.length > 9 ? " .." : ""), C.ink); T(228, y, f.name.replace(" (short)", "").slice(0, 15), f.dir === ">" ? C.amber : C.teal);
-      });
-      T(4, 154, "ms   > reader to card   < card to reader", C.dim);
-    }
-    function viewMemory() {
-      if (!st.dump) { T(8, 50, "No dump yet.", C.ink); T(8, 64, "Hold a card and double-click,", C.muted); T(8, 76, "or type: dump", C.muted); return; }
-      const col = { maker: C.amber, empty: C.dim, data: C.teal, value: C.blue, trailer: C.coral };
-      for (let s = 0; s < 16; s++) {
-        T(8 + s * 18 + (s < 10 ? 6 : 3), 41, String(s), C.muted);
-        for (let b = 0; b < 4; b++) { g.fillStyle = col[blockKind(st.dump.mem[s * 4 + b], s * 4 + b)]; g.fillRect(8 + s * 18, 44 + b * 18, 16, 16); }
-      }
-      ["maker", "empty", "data", "value", "trailer"].forEach((k, i) => { g.fillStyle = col[k]; g.fillRect(8 + i * 60, 124, 7, 7); T(18 + i * 60, 131, k, C.muted); });
-      T(8, 146, `${id(st.dump.uid)}  16 sectors x 4 blocks x 16 B`, C.ink);
-    }
-    function viewCredits(t) {
-      if (!st.credits) { T(110, 56, "No credits read yet.", C.ink); T(110, 70, "credits init 50   (serial)", C.muted); T(110, 82, "then: credits add 5 / use 3", C.muted); return; }
-      const coins = Math.max(0, Math.min(8, Math.floor(st.credits.v / 10) + (st.credits.v > 0 ? 1 : 0)));
-      for (let i = 0; i < coins; i++) { const y = 140 - i * 9 + (i === coins - 1 && !reduce ? Math.sin(t * 3) * 1.5 : 0); g.fillStyle = C.amber; g.fillRect(28, y, 56, 8); }
-      T(110, 47, "credits (block 8, a value block)", C.muted);
-      T(110, 82, String(st.credits.v), C.ink, "bold 28px Archivo, sans-serif");
-      T(110, 103, `backup ${st.credits.b} (block 9)`, C.muted);
-      T(110, 123, "The card does the maths: you send", C.muted); T(110, 134, "\"add 5\", it computes, TRANSFER commits.", C.muted);
-    }
-    function viewEdge() {
-      const e = st.edge;
-      if (!e) { T(8, 46, "No experiment yet. Serial:", C.ink); EDGE.forEach((x, i) => T(14, 60 + i * 12, `${x.cmd.padEnd(14)} ${x.label}`, C.muted)); return; }
-      T(8, 41, e.label, C.ink);
-      const data = e.example, top = e.max || Math.max(...data.map((r) => r[1])) * 1.1, base = 136, hMax = 84, slot = (W - 16) / data.length, bw = slot - 4;
-      g.fillStyle = C.dim; g.fillRect(8, base, W - 16, 1);
-      data.forEach(([l, v], i) => {
-        const h = (v / top) * hMax, x = 8 + i * slot + 2;
-        g.fillStyle = C.blue; g.fillRect(x, base - h, bw, h);
-        if (e.mark === l) { g.strokeStyle = C.ink; g.strokeRect(x - 2, base - hMax - 2, bw + 4, hMax + 4); }
-        g.font = "8px 'IBM Plex Mono', monospace";
-        const vs = String(v), ls = l;
-        T(x + (bw - g.measureText(vs).width) / 2, base - h - 3, vs, C.ink);
-        T(x + (bw - g.measureText(ls).width) / 2, base + 10, ls, C.muted);
-      });
-    }
     let stopped = false, raf;
     function draw(now) {
-      const t = now / 1000;
-      g.fillStyle = C.paper; g.fillRect(0, 0, W, H);
-      [viewChip, viewCard, viewTrace, viewMemory, viewCredits, viewEdge][st.view](t);
-      header(); footer();
+      const s = selected();
+      drawRfidScreen(g, C, { ...st, uid: s ? cards[s].uid : null, coll: s ? st.coll : 0 }, now / 1000, reduce);
       row.querySelectorAll("[data-v]").forEach((b, i) => b.setAttribute("aria-current", String(i === st.view)));
-      row.querySelector(".auto-flag").textContent = `${VIEWS[st.view]} view · ${st.polling ? "polling" : "paused"}`;
-      rgbDot.setAttribute("fill", now < st.flashUntil ? "var(--silk)" : selected() ? "var(--rfid)" : "var(--silk-dim)");
+      row.querySelector(".auto-flag").textContent = `${RFID_VIEWS[st.view]} view · ${st.polling ? "polling" : "paused"}`;
+      rgbDot.setAttribute("fill", now < st.flashUntil ? "var(--silk)" : s ? "var(--rfid)" : "var(--silk-dim)");
       raf = requestAnimationFrame(draw);
     }
     // ---- Inputs ----
@@ -4032,10 +4258,12 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
     log("[I][main.cpp] setup(): rfid-lab: reader task started on core 0, screen on core 1");
     log("RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz", "");
     log("VersionReg 0x92: MFRC522 v2.0", "");
-    log("Type help, or use the buttons: lay the card on the reader first.", "");
+    log(lesson.id === "R1" ? "Type selftest, loopback or regs (no card needed), or use the buttons below." : "Type help, or use the buttons: lay the card on the reader first.", "");
     raf = requestAnimationFrame(draw);
     return () => { stopped = true; cancelAnimationFrame(raf); clearTimeout(clickTimer); rgbDot.setAttribute("fill", "var(--silk-dim)"); };
   }
+
+  const RFID_PANELS = { spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge, screens: rfidScreens };
 
   const LOG = [
     { n: 1, types: ["install"], title: "Install PlatformIO into the project", where: "Mac · test-esp/.venv",
