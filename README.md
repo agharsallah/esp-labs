@@ -14,6 +14,7 @@ This folder is a standalone sandbox. It is not part of the pnpm workspace, and t
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | ESP32-S3-N16R8 DevKitC      | 16 MB flash, 8 MB octal PSRAM, dual-core 240 MHz, Wi-Fi + BLE, on-board RGB LED                                                      |
 | 1.9" IPS TFT, 170 × 320     | ST7789 driver, SPI, 8 pins: GND VCC SCL SDA RES DC CS BLK                                                                            |
+| RC522 RFID reader           | NXP MFRC522, 13.56 MHz, SPI, **3.3 V only**; comes with a white MIFARE Classic 1K card and a key tag                                 |
 | Breadboard, jumper cables   | male-to-male for the breadboard, female-to-male for the display header                                                               |
 | LEDs                        | long leg = **+** (anode), short leg = **−** (cathode)                                                                                |
 | 220–330 Ω resistor (needed) | Protects the LED and the pin. Not in the kit list yet: most LED kits include some. Lesson 02 lowers the pin's drive as a safety net. |
@@ -61,6 +62,9 @@ flowchart LR
   subgraph WiFi["Wi-Fi"]
     W1["W1 · Scan & join"] --> W2["W2 · Phone control"] --> W3["W3 · Internet & Diary"]
   end
+  subgraph RFID["RFID & NFC"]
+    R1["R1 · Wire & talk"] --> R2["R2 · Wake a card"] --> R3["R3 · Who's there"] --> R4["R4 · Inside the card"] --> R5["R5 · Write & count"] --> R6["R6 · Edge lab"]
+  end
   subgraph Planned["Planned themes"]
     S["Sensors"]
     B["Bluetooth LE"]
@@ -69,20 +73,23 @@ flowchart LR
   L3b --> W1
   W1 -.-> S
   W1 -.-> B
+  L3b --> R1
 ```
 
-| Theme           | #   | Lesson                | Environment           | Status   | You learn                                                                |
-| --------------- | --- | --------------------- | --------------------- | -------- | ------------------------------------------------------------------------ |
-| Intro           | 00  | Setup                 | none                  | works    | USB ports, drivers, flashing, the serial monitor                         |
-| Intro           | 01  | Hello                 | `01-hello`            | works    | `setup()`/`loop()`, logging, `millis()`, the RGB LED                     |
-| Intro           | 02  | First circuit         | `02-led`              | works    | breadboards, resistors, GPIO, PWM, a state machine                       |
-| Display & input | 03  | Display               | `03-display`          | works    | SPI, RGB565 colours, frame buffers in PSRAM                              |
-| Display & input | 03b | Showcase, variation 1 | `03b-showcase`        | works    | 3D projection, lookup tables, particles, internal RAM vs PSRAM, timing   |
-| Display & input | 03b | Showcase, variation 2 | `03b-showcase-button` | on board | inputs vs outputs, pull-ups, interrupts, debouncing, gestures            |
-| Wi-Fi           | W1  | Scanner               | `w1-scan`             | built    | station mode, channels, RSSI in dBm, security types, background scanning |
-| Wi-Fi           | W2+ | Join and beyond       | none                  | planned  | see the Wi-Fi track below                                                |
-| Sensors         |     |                       |                       | planned  | I2C sensors (BME280), data over Wi-Fi                                    |
-| Bluetooth LE    |     |                       |                       | planned  | BLE advertising, talking to a phone                                      |
+| Theme           | #     | Lesson                | Environment            | Status   | You learn                                                                            |
+| --------------- | ----- | --------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------ |
+| Intro           | 00    | Setup                 | none                   | works    | USB ports, drivers, flashing, the serial monitor                                     |
+| Intro           | 01    | Hello                 | `01-hello`             | works    | `setup()`/`loop()`, logging, `millis()`, the RGB LED                                 |
+| Intro           | 02    | First circuit         | `02-led`               | works    | breadboards, resistors, GPIO, PWM, a state machine                                   |
+| Display & input | 03    | Display               | `03-display`           | works    | SPI, RGB565 colours, frame buffers in PSRAM                                          |
+| Display & input | 03b   | Showcase, variation 1 | `03b-showcase`         | works    | 3D projection, lookup tables, particles, internal RAM vs PSRAM, timing               |
+| Display & input | 03b   | Showcase, variation 2 | `03b-showcase-button`  | on board | inputs vs outputs, pull-ups, interrupts, debouncing, gestures                        |
+| Wi-Fi           | W1    | Scan & join           | `wifi-lab-w1`          | built    | station mode, channels, RSSI in dBm, security types, NVS, NTP, mDNS                  |
+| Wi-Fi           | W2    | Phone control         | `wifi-lab-w2(-remote)` | on board | REST, WebSocket, captive portal, OTA, relay through a tunnel                         |
+| Wi-Fi           | W3    | Internet & AI         | `wifi-lab-w3`          | built    | HTTPS, JSON filters, worker tasks, AI function calling via LiteLLM                   |
+| RFID & NFC      | R1–R6 | RFID lab              | `rfid-lab`             | built    | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing |
+| Sensors         |       |                       |                        | planned  | I2C sensors (BME280), data over Wi-Fi                                                |
+| Bluetooth LE    |       |                       |                        | planned  | BLE advertising, talking to a phone                                                  |
 
 ## Lesson 00: setup
 
@@ -242,6 +249,56 @@ sequenceDiagram
   G-->>W: OpenAI-style answer: arguments {title, lines, color, scene}
   W-->>L: answer: draw it, light the LED
 ```
+
+## RFID track
+
+One firmware for all six steps: `uv run pio run -e rfid-lab -t upload` · code in [`src/rfid-lab`](src/rfid-lab/main.cpp). No RFID library: [`lib/rfid-kit`](lib/rfid-kit/src) is our own driver, written in layers so every byte stays visible. The reader runs in its own task on core 0 and owns the chip; `loop()` on core 1 only draws and parses commands.
+
+```mermaid
+flowchart LR
+  subgraph kit["lib/rfid-kit"]
+    F["rfid_format.h<br/>CRC_A · BCC · access bits · value blocks<br/>(tested on the Mac)"]
+    M["mfrc522.h<br/>SPI framing · registers · FIFO · timer<br/>poll or IRQ waits · transceive"]
+    I["iso14443a.h<br/>WUPA/REQA · anticollision · select · halt"]
+    C["mifare_classic.h<br/>auth · read · write · value ops<br/>guard rails"]
+    T["trace.h<br/>frame sniffer"]
+    M --> I --> C
+    F --> M
+    T --> M
+  end
+  C --> R["src/rfid-lab/reader.h<br/>task on core 0: polling + jobs + edge.h"]
+  R -->|"Snapshot (mutex)"| L["main.cpp loop() on core 1<br/>6 views · serial · button"]
+```
+
+**Wiring** (the screen stays as in lesson 03; the RC522 is on the S3's second SPI bus, SPI3, so it never shares with the screen):
+
+| RC522 pin | ESP32-S3         | Role                                                                           |
+| --------- | ---------------- | ------------------------------------------------------------------------------ |
+| SDA       | GPIO 15          | chip select (NSS) in SPI mode, not I2C data                                    |
+| SCK       | GPIO 16          | SPI clock                                                                      |
+| MOSI      | GPIO 17          | ESP32 → chip                                                                   |
+| MISO      | GPIO 18          | chip → ESP32                                                                   |
+| IRQ       | GPIO 13          | optional; without it the firmware polls                                        |
+| GND       | GND              | right header, top pin                                                          |
+| RST       | GPIO 14          | reset; low = hard power-down                                                   |
+| 3.3V      | 3V3 (second pin) | **never 5 V**: the MFRC522 is rated 2.5–3.6 V and its pins aren't 5 V tolerant |
+
+**Views** (click to cycle, double-click runs the view's action, hold pauses polling): chip · card · trace · memory · credits · edge.
+
+| Step               | Serial commands                                                                                   | What you learn                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 Wire & talk     | `chip`, `selftest`, `loopback`, `regs`, `spi <MHz>`, `gain <0-7>`, `irq on\|off`, `timeout <us>`  | the SPI address byte, registers, the FIFO, the datasheet self-test (64 bytes, section 16.1.1), what 00h / FFh mean                                                                       |
+| R2 Wake a card     | `poll on\|off`, `trace on\|off`                                                                   | the 13.56 MHz field, 100 % ASK, load modulation, WUPA/ATQA, a polling task, sniffing frames                                                                                              |
+| R3 Who's there     | `inventory` (card and tag together)                                                               | bit collisions, the anticollision tree walk, NVB, BCC, cascade levels, SAK, HALT/WUPA                                                                                                    |
+| R4 Inside the card | `dump`, `read <block>`                                                                            | sectors, trailers, access bits (stored twice), 3-pass authentication inside the chip, encrypted frames                                                                                   |
+| R5 Write & count   | `write <block> <text>`, `credits`, `credits init\|add\|use <n>`                                   | block writes with ACK/NAK, read-back checks, value blocks, INCREMENT/DECREMENT/TRANSFER, a backup block                                                                                  |
+| R6 Edge lab        | `edge spi`, `edge gain`, `edge timeout`, `edge timing`, `edge irq`, `edge crc`, `edge stress [n]` | each setting pushed until it breaks: SPI clock vs the 10 MHz spec, gain vs distance, the card's ~86 µs reply time, per-step timing, IRQ vs polling, offloading the CRC, read reliability |
+
+**Guard rails:** the firmware only uses the factory key on your own cards; it never writes block 0 or a sector trailer (a trailer with broken access bits locks its sector for good), and it checks a block's access bits before writing. The key never goes into the trace.
+
+**Host test** (no board): `c++ -std=c++17 -Wall -I lib/rfid-kit/src test/host/rfid_format_test.cpp -o /tmp/rfid_test && /tmp/rfid_test` checks CRC_A against frames every sniffer shows (`50 00 → 57 CD`, `30 00 → 02 A8`), access bits and value blocks.
+
+The guide has the interactive side: a 3D model of the field and the card (with a range chart), a 3D memory map you open sector by sector, bit-level SPI and anticollision walk-throughs, access-bit and value-block decoders, step-by-step frame diagrams, and edge charts that plot the tables you paste from the monitor.
 
 ## Between lessons
 

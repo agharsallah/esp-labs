@@ -6,18 +6,18 @@ Every command that installs software, talks to the board, or flashes it, with wh
 
 ## Overview
 
-| What                      | Value                                                                                                                        |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                 |
-| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                              |
-| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                   |
-| PSRAM                     | 8 MB, embedded in the chip                                                                                                   |
-| MAC                       | 28:84:85:9E:3B:E4                                                                                                            |
-| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                  |
-| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                       |
-| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                        |
-| **Firmware on board now** | **`03-display`** (screen works again). Built, not flashed: `wifi-lab-w1`, `wifi-lab-w2`, `wifi-lab-w2-remote`, `wifi-lab-w3` |
-| Flashes so far            | 11 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again by you)                 |
+| What                      | Value                                                                                                                                    |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                             |
+| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                          |
+| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                               |
+| PSRAM                     | 8 MB, embedded in the chip                                                                                                               |
+| MAC                       | 28:84:85:9E:3B:E4                                                                                                                        |
+| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                              |
+| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                   |
+| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                    |
+| **Firmware on board now** | **`03-display`** (screen works again). Built, not flashed: `wifi-lab-w1`, `wifi-lab-w2`, `wifi-lab-w2-remote`, `wifi-lab-w3`, `rfid-lab` |
+| Flashes so far            | 11 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again by you)                             |
 
 ### What is installed on the Mac
 
@@ -747,3 +747,29 @@ wifi-lab-w3  Flash 20.2% (1,322,878 B)  SUCCESS, no warnings
 ```
 
 **Waiting for your go:** `cd test-esp/ai-gateway && uv sync` (installs LiteLLM into `test-esp/ai-gateway/.venv`). Nothing was sent to the board.
+
+### 36. RFID lab R1–R6: firmware, driver and guide chapter · `build` + `read` · no board
+
+Your request: a new advanced, step-by-step learning chapter for the RC522 with its white card and key tag, with edge testing, lots of interaction and animation, and 3D.
+
+- **Driver `lib/rfid-kit`** (no RFID library): `mfrc522.h` (SPI address byte, registers, FIFO, timer, polling or IRQ waits, transceive, CRC coprocessor), `iso14443a.h` (WUPA/REQA, anticollision through cascade levels, select, halt), `mifare_classic.h` (factory key A only, read, write, value operations; never writes block 0 or trailers), `rfid_format.h` (CRC_A, BCC, access bits, value blocks), `trace.h` (frame sniffer; keys never recorded).
+- **Firmware `rfid-lab`**: the reader in its own task on core 0 on SPI3 (the screen keeps SPI2), six views (chip, card, trace, memory, credits, edge), serial commands for R1–R6, seven edge experiments (SPI clock, gain, timeout, timing, IRQ vs polling, CRC, stress). Pins: SDA 15, SCK 16, MOSI 17, MISO 18, RST 14, IRQ 13 (optional), 3.3V on the second 3V3 pin.
+- **Guide**: a new "RFID & NFC" theme with lessons R1–R6: a 3D field model (three.js) with a range chart, a 3D memory map, bit-level SPI and anticollision walk-throughs, access-bit and value-block decoders, step-by-step frame diagrams (the W3 diagram, now reusable), edge charts that plot pasted serial output, and a simulator.
+
+Checks (read-only or local):
+
+```sh
+# NXP MFRC522 datasheet rev 3.9: self-test tables (16.1.1), VersionReg 91h/92h, SPI 10 Mbit/s, 2.5–3.6 V, RxGain table, IRQ bits
+uv run pio run -e rfid-lab
+c++ -std=c++17 -Wall -I lib/rfid-kit/src test/host/rfid_format_test.cpp -o <scratch>/rfid_test && <scratch>/rfid_test
+node check.mjs   # the repo's Playwright 1.63, headless Chromium, guide lessons R1–R6 at 1280 and 390 px, light and dark
+```
+
+```text
+first build: return-statement with a value (return log_w(...) in void functions) -> warn() helper
+rfid-lab  RAM 9.4% (30,764 B)  Flash 6.7% (436,695 B)  SUCCESS, no warnings
+all rfid format checks passed
+guide: every RFID lesson renders, three.js 0.160.0 loads from jsDelivr, no page errors, no sideways scroll at 390 px
+```
+
+**Waiting for your wiring and your go:** `uv run pio run -e rfid-lab -t upload`. No new libraries, nothing installed. Nothing was sent to the board.
