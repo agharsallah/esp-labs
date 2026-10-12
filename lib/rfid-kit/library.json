@@ -1,0 +1,7 @@
+{
+  "name": "rfid-kit",
+  "version": "0.1.0",
+  "description": "The RFID labs' own MFRC522 driver, written layer by layer so every byte is visible: SPI registers, the ISO 14443-A card protocol, MIFARE Classic memory, and a frame sniffer.",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

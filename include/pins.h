@@ -52,3 +52,26 @@
 #ifndef PIN_TFT_BL
 #define PIN_TFT_BL 7     // BLK / BL / LED (backlight)
 #endif
+
+// RFID track: the RC522 board (MFRC522 chip) on the S3's second SPI bus (SPI3), so it never shares
+// wires or timing with the screen on SPI2. The four SPI pins sit side by side on the left header
+// in the same order as the module's pins: SDA, SCK, MOSI, MISO.
+// Module label -> ESP32-S3 pin. 3.3V only: the MFRC522 is not 5 V tolerant.
+#ifndef PIN_RFID_SS
+#define PIN_RFID_SS 15    // SDA (in SPI mode this is chip select, NSS)
+#endif
+#ifndef PIN_RFID_SCK
+#define PIN_RFID_SCK 16   // SCK
+#endif
+#ifndef PIN_RFID_MOSI
+#define PIN_RFID_MOSI 17  // MOSI
+#endif
+#ifndef PIN_RFID_MISO
+#define PIN_RFID_MISO 18  // MISO
+#endif
+#ifndef PIN_RFID_RST
+#define PIN_RFID_RST 14   // RST (low = hard power-down)
+#endif
+#ifndef PIN_RFID_IRQ
+#define PIN_RFID_IRQ 13   // IRQ (optional: -1 = not wired, the lab then polls)
+#endif
