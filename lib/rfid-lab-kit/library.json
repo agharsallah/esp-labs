@@ -1,0 +1,7 @@
+{
+  "name": "rfid-lab-kit",
+  "version": "0.1.0",
+  "description": "What the RFID labs R1-R6 share: the reader task, the six screen views, the edge experiments, and the lab shell (screen, buttons, LED, serial commands). Each lab's main.cpp picks its views and commands.",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

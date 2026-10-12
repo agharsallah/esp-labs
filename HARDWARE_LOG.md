@@ -6,19 +6,19 @@ Every command that installs software, talks to the board, or flashes it, with wh
 
 ## Overview
 
-| What                      | Value                                                                                                                                                                 |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                          |
-| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                       |
-| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                            |
-| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                            |
-| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                     |
-| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                           |
-| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                |
-| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                             |
-| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                 |
-| **Firmware on board now** | **`rfid-lab`** (first version, flashed by you). Built, not flashed: the rfid-lab fix from entry 37, `wifi-lab-w1`, `wifi-lab-w2`, `wifi-lab-w2-remote`, `wifi-lab-w3` |
-| Flashes so far            | 12 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab by you)                                                |
+| What                      | Value                                                                                                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                                                    |
+| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                                                 |
+| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                                                      |
+| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                                                      |
+| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                                               |
+| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                                                     |
+| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                          |
+| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                       |
+| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                           |
+| **Firmware on board now** | **`rfid-lab`** with the entry 37–38 fixes, flashed by you: R1 all working. Built, not flashed: `rfid-lab-r1` … `rfid-lab-r6`, `wifi-lab-w1`, `wifi-lab-w2`, `wifi-lab-w2-remote`, `wifi-lab-w3` |
+| Flashes so far            | 12 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab by you)                                                                          |
 
 ### What is installed on the Mac
 
@@ -831,3 +831,26 @@ rfid-lab  RAM 9.4% (30,780 B)  Flash 6.7%  SUCCESS, no warnings
 ```
 
 **Waiting for your go:** flash it (`uv run pio run -e rfid-lab -t upload`); it includes the entry 37 fixes. Nothing was sent to the board.
+
+### 39. One firmware per RFID lab · `build` · no board
+
+Your request: each lab has its own code and its own command, like the Wi-Fi labs. Your R1 run before this: everything working.
+
+- The single `rfid-lab` env became `rfid-lab-r1` … `rfid-lab-r6`. Each `src/rfid-lab-rN/main.cpp` lists that lab's screen views (with its double-click action) and serial commands; `help` shows only those.
+- The shared code moved to `lib/rfid-lab-kit`: the reader task, views, edge experiments, every command (`lab_commands.h`) and the lab shell (`lab.h`: screen, button, LED, serial). The driver stays in `lib/rfid-kit`.
+- Guide: each RFID lesson has its own flash command and a flash card at the top of its command list; the preview only knows that lab's views and commands.
+
+```sh
+uv run pio run -e rfid-lab-r1 -e rfid-lab-r2 -e rfid-lab-r3 -e rfid-lab-r4 -e rfid-lab-r5 -e rfid-lab-r6
+```
+
+```text
+rfid-lab-r1  Flash 437,519 B  SUCCESS
+rfid-lab-r2  Flash 437,875 B  SUCCESS
+rfid-lab-r3  Flash 437,963 B  SUCCESS
+rfid-lab-r4  Flash 438,227 B  SUCCESS
+rfid-lab-r5  Flash 439,191 B  SUCCESS
+rfid-lab-r6  Flash 439,959 B  SUCCESS   no warnings in any
+```
+
+Nothing was sent to the board. For R2: `uv run pio run -e rfid-lab-r2 -t upload`.

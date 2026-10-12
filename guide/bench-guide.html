@@ -530,7 +530,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
 
 
   <dl class="overview" aria-label="On the bench now">
-    <div class="now"><dt>On the board now</dt><dd>rfid-lab<small>12 flashes · flashed by you · reader chip FM17522 clone (B2h) · built, not flashed: wifi-lab-w1, wifi-lab-w2, wifi-lab-w2-remote, wifi-lab-w3</small></dd></div>
+    <div class="now"><dt>On the board now</dt><dd>rfid-lab<small>R1 all working (by you) · reader chip FM17522 clone (B2h) · built, not flashed: rfid-lab-r1 … r6, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
     <div><dt>Connection</dt><dd>/dev/cu.usbserial-A5069RR4<small>FTDI FT232R · VID:PID 0403:6001</small></dd></div>
     <div><dt>Chip</dt><dd>ESP32-S3 rev v0.2<small>16 MB flash · 8 MB PSRAM · MAC 28:84:85:9E:3B:E4</small></dd></div>
     <div><dt>Verified</dt><dd class="flag">RGB · LED · screen · showcase<small>all seen working by you · display at 22 fps</small></dd></div>
@@ -864,7 +864,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
     },
     { id: "W4", track: "wifi", title: "Radio lab (bonus)", status: "planned", disabled: true },
     { id: "W5", track: "wifi", title: "Hardware Diary", status: "planned", disabled: true },
-    // ----- RFID track (firmware: rfid-lab, driver: lib/rfid-kit) -----
+    // ----- RFID track (one firmware per lab: rfid-lab-r1 … r6; shared code: lib/rfid-kit, lib/rfid-lab-kit) -----
     // Each lesson: goalLine + goalCheck (how you know you're done), commands (what to type, with the
     // card where, what you should see, what to do if not), and panels (fn → RFID_PANELS).
     ...(() => {
@@ -882,13 +882,15 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
         { pin: "5", role: "BTN", side: "L", kind: "btn" },
         { pin: "0", role: "BOOT", side: "R" },
       ];
-      const common = { track: "rfid", status: "built, not flashed", pins, boot: true, sim: "rfid", cmd: "uv run pio run -e rfid-lab -t upload" };
+      const common = { track: "rfid", status: "built, not flashed", pins, boot: true, sim: "rfid" };
+      // Each lab is its own firmware: the same shared code, its own views and serial commands.
+      const flash = (n, adds) => ({ c: `uv run pio run -e rfid-lab-r${n} -t upload`, where: "mac", card: "any", does: `Flashes lab R${n}'s own firmware: ${adds} <code>help</code> lists exactly this lab's commands.`, see: `<code>rfid-lab-r${n}: reader task started</code>, then this lab's command list and views.`, fix: "“Failed to connect”: hold BOOT, tap RST, release BOOT, run it again." });
       const screens = (view) => ({ title: "What the screen shows", fn: "screens", view, intro: "The board's screen has six views. A click on the push button (or BOOT) goes to the next one, a double-click runs the action written at the bottom left, a long press pauses card polling. Pick a view to see what each part means; the numbers match the list below it." });
       return [
         {
-          ...common, id: "R1", title: "Wire & talk", rfidView: 0,
+          ...common, id: "R1", title: "Wire & talk", rfidView: 0, cmd: "uv run pio run -e rfid-lab-r1 -t upload",
           heading: "Wire the reader and talk to its chip",
-          goal: "Its own firmware (rfid-lab) with our own driver in lib/rfid-kit: no RFID library, so every byte is ours to see. Eight wires put the RC522 on the S3's second SPI bus, so it never shares with the screen. The first conversation is with the chip itself, not a card: its version register, the self-test from the datasheet, and 3,200 bytes through its FIFO and back.",
+          goal: "Its own firmware (rfid-lab-r1; every RFID lab has its own) with our own driver in lib/rfid-kit: no RFID library, so every byte is ours to see. Eight wires put the RC522 on the S3's second SPI bus, so it never shares with the screen. The first conversation is with the chip itself, not a card: its version register, the self-test from the datasheet, and 3,200 bytes through its FIFO and back.",
           goalLine: "Prove that the ESP32 and the reader chip talk to each other reliably over SPI, before any card is involved. Keep the card and the tag away for now.",
           goalCheck: [
             "The monitor says <code>VersionReg 0x92: MFRC522 v2.0</code> (or 0x91, or a clone's value), not 0x00 or 0xFF.",
@@ -904,7 +906,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
             screens(0),
           ],
           commands: [
-            { c: "uv run pio run -e rfid-lab -t upload", where: "mac", card: "off", does: "Builds the firmware and writes it to the board (no new downloads: it only uses the display libraries you already have).", see: "<code>Hard resetting via RTS pin…</code>. The screen starts on the <b>card</b> view: rings, “Hold a card or tag”.", fix: "“Failed to connect”: hold BOOT, tap RST, release BOOT, run it again." },
+            { c: "uv run pio run -e rfid-lab-r1 -t upload", where: "mac", card: "off", does: "Builds lab R1's firmware and writes it to the board (no new downloads: it only uses the display libraries you already have).", see: "<code>Hard resetting via RTS pin…</code>. The screen starts on the <b>card</b> view: rings, “Hold a card or tag”.", fix: "“Failed to connect”: hold BOOT, tap RST, release BOOT, run it again." },
             { c: "uv run pio device monitor", where: "mac", card: "off", does: "Opens the serial monitor. Opening it restarts the board, so you see the start-up lines.", see: "<code>RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz</code> then <code>VersionReg 0x92: MFRC522 v2.0</code> and the command list.", fix: "<code>0x00</code>: the chip isn't powered or MISO is stuck low: check 3.3V, GND, RST. <code>0xFF</code>: nobody drives MISO: check MISO (18) and SDA (15)." },
             { c: "chip", card: "any", does: "Reads VersionReg (37h) once more: the 2-byte transfer shown above, live.", see: "The same line as at start-up (<code>0x92</code>, or e.g. <code>0xB2: FM17522 (clone)</code>). Run it a few times, and again after moving the card around: it must never change.", fix: "It changes, or turns into 00h/FFh after you touched the reader = a loose wire. Press the RC522's header in or solder it, then <code>reset</code>." },
             { c: "reset", card: "any", does: "Pulses the RST wire (a hard reset of the chip), sets it up again and reads VersionReg. The firmware also checks VersionReg by itself every 2 s and does this on its own when the chip goes quiet.", see: "<code>hard reset: VersionReg 0x92</code> (or your clone's value). If the chip had gone quiet: <code>chip back after a hard reset</code> = it had hung; <code>still 0x00 after a reset</code> = a wire.", fix: "Still 00h/FFh: power off, press the header pins in (or solder them), check 3.3V, GND, MISO (18), SDA (15)." },
@@ -924,7 +926,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           note: "The on-board RGB LED tells you what the reader sees: a bright green flash each time a card is read, steady green while one lies on the reader, red if the reader chip stops answering (a wire), off otherwise. Many RC522 boards come with the header loose: push-in pins lose contact, so solder it or press it in firmly. IRQ is optional: without it the firmware polls, and the chip view says “polling” (R6 compares both). The card's position doesn't change any of R1's results. But handling it near the reader is the moment loose header pins lose contact: if VersionReg turns 00h/FFh afterwards, the firmware notices within 2 s, tries a hard reset and tells you whether it was a hang or a wire.",
         },
         {
-          ...common, id: "R2", title: "Wake a card", rfidView: 1,
+          ...common, id: "R2", title: "Wake a card", rfidView: 1, cmd: "uv run pio run -e rfid-lab-r2 -t upload",
           heading: "The field, and the first hello",
           goal: "The reader's antenna makes a 13.56 MHz magnetic field. The card has no battery: its coil harvests that field, its chip wakes up, and it answers by loading the field in a rhythm the reader can hear. First in 3D, then frame by frame, then for real in the sniffer.",
           goalLine: "See a card wake up and answer, read its identity, and find your reader's range.",
@@ -936,6 +938,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           learn: ["13.56 MHz near field", "inductive coupling", "100 % ASK pauses", "load modulation", "REQA · WUPA · ATQA", "a polling task", "sniffing frames"],
           panels: [{ title: "The field, in 3D", fn: "field3d", intro: "A model of your reader and card: drag to turn it, move the card up and down, change the gain, and press Send WUPA to watch one wake-up. The chart under it shows why the range ends where it does." }, { title: "Follow one wake-up, step by step", fn: "seq", flows: ["wake", "select"], intro: "What happens in the first millisecond after a card arrives, from the ESP32's SPI writes to the card's answer. The same frames appear in your sniffer." }, screens(1)],
           commands: [
+            flash(2, "everything from R1, plus the trace view and the poll and trace commands."),
             { c: "(click to the card view)", where: "button", card: "off", does: "One click on the push button or BOOT goes to the next view; the dots at the top show which one.", see: "Rings around the antenna and “Hold a card or tag flat on the reader”, plus how many taps so far.", fix: "" },
             { c: "lay the card flat on the reader", where: "hands", card: "on", does: "The reader task polls ~12 times a second; the first poll that finds the card wakes it, reads its UID, then halts it.", see: "The on-board LED flashes bright green, then stays green while the card lies there. The card view shows the UID, type, ATQA/SAK and a read rate that fills to 100 %. The monitor prints <code>card 9C:4F:… · MIFARE Classic 1K · ATQA 0004 SAK 08</code> and the frames.", fix: "Nothing? Run R1's <code>chip</code> again; then try the card flat in the middle of the antenna." },
             { c: "lift the card slowly", where: "hands", card: "move", does: "The field gets weaker with height; polls start to miss.", see: "The read rate turns amber, then coral. After 3 misses in a row (~0.3 s) the monitor says <code>card removed</code>.", fix: "" },
@@ -945,7 +948,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
             { c: "poll off / poll on (or a long press)", card: "any", does: "Pauses and resumes card polling.", see: "The card view says “polling paused”; new cards are ignored until <code>poll on</code>.", fix: "" },
           ],
           steps: [
-            "Same wiring and firmware as R1. Click to the <b>card</b> view.",
+            "Same wiring as R1. Flash <code>rfid-lab-r2</code> (the command above), then click to the <b>card</b> view.",
             "Lay the white card flat on the reader. <b>Checkpoint:</b> the LED flashes bright green and stays green; UID, MIFARE Classic 1K, read rate 100 %.",
             "Click to the <b>trace</b> view and find the 7 frames; compare with the step-by-step diagram above.",
             "Lift the card slowly and note the height where the read rate drops: your range.",
@@ -955,7 +958,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           note: "The reader polls about 12 times a second in its own task on core 0, so the screen never waits. A card counts as removed only after 3 missed polls in a row (~0.3 s), so one weak poll at the edge of range doesn't make it flicker. The 3D model is simplified on purpose: measure your real range in R6.",
         },
         {
-          ...common, id: "R3", title: "Who's there", rfidView: 1,
+          ...common, id: "R3", title: "Who's there", rfidView: 1, cmd: "uv run pio run -e rfid-lab-r3 -t upload",
           heading: "Two cards at once: anticollision",
           goal: "Lay the card and the tag on the reader together. Both answer at the same instant, bit by bit, and where their UIDs differ the reader hears a collision. Anticollision walks down the bits like a binary tree: pick a branch, ask again with that prefix, select the card that's left, halt it, repeat until nobody answers.",
           goalLine: "Find both cards at once, and point to the exact bit where their UIDs collided.",
@@ -966,11 +969,13 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           learn: ["bit collisions", "binary tree walk", "NVB", "BCC", "cascade levels", "SAK", "HALT · WUPA"],
           panels: [{ title: "Anticollision: a walk down the bits", fn: "anticoll", intro: "The two rows are the UID bits of two cards, in the order they travel (least significant bit of byte 0 first). Step through: where the bits differ the reader hears a collision, picks 1, and only the matching card keeps answering. Type your own UIDs from the monitor." }, screens(1)],
           commands: [
+            flash(3, "everything from R2, plus inventory (and a double-click on the card view runs it)."),
             { c: "lay the card and the tag together", where: "hands", card: "both", does: "Both cards wake on the same WUPA. The poll resolves the collision and selects one of them.", see: "The card view shows one UID (always the same one) and an amber line: <code>collision at bit 23</code> (your bit will differ).", fix: "Only one card found? Overlap them more: both must sit inside the antenna's loop." },
             { c: "inventory (or double-click on the card view)", card: "both", does: "Switches the field off for 10 ms so every card restarts, then REQA → select → halt, again and again until nobody answers.", see: "<code>#1 9C:4F:6A:0D … collision at level 1 bit 23 -&gt; chose 1</code>, <code>#2 9C:4F:2A:1B …</code>, then <code>inventory: 2 cards in the field</code>.", fix: "<code>select failed (collision)</code>: move the cards a little and run it again." },
             { c: "inventory with one card, then none", card: "move", does: "Same walk, nothing to resolve.", see: "<code>1 card</code> without a collision line, then <code>0 cards</code>.", fix: "" },
           ],
           steps: [
+            "Flash <code>rfid-lab-r3</code> with the command above (same wiring as R1). <code>help</code> shows this lab's commands.",
             "Lay the card and the tag on the reader together, overlapping.",
             "Watch the card view: one UID, and the collision bit in amber.",
             "Type <code>inventory</code> (or double-click on the card view). <b>Checkpoint:</b> 2 cards, and the collision bit.",
@@ -980,7 +985,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           note: "Bits travel least-significant first, so “bit 23” is bit 6 of the third UID byte. Our driver is tested for two cards at once: with three or more, the chip's collision position after the first branch is harder to trust. 7-byte UIDs take two cascade levels; the first part starts with 88h, the cascade tag.",
         },
         {
-          ...common, id: "R4", title: "Inside the card", rfidView: 3,
+          ...common, id: "R4", title: "Inside the card", rfidView: 3, cmd: "uv run pio run -e rfid-lab-r4 -t upload",
           heading: "Open the card's memory",
           goal: "A MIFARE Classic 1K holds 1,024 bytes: 16 sectors × 4 blocks × 16 bytes. Every sector has its own lock, the trailer: two keys plus access bits that say who may read or write each block. Open each sector of your own card with the factory key and dump it.",
           goalLine: "Dump your own card's whole memory and explain block 0 and one sector trailer byte by byte.",
@@ -991,11 +996,13 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           learn: ["sectors & blocks", "sector trailers", "access bits (stored twice)", "3-pass authentication", "encrypted frames", "manufacturer block"],
           panels: [{ title: "The card's memory, in 3D", fn: "memory3d", intro: "Each cabinet is a sector, each slab a block, the top slab the trailer with its lock. Click a sector, then Authenticate: only then can its blocks be read." }, { title: "Access bits decoder", fn: "access", intro: "Bytes 6–8 of every trailer decide who may do what in that sector. Tick the bits or type the three bytes from your dump." }, { title: "Authenticate and read, step by step", fn: "seq", flows: ["read"], intro: "What one <code>read 4</code> does on the bus and in the air." }, screens(3)],
           commands: [
+            flash(4, "everything from R3, plus the memory view, dump and read."),
             { c: "dump (or double-click on the memory view)", card: "still", does: "For each of the 16 sectors: authenticate with the factory key A, read its 4 blocks, decode the trailer. About 1.5 s; keep the card still.", see: "64 lines (block, 16 bytes, ASCII, meaning), then <code>dump: 16 sectors read</code>. The memory view: block 0 amber, empty blocks dark, trailers coral.", fix: "Grey “closed” sectors: their key isn't the factory key (a card someone set up): the lab leaves those alone. “no card”: it moved; run it again." },
             { c: "read 0", card: "on", does: "Authenticates sector 0 and reads block 0 only.", see: "UID (4 bytes), BCC, then 08 04 00 (SAK, ATQA), then the maker's bytes.", fix: "" },
             { c: "read 1 (with trace on)", card: "on", does: "The same for block 1, with the sniffer showing the frames.", see: "<code>AUTH key A</code> marked as done inside the chip, then <code>READ</code> and 16 bytes, both “[encrypted on air]”.", fix: "" },
           ],
           steps: [
+            "Flash <code>rfid-lab-r4</code> with the command above (same wiring as R1). <code>help</code> shows this lab's commands.",
             "Hold the white card on the reader and keep it still. Type <code>dump</code> (or double-click on the memory view). <b>Checkpoint:</b> 16 sectors read.",
             "In the dump, read block 0: UID, BCC, SAK, ATQA, maker's bytes.",
             "Find a trailer (blocks 3, 7, 11…): key A reads as 00 (the card never reveals it), then <code>FF 07 80 69</code>, then key B.",
@@ -1005,7 +1012,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           note: "Authentication runs inside the MFRC522 (its MFAuthent command): the ESP32 hands over the key and never sees the handshake, and the key never goes into the trace. The firmware only uses the factory key, on cards you own, and never writes block 0 or a trailer: a trailer with broken access bits locks its sector for good.",
         },
         {
-          ...common, id: "R5", title: "Write & count", rfidView: 4,
+          ...common, id: "R5", title: "Write & count", rfidView: 4, cmd: "uv run pio run -e rfid-lab-r5 -t upload",
           heading: "Write a label, keep a count",
           goal: "Write your own 16 bytes into a data block and read them back. Then use MIFARE's built-in arithmetic: a value block stores a number three times (once inverted) and the card itself adds or subtracts, then commits the result in one step. A backup block keeps the value from before.",
           goalLine: "Write text to your card and keep a credit counter on it that the card itself updates.",
@@ -1017,6 +1024,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           learn: ["block writes · ACK / NAK", "read-back checks", "value block format", "INCREMENT · DECREMENT · TRANSFER", "backup blocks", "guard rails"],
           panels: [{ title: "A value block, byte by byte", fn: "value", intro: "How the card stores a number so that it can check it itself. Change the value and watch which bytes move." }, { title: "credits use 3, step by step", fn: "seq", flows: ["credits"], intro: "The four card commands behind one <code>credits use 3</code>." }, screens(4)],
           commands: [
+            flash(5, "everything from R4, plus the credits view, write and credits."),
             { c: "write 4 hello bench", card: "on", does: "Opens sector 1, checks its access bits allow key A writes, writes 16 bytes (text padded with zeros), reads them back.", see: "Block 4's bytes, <code>|hello bench.....|</code> and <code>written and read back</code>.", fix: "<code>READ BACK DIFFERS</code>: the card moved mid-write; run it again." },
             { c: "write 3 test", card: "any", does: "Tries to write a sector trailer.", see: "Refused before anything is sent: <code>not writable here (block 0 and trailers are off limits)</code>.", fix: "" },
             { c: "credits init 50", card: "on", does: "Writes 50 as a value block into block 8 and the same into the backup, block 9.", see: "The credits view: 50, backup 50, a coin stack.", fix: "" },
@@ -1025,6 +1033,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
             { c: "credits", card: "on", does: "Reads blocks 8 and 9 and decodes them.", see: "The current value and the backup.", fix: "" },
           ],
           steps: [
+            "Flash <code>rfid-lab-r5</code> with the command above (same wiring as R1). <code>help</code> shows this lab's commands.",
             "Card on the reader. <code>write 4 hello bench</code>. <b>Checkpoint:</b> written and read back.",
             "<code>write 3 test</code>: refused, a trailer. So is block 0.",
             "<code>credits init 50</code>, then <code>credits use 3</code>. <b>Checkpoint:</b> 47, backup 50.",
@@ -1034,7 +1043,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           note: "Credits on a MIFARE Classic are a learning toy, not money: anyone with the key can rewrite the block. Payment and transit systems use cards with modern cryptography (such as MIFARE DESFire) and check every transaction on a server.",
         },
         {
-          ...common, id: "R6", title: "Edge lab", rfidView: 5,
+          ...common, id: "R6", title: "Edge lab", rfidView: 5, cmd: "uv run pio run -e rfid-lab-r6 -t upload",
           heading: "Find the limits on your own bench",
           goal: "Seven experiments that each push one setting until something breaks: the SPI clock, receiver gain against distance, how fast the card answers, how long each step takes, polling against the IRQ wire, the chip's CRC unit against the ESP32, and hundreds of reads in a row. Each one draws a chart on the screen and prints a table you can paste below.",
           goalLine: "Measure where your own bench breaks, and compare it with the datasheet.",
@@ -1045,6 +1054,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           learn: ["measured vs datasheet", "SPI signal integrity", "timeouts & reply time", "IRQ vs polling", "offloading", "reliability statistics"],
           panels: [{ title: "Experiments", fn: "edge", intro: "One tab per experiment: what it pushes, what to look for, the example result, and a box for your own table." }, screens(5)],
           commands: [
+            flash(6, "everything from R5, plus the edge view and the seven edge experiments."),
             { c: "edge spi", card: "any", does: "FIFO loopback at 1 to 40 MHz, then a chip reset. About 1 s.", see: "A table of % wrong per MHz and a bar chart; the 10 MHz bar is outlined (the datasheet limit).", fix: "" },
             { c: "edge crc", card: "any", does: "300 checksums by the chip and by the ESP32.", see: "0 mismatches; the chip much slower (SPI round trips).", fix: "" },
             { c: "edge irq", card: "any", does: "30 WUPAs polling, 30 sleeping on the IRQ wire. Run it with the card on, then off.", see: "SPI accesses per command for each; the gap grows a lot with no card.", fix: "“IRQ never fired”: the IRQ wire (13) is loose." },
@@ -1054,6 +1064,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
             { c: "edge stress 500", card: "move", does: "500 full read cycles (~10 s). Lift or tilt the card slowly while it runs.", see: "Counts per outcome: ok, absent, CRC, protocol… and reads per second.", fix: "" },
           ],
           steps: [
+            "Flash <code>rfid-lab-r6</code> with the command above (same wiring as R1). <code>help</code> shows this lab's commands.",
             "Card on the reader and kept still (a book on top helps). Click to the <b>edge</b> view: double-click there runs the next experiment.",
             "<code>edge spi</code>, <code>edge crc</code>, <code>edge irq</code> (card on, then off).",
             "<code>edge timeout</code> and <code>edge timing</code> with the card still. <b>Checkpoint:</b> your card's reply time.",
@@ -3693,7 +3704,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
   }
   // ---------- R6: the edge lab ----------
   // Example numbers are illustrative (a typical RC522 on 15 cm jumpers), not measured on your board.
-  // Each parser reads the exact table the firmware prints (src/rfid-lab/edge.h).
+  // Each parser reads the exact table the firmware prints (lib/rfid-lab-kit/src/edge.h).
   const rows = (t, re, f) => [...t.matchAll(re)].map(f);
   const EDGE = [
     { key: "spi", label: "SPI clock", cmd: "edge spi", unit: "% bytes wrong", xTitle: "SPI clock (MHz)",
@@ -3816,12 +3827,12 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
     return () => {};
   }
 
-  // ---------- The rfid-lab screen, drawn like src/rfid-lab/rfid_views.h ----------
+  // ---------- The rfid-lab screen, drawn like lib/rfid-lab-kit/src/rfid_views.h ----------
   // One drawer for both the simulator and the "What the screen shows" panel. `s` is a plain state:
   // { view, uid (array or null), rate, taps, polling, coll, selfTest, gain, irq, mhz, trace, frames,
   //   dump {uid, mem} | null, credits {v, b} | null, edge (an EDGE entry) | null, busy, progress, note, noteBad }
   const RFID_VIEWS = ["chip", "card", "trace", "memory", "credits", "edge"];
-  const RFID_HINTS = ["double: self-test", "double: inventory", "double: sniffer on/off", "double: dump", "double: +1 credit", "double: next test"];
+  const RFID_HINTS = ["double-click: selftest", "double-click: inventory", "double-click: trace", "double-click: dump", "double-click: credits add 1", "double-click: edge next"];
   function rfidPalette() {
     return { paper: css("--scope-paper"), ink: css("--scope-ink"), muted: css("--scope-muted"), dim: css("--scope-dim"), teal: css("--scope-trace"), amber: css("--scope-amber"), coral: css("--scope-coral"), blue: css("--scope-blue"), card: css("--card-white"), chip: css("--pcb") };
   }
@@ -3918,12 +3929,13 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
     views[s.view](t);
     // Header: title, view dots, card-present dot. Footer: button hint, last result or progress.
     T(8, 18, "RFID", C.ink, BOLD); T(42, 18, RFID_VIEWS[s.view], C.muted, SANS);
-    for (let i = 0; i < 6; i++) { g.fillStyle = i === s.view ? C.ink : C.dim; g.beginPath(); g.arc(236 + i * 10, 18, 3, 0, 7); g.fill(); }
+    const dots = s.dots || { n: 6, i: s.view }; // a lab shows only its own views
+    for (let i = 0; i < dots.n; i++) { g.fillStyle = i === dots.i ? C.ink : C.dim; g.beginPath(); g.arc(286 - (dots.n - 1) * 10 + i * 10, 18, 3, 0, 7); g.fill(); }
     g.fillStyle = s.uid ? C.teal : C.dim; g.beginPath(); g.arc(304, 18, 5, 0, 7); g.fill();
     if (s.uid) { g.strokeStyle = C.teal; g.beginPath(); g.arc(304, 18, 8, 0, 7); g.stroke(); }
     g.fillStyle = C.dim; g.fillRect(0, 28, W, 1);
     g.fillStyle = C.paper; g.fillRect(0, H - 11, W, 11);
-    T(6, H - 3, `click: view  ${RFID_HINTS[s.view]}`, C.muted);
+    T(6, H - 3, s.hint ?? RFID_HINTS[s.view], C.muted);
     const right = s.busy ? `${s.busy} ${Math.round(s.progress)}%` : s.note.slice(0, 34);
     g.font = "8px 'IBM Plex Mono', monospace";
     T(W - 6 - g.measureText(right).width, H - 3, right, s.busy ? C.amber : s.noteBad ? C.coral : C.teal);
@@ -4017,11 +4029,38 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
   }
 
   // ---------- Sim R1-R6: the rfid-lab screen + serial monitor (example data) ----------
+  // What each lab's firmware has: its views and commands (lib/rfid-lab-kit, src/rfid-lab-rN/main.cpp).
+  const RFID_CMD_HELP = {
+    chip: ["", "read VersionReg again (92h NXP, B2h/88h clones, 00/FF = no answer)"], reset: ["", "hard reset of the reader chip (RST pin), then VersionReg"],
+    selftest: ["", "the datasheet's digital self-test (clones: two runs compared)"], loopback: ["", "3,200 bytes through the chip's FIFO and back"],
+    regs: ["", "15 registers with their bits and meaning"], spi: ["<MHz>", "SPI clock, 1-40 (default 4, the chip's limit is 10)"],
+    gain: ["<0-7>", "receiver gain, 18-48 dB (default 4 = 33 dB)"], timeout: ["<us>", "how long the chip waits for a card (default 25000)"],
+    irq: ["on|off", "wait on the IRQ wire, or poll the chip over SPI"], poll: ["on|off", "look for cards ~12 times a second, or pause"],
+    trace: ["[on|off]", "the sniffer: print each card's frames (alone: toggle)"], inventory: ["", "find every card in the field, one by one"],
+    dump: ["", "all 16 sectors with the factory key (hold the card still)"], read: ["<block>", "one block, 0-63"],
+    write: ["<block> <text>", "16 bytes of text into a data block, read back"], credits: ["[init|add|use <n>]", "a value block on block 8, backup on 9"],
+    edge: ["<test>", "spi gain timeout timing irq crc stress [n], or next"],
+  };
+  const RFID_LABS = (() => {
+    const r1 = ["chip", "reset", "selftest", "loopback", "regs", "spi", "gain", "timeout", "irq"];
+    const r2 = [...r1, "poll", "trace"], r3 = [...r2, "inventory"], r4 = [...r3, "dump", "read"], r5 = [...r4, "write", "credits"], r6 = [...r5, "edge"];
+    const actions = (inv) => ["selftest", inv ? "inventory" : null, "trace", "dump", "credits add 1", "edge next"];
+    return {
+      R1: { title: "R1 Wire & talk", views: [0, 1], cmds: r1, actions: actions(false) },
+      R2: { title: "R2 Wake a card", views: [0, 1, 2], cmds: r2, actions: actions(false) },
+      R3: { title: "R3 Who's there", views: [0, 1, 2], cmds: r3, actions: actions(true) },
+      R4: { title: "R4 Inside the card", views: [0, 1, 2, 3], cmds: r4, actions: actions(true) },
+      R5: { title: "R5 Write & count", views: [0, 1, 2, 3, 4], cmds: r5, actions: actions(true) },
+      R6: { title: "R6 Edge lab", views: [0, 1, 2, 3, 4, 5], cmds: r6, actions: actions(true) },
+    };
+  })();
+
   function simRfid(parent, lesson) {
     const W = 320, H = 170, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const LAB = RFID_LABS[lesson.id] || RFID_LABS.R6, ENV = `rfid-lab-${(lesson.id || "R6").toLowerCase()}`;
     const row = document.createElement("div"); row.className = "boot-row";
     row.innerHTML = `<button type="button" class="boot-btn" aria-label="Push button: click next view, double-click this view's action, hold to pause polling">BUTTON</button>
-      <div class="scene-dots" role="group" aria-label="Views">${RFID_VIEWS.map((v, i) => `<button type="button" data-v="${i}">${i + 1}</button>`).join("")}</div><span class="auto-flag"></span>`;
+      <div class="scene-dots" role="group" aria-label="Views">${LAB.views.map((v, i) => `<button type="button" data-v="${i}" title="${RFID_VIEWS[v]}">${i + 1}</button>`).join("")}</div><span class="auto-flag"></span>`;
     const field = document.createElement("div"); field.className = "quick";
     field.innerHTML = `<button type="button" class="btn" data-f="card">lay the card</button><button type="button" class="btn" data-f="tag">lay the tag</button><button type="button" class="btn" data-f="both">both</button><button type="button" class="btn" data-f="none">remove</button>`;
     const frame = document.createElement("div"); frame.className = "screen-frame";
@@ -4087,7 +4126,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       st.flashUntil = performance.now() + 300; // the LED flashes for every read
       return cards[s];
     }
-    // ---- Commands (the same words as src/rfid-lab/main.cpp) ----
+    // ---- Commands (the same words as lib/rfid-lab-kit/src/lab_commands.h) ----
     function busyFor(what, ms, done) {
       st.busy = what; st.progress = 0;
       const t0 = performance.now();
@@ -4132,10 +4171,8 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       log(line, "you");
       const [cmd, ...rest] = line.split(/\s+/); const arg = rest.join(" "); const c = cmd.toLowerCase(), a = arg.toLowerCase();
       const n = parseInt(arg, 10);
-      if (c === "help" || c === "?") {
-        ["R1 chip    chip | reset | selftest | loopback | regs | spi <MHz> | gain <0-7> | irq on|off | timeout <us>", "R2 wake    poll on|off | trace on|off", "R3 who     inventory", "R4 memory  dump | read <block>", "R5 write   write <block> <text> | credits | credits init|add|use <n>", "R6 edge    edge spi | gain | timeout | timing | irq | crc | stress [n]", "           view <1-6> | help"].forEach((x) => log(x, ""));
-        return;
-      }
+      if (c === "help" || c === "?") return printHelp();
+      if (c !== "view" && !LAB.cmds.includes(c)) return log(`[W][lab.h] runLine(): unknown command '${line}' in ${ENV} (type help)`, "w");
       if (c === "chip") { log("RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz", ""); log("VersionReg 0x92: MFRC522 v2.0", ""); return; }
       if (c === "reset") { log("RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz", ""); log("VersionReg 0x92: MFRC522 v2.0", ""); return say("hard reset: VersionReg 0x92"); }
       if (c === "selftest") {
@@ -4155,11 +4192,11 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
         log("  SPI address bytes: read = 0x80 | reg << 1, write = reg << 1 (e.g. VersionReg read = 0xEE)", "");
         return;
       }
-      if (c === "spi") { if (!(n >= 1 && n <= 40)) return log("[W][main.cpp] warn(): spi <MHz>, 1-40 (the chip is rated for 10)", "w"); st.mhz = n; return say(`SPI clock ${n} MHz${n > 10 ? ": above the chip's 10 MHz spec" : ""}`, n > 10); }
-      if (c === "gain") { if (!(n >= 0 && n <= 7)) return log("[W][main.cpp] warn(): gain <0-7>: 0=18 1=23 4=33 5=38 6=43 7=48 dB", "w"); st.gain = n; return say(`receiver gain ${FIELD.gains[[0, 1, 0, 1, 2, 3, 4, 5][n]]} dB`); }
-      if (c === "timeout") { if (!(n >= 25)) return log("[W][main.cpp] warn(): timeout <us>, 25-1000000 (default 25000)", "w"); st.timeout = n; return say(`chip timer ${n} us`); }
+      if (c === "spi") { if (!(n >= 1 && n <= 40)) return log("[W][lab.h] warn(): spi <MHz>, 1-40 (the chip is rated for 10)", "w"); st.mhz = n; return say(`SPI clock ${n} MHz${n > 10 ? ": above the chip's 10 MHz spec" : ""}`, n > 10); }
+      if (c === "gain") { if (!(n >= 0 && n <= 7)) return log("[W][lab.h] warn(): gain <0-7>: 0=18 1=23 4=33 5=38 6=43 7=48 dB", "w"); st.gain = n; return say(`receiver gain ${FIELD.gains[[0, 1, 0, 1, 2, 3, 4, 5][n]]} dB`); }
+      if (c === "timeout") { if (!(n >= 25)) return log("[W][lab.h] warn(): timeout <us>, 25-1000000 (default 25000)", "w"); st.timeout = n; return say(`chip timer ${n} us`); }
       if (["irq", "poll", "trace"].includes(c)) {
-        if (a !== "on" && a !== "off") return log(`[W][main.cpp] warn(): ${c} on | ${c} off`, "w");
+        if (a !== "on" && a !== "off") return log(`[W][lab.h] warn(): ${c} on | ${c} off`, "w");
         const on = a === "on";
         if (c === "irq") { st.irq = on; return say(`waiting by ${on ? "IRQ wire" : "polling"}`); }
         if (c === "poll") { st.polling = on; return say(`card polling ${on ? "on" : "paused"}`); }
@@ -4179,7 +4216,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
         return busyFor("dump", 1400, () => { dumpLines(card); st.dump = card; say("dump: 16 sectors read"); });
       }
       if (c === "read") {
-        if (!(n >= 0 && n <= 63)) return log("[W][main.cpp] warn(): read <block>, 0-63", "w");
+        if (!(n >= 0 && n <= 63)) return log("[W][lab.h] warn(): read <block>, 0-63", "w");
         const card = need(); if (!card) return;
         const b = card.mem[n], ascii = b.map((x) => (x >= 32 && x < 127 ? String.fromCharCode(x) : ".")).join("");
         log(`  ${String(n).padStart(3)}  ${hxs(b)}  |${ascii}|  ${blockKind(b, n) === "value" ? "value block" : ""}`, "");
@@ -4191,7 +4228,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       }
       if (c === "write") {
         const m = arg.match(/^(\d+)\s+(.+)$/);
-        if (!m || +m[1] < 1 || +m[1] > 63) return log("[W][main.cpp] warn(): write <block> <text>, e.g. write 4 hello bench", "w");
+        if (!m || +m[1] < 1 || +m[1] > 63) return log("[W][lab.h] warn(): write <block> <text>, e.g. write 4 hello bench", "w");
         const blk = +m[1];
         if (blk % 4 === 3) return say(`block ${blk}: not writable here (block 0 and trailers are off limits)`, true);
         const card = need(); if (!card) return;
@@ -4206,14 +4243,14 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
         const [op, val] = a.split(/\s+/), v = parseInt(val, 10), cur = card.mem[8];
         const has = blockKind(cur, 8) === "value";
         const value = (b) => b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24);
-        if (op === "init") { if (!(v >= 0)) return log("[W][main.cpp] warn(): credits init|add|use <n>, 0-100000", "w"); card.mem[8] = valueBlock(v, 8); card.mem[9] = valueBlock(v, 9); }
+        if (op === "init") { if (!(v >= 0)) return log("[W][lab.h] warn(): credits init|add|use <n>, 0-100000", "w"); card.mem[8] = valueBlock(v, 8); card.mem[9] = valueBlock(v, 9); }
         else if (op === "add" || op === "use") {
           if (!has) return say("no credits on this card yet: credits init <n>", true);
-          if (!(v >= 0)) return log("[W][main.cpp] warn(): credits init|add|use <n>, 0-100000", "w");
+          if (!(v >= 0)) return log("[W][lab.h] warn(): credits init|add|use <n>, 0-100000", "w");
           if (op === "use" && value(cur) < v) return say(`only ${value(cur)} credits, can't use ${v}`, true);
           card.mem[9] = valueBlock(value(cur), 9);
           card.mem[8] = valueBlock(value(cur) + (op === "add" ? v : -v), 8);
-        } else if (op) return log("[W][main.cpp] warn(): credits init|add|use <n>", "w");
+        } else if (op) return log("[W][lab.h] warn(): credits init|add|use <n>", "w");
         if (blockKind(card.mem[8], 8) !== "value") return say("block 8 is not a value block: credits init <n>", true);
         st.credits = { v: value(card.mem[8]), b: value(card.mem[9]) };
         log(`  credits ${st.credits.v} (block 8) · backup ${st.credits.b} (block 9)`, "");
@@ -4221,24 +4258,36 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       }
       if (c === "edge") {
         const k = a.split(/\s+/)[0];
-        if (!EDGE.some((e) => e.key === k)) return log("[W][main.cpp] warn(): edge spi | gain | timeout | timing | irq | crc | stress [n]", "w");
+        if (!EDGE.some((e) => e.key === k)) return log("[W][lab.h] warn(): edge spi | gain | timeout | timing | irq | crc | stress [n]", "w");
         return edgeRun(k);
       }
-      if (c === "view") { if (!(n >= 1 && n <= 6)) return log("[W][main.cpp] warn(): view <1-6>", "w"); return setView(n - 1); }
+      if (c === "view") { if (!(n >= 1 && n <= LAB.views.length)) return log(`[W][lab.h] warn(): view <1-${LAB.views.length}>`, "w"); return setView(n - 1); }
       log(`[W][main.cpp] handleCommand(): unknown command '${line}' (type help)`, "w");
     }
-    function setView(v) { st.view = (v + 6) % 6; log(`[I][main.cpp] setView(): view ${st.view + 1}: ${RFID_VIEWS[st.view]}`); }
+    const pos = () => Math.max(0, LAB.views.indexOf(st.view));
+    function setView(p) { const n = LAB.views.length; st.view = LAB.views[((p % n) + n) % n]; log(`[I][lab.h] setView(): view ${pos() + 1}: ${RFID_VIEWS[st.view]}`); }
+    function printHelp() {
+      log(`RFID lab ${LAB.title}  (${ENV})`, "");
+      LAB.cmds.forEach((k) => log(`  ${`${k} ${RFID_CMD_HELP[k][0]}`.padEnd(28)} ${RFID_CMD_HELP[k][1]}`, ""));
+      log(`  ${"view <n>".padEnd(28)} show screen view n`, "");
+      log(`Views: ${LAB.views.map((v, i) => `${i + 1} ${RFID_VIEWS[v]}`).join(" · ")}`, "");
+    }
     function action() {
-      if (st.view === 0) run("selftest"); else if (st.view === 1) run("inventory"); else if (st.view === 2) run(`trace ${st.trace ? "off" : "on"}`);
-      else if (st.view === 3) run("dump"); else if (st.view === 4) run(st.credits ? "credits add 1" : "credits init 50");
-      else { run(`edge ${EDGE[st.nextEdge].key}`); st.nextEdge = (st.nextEdge + 1) % EDGE.length; }
+      const a = LAB.actions[st.view];
+      if (!a) return;
+      log(`> ${a}   (double-click)`, "");
+      if (a === "trace") return run(`trace ${st.trace ? "off" : "on"}`);
+      if (a === "credits add 1" && !st.credits) return run("credits init 50");
+      if (a === "edge next") { const k = EDGE[st.nextEdge].key; st.nextEdge = (st.nextEdge + 1) % EDGE.length; return run(`edge ${k}`); }
+      run(a);
     }
 
     let stopped = false, raf;
     function draw(now) {
       const s = selected();
-      drawRfidScreen(g, C, { ...st, uid: s ? cards[s].uid : null, coll: s ? st.coll : 0 }, now / 1000, reduce);
-      row.querySelectorAll("[data-v]").forEach((b, i) => b.setAttribute("aria-current", String(i === st.view)));
+      const a = LAB.actions[st.view];
+      drawRfidScreen(g, C, { ...st, uid: s ? cards[s].uid : null, coll: s ? st.coll : 0, dots: { n: LAB.views.length, i: pos() }, hint: a ? `double-click: ${a}` : "click: next view" }, now / 1000, reduce);
+      row.querySelectorAll("[data-v]").forEach((b, i) => b.setAttribute("aria-current", String(i === pos())));
       row.querySelector(".auto-flag").textContent = `${RFID_VIEWS[st.view]} view · ${st.polling ? "polling" : "paused"}`;
       rgbDot.setAttribute("fill", now < st.flashUntil ? "var(--ok)" : s ? "var(--ok)" : "var(--silk-dim)");
       rgbDot.setAttribute("r", now < st.flashUntil ? 10 : 7);
@@ -4252,17 +4301,18 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       btn.classList.remove("down");
       if (performance.now() - downAt > 600) { run(`poll ${st.polling ? "off" : "on"}`); return; }
       clicks++; clearTimeout(clickTimer);
-      clickTimer = setTimeout(() => { if (clicks >= 2) action(); else setView(st.view + 1); clicks = 0; }, 300);
+      clickTimer = setTimeout(() => { if (clicks >= 2) action(); else setView(pos() + 1); clicks = 0; }, 300);
     });
-    btn.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(st.view + 1); } });
+    btn.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(pos() + 1); } });
     row.querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", () => setView(+b.dataset.v)));
     field.querySelectorAll("[data-f]").forEach((b) => b.addEventListener("click", () => setField(b.dataset.f)));
     quick.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => run(b.textContent)));
     term.form.addEventListener("submit", (e) => { e.preventDefault(); run(term.input.value); term.input.value = ""; });
-    log("[I][main.cpp] setup(): rfid-lab: reader task started on core 0, screen on core 1");
+    log(`[I][lab.h] begin(): ${ENV}: reader task started on core 0, screen on core 1`);
     log("RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz", "");
     log("VersionReg 0x92: MFRC522 v2.0", "");
-    log(lesson.id === "R1" ? "Type selftest, loopback or regs (no card needed), or use the buttons below." : "Type help, or use the buttons: lay the card on the reader first.", "");
+    printHelp();
+    log(lesson.id === "R1" ? "Type selftest, loopback or regs (no card needed), or use the buttons below." : "Type a command, or use the buttons: lay the card on the reader first.", "");
     raf = requestAnimationFrame(draw);
     return () => { stopped = true; cancelAnimationFrame(raf); clearTimeout(clickTimer); rgbDot.setAttribute("fill", "var(--silk-dim)"); rgbDot.setAttribute("r", 7); };
   }
@@ -4456,6 +4506,11 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       why: "Your request: the LED must be on when a card is read. Before, it gave a short white flash only for a new card, then a dim teal.",
       out: "rfid-lab  RAM 9.4%  Flash 6.7% (438,4xx B)  SUCCESS, no warnings",
       result: "Bright green flash on every read (new card, dump/read/write/credits reaching the card, inventory once per card), steady green while the card lies there, red when the reader chip stops answering, off with no card. Built with the entry 37 fixes; not flashed yet." },
+    { n: 39, types: ["build"], title: "One firmware per RFID lab", where: "Mac · no board",
+      cmd: "uv run pio run -e rfid-lab-r1 -e rfid-lab-r2 -e rfid-lab-r3 -e rfid-lab-r4 -e rfid-lab-r5 -e rfid-lab-r6",
+      why: "Your request: each lab its own code and command, like W1/W2. Each src/rfid-lab-rN/main.cpp lists its views and serial commands; the shared code moved to lib/rfid-lab-kit.",
+      out: "rfid-lab-r1 … r6  SUCCESS, Flash 437–440 KB, no warnings",
+      result: "R1 was all working on your board (rfid-lab). Next: uv run pio run -e rfid-lab-r2 -t upload. Nothing was sent to the board." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";

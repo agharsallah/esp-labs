@@ -87,7 +87,7 @@ flowchart LR
 | Wi-Fi           | W1    | Scan & join           | `wifi-lab-w1`          | built    | station mode, channels, RSSI in dBm, security types, NVS, NTP, mDNS                  |
 | Wi-Fi           | W2    | Phone control         | `wifi-lab-w2(-remote)` | on board | REST, WebSocket, captive portal, OTA, relay through a tunnel                         |
 | Wi-Fi           | W3    | Internet & AI         | `wifi-lab-w3`          | built    | HTTPS, JSON filters, worker tasks, AI function calling via LiteLLM                   |
-| RFID & NFC      | R1–R6 | RFID lab              | `rfid-lab`             | built    | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing |
+| RFID & NFC      | R1–R6 | RFID labs             | `rfid-lab-r1` … `r6`   | R1 works | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing |
 | Sensors         |       |                       |                        | planned  | I2C sensors (BME280), data over Wi-Fi                                                |
 | Bluetooth LE    |       |                       |                        | planned  | BLE advertising, talking to a phone                                                  |
 
@@ -252,7 +252,18 @@ sequenceDiagram
 
 ## RFID track
 
-One firmware for all six steps: `uv run pio run -e rfid-lab -t upload` · code in [`src/rfid-lab`](src/rfid-lab/main.cpp). No RFID library: [`lib/rfid-kit`](lib/rfid-kit/src) is our own driver, written in layers so every byte stays visible. The reader runs in its own task on core 0 and owns the chip; `loop()` on core 1 only draws and parses commands.
+Each lab is its own firmware with its own command, like the Wi-Fi labs:
+
+| Lab                | Command                                   | Views       | Adds these serial commands                                               |
+| ------------------ | ----------------------------------------- | ----------- | ------------------------------------------------------------------------ |
+| R1 Wire & talk     | `uv run pio run -e rfid-lab-r1 -t upload` | chip · card | `chip` `reset` `selftest` `loopback` `regs` `spi` `gain` `timeout` `irq` |
+| R2 Wake a card     | `uv run pio run -e rfid-lab-r2 -t upload` | + trace     | `poll` `trace`                                                           |
+| R3 Who's there     | `uv run pio run -e rfid-lab-r3 -t upload` | (same)      | `inventory`                                                              |
+| R4 Inside the card | `uv run pio run -e rfid-lab-r4 -t upload` | + memory    | `dump` `read`                                                            |
+| R5 Write & count   | `uv run pio run -e rfid-lab-r5 -t upload` | + credits   | `write` `credits`                                                        |
+| R6 Edge lab        | `uv run pio run -e rfid-lab-r6 -t upload` | + edge      | `edge`                                                                   |
+
+Each [`src/rfid-lab-rN/main.cpp`](src/rfid-lab-r1/main.cpp) is a short list: that lab's views (with what a double-click does on each) and its commands, so `help` shows exactly what the lesson teaches. The shared code is in [`lib/rfid-lab-kit`](lib/rfid-lab-kit/src): the reader task, the six screen views, the edge experiments, every command (`lab_commands.h`) and the lab shell (`lab.h`: screen, button, LED, serial). No RFID library: [`lib/rfid-kit`](lib/rfid-kit/src) is our own driver, written in layers so every byte stays visible. The reader runs in its own task on core 0 and owns the chip; `loop()` on core 1 only draws and parses commands.
 
 ```mermaid
 flowchart LR
@@ -266,8 +277,9 @@ flowchart LR
     F --> M
     T --> M
   end
-  C --> R["src/rfid-lab/reader.h<br/>task on core 0: polling + jobs + edge.h"]
-  R -->|"Snapshot (mutex)"| L["main.cpp loop() on core 1<br/>6 views · serial · button"]
+  C --> R["lib/rfid-lab-kit/reader.h<br/>task on core 0: polling + jobs + edge.h"]
+  R -->|"Snapshot (mutex)"| L["lab.h loop() on core 1<br/>views · serial · button · LED"]
+  M2["src/rfid-lab-rN/main.cpp<br/>this lab's views + commands"] --> L
 ```
 
 **Wiring** (the screen stays as in lesson 03; the RC522 is on the S3's second SPI bus, SPI3, so it never shares with the screen):
