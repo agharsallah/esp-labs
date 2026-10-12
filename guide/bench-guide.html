@@ -376,6 +376,110 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
 .facts .panel { padding: 14px 16px; }
 @media (max-width: 480px) { ol.entries > li { grid-template-columns: minmax(0, 1fr); } }
 
+
+
+/* RFID track */
+:root { --scope-blue: #5aa0ff; --rfid: #0e7490; --rc522: #1f56a8; --rc522-edge: #163f7c; --card-white: #f3f5f7; --gold: #c9a227; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --rfid: #4cc9e0; --rc522: #2a63b8; --rc522-edge: #1b4686; --card-white: #e8ecef; --gold: #e0b93a; } }
+:root[data-theme="dark"] { --rfid: #4cc9e0; --rc522: #2a63b8; --rc522-edge: #1b4686; --card-white: #e8ecef; --gold: #e0b93a; }
+.f3d { display: flex; flex-direction: column; gap: 12px; }
+.f3d-stage { position: relative; background: radial-gradient(ellipse at 50% 35%, var(--surface), var(--bg)); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 10; max-width: 100%; touch-action: pan-y; cursor: grab; }
+.f3d-stage:active { cursor: grabbing; }
+.f3d-stage canvas { width: 100%; height: 100%; display: block; }
+.f3d-labels { position: absolute; inset: 0; pointer-events: none; }
+.f3d-labels span { position: absolute; transform: translate(-50%, -100%); font: 600 11px var(--font-mono); color: var(--ink); background: color-mix(in srgb, var(--surface) 82%, transparent); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; white-space: nowrap; transition: opacity .2s; }
+.f3d-labels span::after { content: ""; position: absolute; left: 50%; top: 100%; width: 1px; height: 10px; background: var(--muted); }
+.f3d-load { position: absolute; inset: auto 0 12px; text-align: center; font: 12px var(--font-mono); color: var(--muted); margin: 0; }
+.f3d-hint { position: absolute; top: 8px; right: 10px; font: 11px var(--font-mono); color: var(--muted); margin: 0; }
+.f3d-ctl { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 16px; align-items: center; }
+.f3d-ctl label { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; font: 600 11.5px var(--font-mono); letter-spacing: .04em; color: var(--muted); }
+.f3d-ctl input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--rfid); }
+.f3d-ctl output { font: 600 12px var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.f3d-ctl .quick .btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pills span { font: 600 11.5px var(--font-mono); padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.pills span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.pills span.yes { color: var(--ink); border-color: var(--ok); }
+.pills span.yes::before { background: var(--ok); }
+.pills span.no { color: var(--ink); border-color: var(--danger); }
+.pills span.no::before { background: var(--danger); }
+.bitstrip { display: flex; flex-wrap: wrap; gap: 3px; font: 600 11px var(--font-mono); }
+.bitstrip span { min-width: 30px; text-align: center; padding: 3px 4px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); background: var(--surface); }
+.bitstrip span.now { border-color: var(--copper); color: var(--ink); background: var(--copper-soft); }
+.bitstrip span small { display: block; font-weight: 400; font-size: 9.5px; }
+.rf-chart { width: 100%; height: auto; display: block; }
+.rf-chart .ax { stroke: var(--line); }
+.rf-chart .tk { font: 10.5px var(--font-mono); fill: var(--muted); }
+.rf-chart .curve { fill: none; stroke: var(--w-sda); stroke-width: 2; }
+.rf-chart .need { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.rf-chart .hear { stroke: var(--rfid); stroke-width: 1.5; stroke-dasharray: 2 3; }
+.rf-chart .zone { fill: var(--ok); opacity: .12; }
+.rf-chart .lbl { font: 600 10.5px var(--font-mono); fill: var(--ink); }
+.rf-chart .bar { transition: height .3s, y .3s; }
+.rf-chart .val { font: 600 10.5px var(--font-mono); fill: var(--ink); }
+.rf-chart .mark { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.rf-chart .ghost { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 3 2; }
+.ac-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; align-items: center; overflow-x: auto; }
+.ac-name { font: 600 12px var(--font-mono); white-space: nowrap; }
+.ac-bits { display: grid; grid-template-columns: repeat(32, minmax(12px, 1fr)); gap: 2px; min-width: 430px; }
+.ac-bits i { font: 600 10px var(--font-mono); font-style: normal; text-align: center; padding: 3px 0; border-radius: 3px; background: var(--bg); color: var(--muted); border: 1px solid transparent; transition: background .25s, color .25s, opacity .25s; }
+.ac-bits i.sent { background: var(--copper-soft); color: var(--ink); }
+.ac-bits i.got { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.ac-bits i.coll { background: var(--danger); color: var(--surface); }
+.ac-bits i.pick { background: var(--copper); color: var(--surface); }
+.ac-bits i.byte { margin-left: 4px; }
+.ac-row.silent .ac-bits, .ac-row.silent .ac-name { opacity: .3; }
+.ac-row { display: contents; }
+.ac-tree { width: 100%; height: auto; display: block; }
+.ac-tree .edge { stroke: var(--line); stroke-width: 2; fill: none; }
+.ac-tree .edge.on { stroke: var(--copper); stroke-width: 3; }
+.ac-tree .node { fill: var(--surface); stroke: var(--muted); }
+.ac-tree .leaf { font: 600 11px var(--font-mono); fill: var(--ink); }
+.ac-tree .tk { font: 10.5px var(--font-mono); fill: var(--muted); }
+.ac-inputs { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; }
+.ac-inputs label { display: flex; flex-direction: column; gap: 3px; font: 600 11px var(--font-mono); letter-spacing: .04em; color: var(--muted); }
+.ac-inputs input, .edge-paste textarea { font: 13px var(--font-mono); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; background: var(--surface); color: var(--ink); width: 14ch; }
+.ab-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.ab-table th, .ab-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.ab-table th { font: 600 11px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ab-table td.c { text-align: center; }
+.ab-table input { width: 18px; height: 18px; accent-color: var(--copper); }
+.ab-bytes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.ab-byte { border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--bg); min-width: 0; }
+.ab-byte b { font: 600 11px var(--font-mono); color: var(--muted); display: block; }
+.ab-byte .hex { font: 700 20px var(--font-mono); }
+.ab-byte .bits { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; margin-top: 4px; }
+.ab-byte .bits i { font: 600 10px var(--font-mono); font-style: normal; text-align: center; border-radius: 3px; padding: 2px 0; background: var(--surface); border: 1px solid var(--line); }
+.ab-byte .bits i.inv { border-style: dashed; color: var(--muted); }
+.ab-byte .bits i.hl { background: var(--copper); color: var(--surface); border-color: var(--copper); }
+.ab-byte small { display: block; font: 10.5px var(--font-mono); color: var(--muted); margin-top: 4px; }
+.warn-box { border-left: 3px solid var(--danger); padding: 6px 10px; margin-top: 10px; font-size: 13.5px; background: var(--bg); border-radius: 0 6px 6px 0; }
+.vb { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 3px; margin-top: 10px; min-width: 420px; }
+.vb div { font: 600 11px var(--font-mono); text-align: center; padding: 6px 0 4px; border-radius: 4px; color: var(--surface); }
+.vb div small { display: block; font-size: 9px; font-weight: 400; opacity: .85; }
+.vb .v { background: var(--w-sda); } .vb .nv { background: var(--muted); } .vb .a { background: var(--copper); } .vb .na { background: var(--gnd); }
+.vb-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 11.5px var(--font-mono); color: var(--muted); margin-top: 8px; }
+.vb-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.edge-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.edge-body { display: grid; gap: 10px; }
+.edge-body h4 { margin: 0; font: 650 16px var(--font-display); }
+.edge-body p { margin: 0; max-width: 68ch; }
+.edge-paste { display: grid; gap: 6px; }
+.edge-paste textarea { width: 100%; min-height: 90px; resize: vertical; }
+.edge-src { font: 11.5px var(--font-mono); color: var(--muted); }
+.mem-side { display: grid; gap: 6px; }
+.mem-row { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: center; font: 12px var(--font-mono); }
+.mem-row b { color: var(--muted); font-weight: 600; text-align: right; }
+.mem-bytes { display: grid; grid-template-columns: repeat(16, minmax(18px, 1fr)); gap: 2px; min-width: 360px; }
+.mem-bytes i { font-style: normal; text-align: center; padding: 2px 0; border-radius: 3px; background: var(--bg); font-size: 11px; }
+.mem-bytes i.ka { background: var(--danger); color: var(--surface); } .mem-bytes i.ab { background: var(--copper); color: var(--surface); }
+.mem-bytes i.ud { background: var(--gnd); color: var(--surface); } .mem-bytes i.kb { background: var(--w-sda); color: var(--surface); }
+.mem-bytes i.uid { background: var(--w-cs); color: var(--surface); } .mem-bytes i.val { background: var(--w-sda); color: var(--surface); }
+.mem-bytes i.txt { background: var(--ok); color: var(--surface); }
+.mem-scroll { overflow-x: auto; }
+.spi-ctl { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.spi-ctl select { font: 12.5px var(--font-mono); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: var(--surface); color: var(--ink); }
+
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
 
@@ -396,7 +500,7 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
 
 
   <dl class="overview" aria-label="On the bench now">
-    <div class="now"><dt>On the board now</dt><dd>03-display<small>11 flashes · screen works · built, not flashed: wifi-lab-w1, wifi-lab-w2, wifi-lab-w2-remote, wifi-lab-w3</small></dd></div>
+    <div class="now"><dt>On the board now</dt><dd>03-display<small>11 flashes · screen works · built, not flashed: wifi-lab-w1, wifi-lab-w2, wifi-lab-w2-remote, wifi-lab-w3, rfid-lab</small></dd></div>
     <div><dt>Connection</dt><dd>/dev/cu.usbserial-A5069RR4<small>FTDI FT232R · VID:PID 0403:6001</small></dd></div>
     <div><dt>Chip</dt><dd>ESP32-S3 rev v0.2<small>16 MB flash · 8 MB PSRAM · MAC 28:84:85:9E:3B:E4</small></dd></div>
     <div><dt>Verified</dt><dd class="flag">RGB · LED · screen · showcase<small>all seen working by you · display at 22 fps</small></dd></div>
@@ -418,6 +522,7 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
         <span><i style="background:var(--power)"></i>power</span>
         <span><i style="background:var(--gnd)"></i>ground</span>
         <span><i style="background:var(--w-btn)"></i>button input</span>
+        <span><i style="background:var(--rfid)"></i>RC522</span>
       </div>
       <div class="between" aria-label="Between lessons">
         <h3>Between lessons</h3>
@@ -729,6 +834,122 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
     },
     { id: "W4", track: "wifi", title: "Radio lab (bonus)", status: "planned", disabled: true },
     { id: "W5", track: "wifi", title: "Hardware Diary", status: "planned", disabled: true },
+    // ----- RFID track (firmware: rfid-lab, driver: lib/rfid-kit) -----
+    ...(() => {
+      const pins = [
+        { pin: "3V3", idx: 0, role: "VCC", side: "L", kind: "power" },
+        { pin: "3V3", idx: 1, role: "RC 3.3V", side: "L", kind: "power" },
+        { pin: "7", role: "BLK", side: "L" }, { pin: "8", role: "RES", side: "L" },
+        { pin: "9", role: "DC", side: "L" }, { pin: "10", role: "CS", side: "L" },
+        { pin: "11", role: "SDA", side: "L" }, { pin: "12", role: "SCL", side: "L" },
+        { pin: "GND", idx: 21, role: "GND", side: "L", kind: "gnd" },
+        { pin: "15", role: "RC SDA", side: "L", kind: "rfid" }, { pin: "16", role: "RC SCK", side: "L", kind: "rfid" },
+        { pin: "17", role: "MOSI", side: "L", kind: "rfid" }, { pin: "18", role: "MISO", side: "L", kind: "rfid" },
+        { pin: "14", role: "RC RST", side: "L", kind: "rfid" }, { pin: "13", role: "IRQ", side: "L", kind: "rfid" },
+        { pin: "GND", idx: 0, role: "RC GND", side: "R", kind: "gnd" },
+        { pin: "5", role: "BTN", side: "L", kind: "btn" },
+        { pin: "0", role: "BOOT", side: "R" },
+      ];
+      const common = { track: "rfid", status: "built, not flashed", pins, boot: true, sim: "rfid", cmd: "uv run pio run -e rfid-lab -t upload" };
+      return [
+        {
+          ...common, id: "R1", title: "Wire & talk", rfidView: 0,
+          heading: "Wire the reader and talk to its chip",
+          goal: "Its own firmware (rfid-lab) with our own driver in lib/rfid-kit: no RFID library, so every byte is ours to see. Eight wires put the RC522 on the S3's second SPI bus, so it never shares with the screen. The first conversation is with the chip itself, not a card: its version register, the self-test from the datasheet, and 3,200 bytes through its FIFO and back.",
+          learn: ["SPI address byte", "registers", "FIFO", "datasheet self-test", "two SPI buses", "reading a bus fault"],
+          wiring: [["SDA", "GPIO 15", "chip select (NSS) in SPI mode, not I2C data"], ["SCK", "GPIO 16", "SPI clock, from the ESP32"], ["MOSI", "GPIO 17", "data ESP32 → chip"], ["MISO", "GPIO 18", "data chip → ESP32"], ["IRQ", "GPIO 13", "optional: the chip says “done”"], ["GND", "GND", "the right header's top pin"], ["RST", "GPIO 14", "reset; low = power-down"], ["3.3V", "3V3", "the second 3V3 pin. Never 5V"]],
+          wiringHead: ["RC522 pin", "ESP32-S3", "Role"], wiringTitle: "RC522 wiring (8 new wires, the screen stays as it is)",
+          panels: [{ title: "One register read, bit by bit", fn: "spi" }],
+          steps: [
+            "Unplug USB. Keep the screen wired as in lesson 03. Add the RC522 with 8 female-to-male jumpers as in the table: SDA, SCK, MOSI and MISO go to 15, 16, 17, 18, side by side in the same order as on the module.",
+            "Check twice: the module's 3.3V goes to <b>3V3</b>, never 5V. The MFRC522 runs on 2.5–3.6 V and its pins are not 5 V tolerant.",
+            "Flash with the command above (or tell Claude “go”). Open <code>uv run pio device monitor</code>.",
+            "The first lines say <code>VersionReg 0x92: MFRC522 v2.0</code> (or 0x91, or a clone such as 0x88). <code>0x00</code> or <code>0xFF</code> means nothing answered: the bit-by-bit diagram above shows which wire each one points to.",
+            "Type <code>selftest</code>: all 64 bytes must match the datasheet's table. Then <code>loopback</code> (3,200 bytes through the FIFO) and <code>regs</code> (the registers with their bits).",
+            "Click to the <b>chip</b> view: double-click runs the self-test again.",
+          ],
+          note: "Many RC522 boards come with the header loose: push-in pins lose contact, so solder it or press it in firmly. Clone chips (0x88, 0xB2, 0x12) work, but the datasheet has no self-test table for them, so it says “no reference”. IRQ is optional: without it the firmware polls (R6 compares both).",
+        },
+        {
+          ...common, id: "R2", title: "Wake a card", rfidView: 1,
+          heading: "The field, and the first hello",
+          goal: "The reader's antenna makes a 13.56 MHz magnetic field. The card has no battery: its coil harvests that field, its chip wakes up, and it answers by loading the field in a rhythm the reader can hear. First in 3D, then frame by frame, then for real in the sniffer.",
+          learn: ["13.56 MHz near field", "inductive coupling", "100 % ASK pauses", "load modulation", "REQA · WUPA · ATQA", "a polling task", "sniffing frames"],
+          panels: [{ title: "The field, in 3D", fn: "field3d" }, { title: "Follow one wake-up, step by step", fn: "seq", flows: ["wake", "select"] }],
+          steps: [
+            "Same wiring and firmware as R1. Click to the <b>card</b> view.",
+            "Lay the white card flat on the reader: the LED flashes white, the UID appears, the read rate fills up. Lift it slowly and watch the rate drop before the card disappears: that is your range.",
+            "Click to the <b>trace</b> view: the sniffer shows the frames of the last wake-up (WUPA, ATQA, ANTICOLL, SELECT, SAK, HLTA).",
+            "In the monitor, <code>trace on</code> prints each new card's frames with their times in ms. Find the same frames in the step-by-step diagram.",
+            "Try the key tag. Then <code>gain 0</code> (18 dB) and <code>gain 7</code> (48 dB): does the range change? The 3D view predicts when it won't.",
+            "Long-press the button (or <code>poll off</code>) to pause polling; <code>poll on</code> resumes.",
+          ],
+          note: "The reader polls about 12 times a second in its own task on core 0, so the screen never waits. A card counts as removed only after 3 missed polls in a row (~0.3 s), so one weak poll at the edge of range doesn't make it flicker. The 3D model is simplified on purpose: measure your real range in R6.",
+        },
+        {
+          ...common, id: "R3", title: "Who's there", rfidView: 1,
+          heading: "Two cards at once: anticollision",
+          goal: "Lay the card and the tag on the reader together. Both answer at the same instant, bit by bit, and where their UIDs differ the reader hears a collision. Anticollision walks down the bits like a binary tree: pick a branch, ask again with that prefix, select the card that's left, halt it, repeat until nobody answers.",
+          learn: ["bit collisions", "binary tree walk", "NVB", "BCC", "cascade levels", "SAK", "HALT · WUPA"],
+          panels: [{ title: "Anticollision: a walk down the bits", fn: "anticoll" }],
+          steps: [
+            "Lay the card and the tag on the reader together, overlapping.",
+            "Type <code>inventory</code> (or double-click on the card view). The field goes off for 10 ms so every card restarts, then the reader finds them one by one.",
+            "Read the output: each UID, and where the walk branched, e.g. <code>collision at level 1 bit 23 -> chose 1</code>.",
+            "Type both UIDs into the diagram above and step through: the collision lands on the same bit.",
+            "Leave both on the reader: the card view always shows the same one. The walk always picks 1 at a collision, so the same card wins every time.",
+          ],
+          note: "Bits travel least-significant first, so “bit 23” is bit 6 of the third UID byte. Our driver is tested for two cards at once: with three or more, the chip's collision position after the first branch is harder to trust. 7-byte UIDs take two cascade levels; the first part starts with 88h, the cascade tag.",
+        },
+        {
+          ...common, id: "R4", title: "Inside the card", rfidView: 3,
+          heading: "Open the card's memory",
+          goal: "A MIFARE Classic 1K holds 1,024 bytes: 16 sectors × 4 blocks × 16 bytes. Every sector has its own lock, the trailer: two keys plus access bits that say who may read or write each block. Open each sector of your own card with the factory key and dump it.",
+          learn: ["sectors & blocks", "sector trailers", "access bits (stored twice)", "3-pass authentication", "encrypted frames", "manufacturer block"],
+          panels: [{ title: "The card's memory, in 3D", fn: "memory3d" }, { title: "Access bits decoder", fn: "access" }, { title: "Authenticate and read, step by step", fn: "seq", flows: ["read"] }],
+          steps: [
+            "Hold the white card on the reader. Type <code>dump</code> (or double-click on the memory view).",
+            "Read block 0: the UID, its BCC, SAK and ATQA, then the maker's bytes. Every 4th block is a trailer: key A reads back as 00 (the card never reveals it), then <code>FF 07 80 69</code>, then key B.",
+            "Enter <code>FF 07 80</code> in the access-bits decoder above: the data blocks get 000, the trailer 001.",
+            "The memory view colours each block: maker, empty, data, value, trailer. In the 3D view, click a sector to open it.",
+            "<code>trace on</code>, then <code>read 1</code>: the sniffer shows <code>AUTH key A</code>, then a <code>READ</code> marked “encrypted on air”.",
+          ],
+          note: "Authentication runs inside the MFRC522 (its MFAuthent command): the ESP32 hands over the key and never sees the handshake, and the key never goes into the trace. The firmware only uses the factory key, on cards you own, and never writes block 0 or a trailer: a trailer with broken access bits locks its sector for good.",
+        },
+        {
+          ...common, id: "R5", title: "Write & count", rfidView: 4,
+          heading: "Write a label, keep a count",
+          goal: "Write your own 16 bytes into a data block and read them back. Then use MIFARE's built-in arithmetic: a value block stores a number three times (once inverted) and the card itself adds or subtracts, then commits the result in one step. A backup block keeps the value from before.",
+          learn: ["block writes · ACK / NAK", "read-back checks", "value block format", "INCREMENT · DECREMENT · TRANSFER", "backup blocks", "guard rails"],
+          panels: [{ title: "A value block, byte by byte", fn: "value" }, { title: "credits use 3, step by step", fn: "seq", flows: ["credits"] }],
+          steps: [
+            "Card on the reader. <code>write 4 hello bench</code>: block 4 gets 16 bytes (padded with zeros), then the firmware reads them back and compares.",
+            "<code>write 3 test</code> is refused: block 3 is a trailer. So is block 0.",
+            "<code>credits init 50</code> turns blocks 8 and 9 into value blocks holding 50.",
+            "<code>credits use 3</code>, then <code>credits add 10</code>. On the credits view the coin stack follows; the backup shows the value before the last change.",
+            "Step through the diagram above: RESTORE + TRANSFER copy the value into the backup, then DECREMENT + TRANSFER. The card checks the value format itself.",
+            "<code>dump</code> again: block 4 shows as data, blocks 8 and 9 as value blocks.",
+          ],
+          note: "Credits on a MIFARE Classic are a learning toy, not money: anyone with the key can rewrite the block. Payment and transit systems use cards with modern cryptography (such as MIFARE DESFire) and check every transaction on a server.",
+        },
+        {
+          ...common, id: "R6", title: "Edge lab", rfidView: 5,
+          heading: "Find the limits on your own bench",
+          goal: "Seven experiments that each push one setting until something breaks: the SPI clock, receiver gain against distance, how fast the card answers, how long each step takes, polling against the IRQ wire, the chip's CRC unit against the ESP32, and hundreds of reads in a row. Each one draws a chart on the screen and prints a table you can paste below.",
+          learn: ["measured vs datasheet", "SPI signal integrity", "timeouts & reply time", "IRQ vs polling", "offloading", "reliability statistics"],
+          panels: [{ title: "Experiments", fn: "edge" }],
+          steps: [
+            "Card on the reader and kept still (a book on top helps). Click to the <b>edge</b> view.",
+            "<code>edge spi</code>: 1 to 40 MHz. Where do bytes start coming back wrong? The chip is rated for 10 MHz; your wires decide the rest.",
+            "<code>edge timeout</code>: shrink the chip's timer from 25 ms to 40 µs. Below some point the card can't answer in time: that is its reply time.",
+            "<code>edge gain</code> with the card at 1 cm, then at 3 cm: the found rate at each gain step.",
+            "<code>edge timing</code>, <code>edge irq</code> and <code>edge crc</code>, then <code>edge stress 500</code> while you slowly lift the card.",
+            "Paste each table into the matching tab below: your numbers appear next to the example.",
+          ],
+          note: "Double-click on the edge view runs the next experiment. edge spi resets the chip afterwards, in case a fast, garbled write changed a setting. Pull the IRQ wire and run edge irq: the firmware notices and falls back to polling.",
+        },
+      ];
+    })(),
   ];
 
   // ---------- Storage (per-viewer convenience only) ----------
@@ -742,7 +963,9 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
   if (/^l0([0-3]|3b)$/.test(hash)) current = hash.slice(1);
   if (hash === "w1") current = "W1";
   if (hash === "w2") current = "W2";
-  const hashTrack = { intro: "00", display: "03", wifi: "W1" }[hash];
+  if (hash === "w3") current = "W3";
+  if (/^r[1-6]$/.test(hash)) current = hash.toUpperCase();
+  const hashTrack = { intro: "00", display: "03", wifi: "W1", rfid: "R1" }[hash];
   if (hashTrack) current = hashTrack;
 
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -838,6 +1061,7 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
     { id: "intro", title: "Intro", blurb: "Tools, first program, first circuit", color: "--ok" },
     { id: "display", title: "Display & input", blurb: "The 1.9″ screen and buttons", color: "--copper" },
     { id: "wifi", title: "Wi-Fi", blurb: "Scan, join, serve pages, update over the air", color: "--w-sda" },
+    { id: "rfid", title: "RFID & NFC", blurb: "Cards, tags and the 13.56 MHz field", color: "--rfid" },
     { id: "sensors", title: "Sensors", blurb: "Temperature, air, motion over I2C", color: "--w-dc", planned: true },
     { id: "ble", title: "Bluetooth LE", blurb: "Talk to your phone without Wi-Fi", color: "--w-cs", planned: true },
   ];
@@ -927,6 +1151,7 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
       ${l.webConcepts ? `<div class="panel"><h3>How the pieces talk</h3><div id="web-concepts"></div></div>` : ""}
       ${l.remoteConcepts ? `<div class="panel"><h3>How remote control works</h3><div id="remote-concepts"></div></div>` : ""}
       ${l.httpsConcepts ? `<div class="panel"><h3>Follow one request, step by step</h3><div id="https-concepts"></div></div>` : ""}
+      ${(l.panels || []).map((p, i) => `<div class="panel"><h3>${p.title}</h3><div id="rpanel-${i}"></div></div>`).join("")}
       ${l.roadmap ? `<div class="panel"><h3>The Wi-Fi track</h3><div id="wifi-roadmap"></div></div>` : ""}
       ${l.fullWiring ? `<div class="panel"><h3>Wiring on the ESP32: screen + button</h3><div class="wd" id="full-wiring"></div></div>` : ""}
       ${l.compare ? `<div class="panel"><h3>Screen vs button</h3><div id="compare"></div></div>` : ""}
@@ -950,7 +1175,7 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
       });
     });
     const sim = document.getElementById("sim");
-    const stopMain = ({ usb: simUsb, hello: simHello, led: simLed, display: simDisplay, showcase: simShowcase, wifi: simWifi, phone: simPhone, weather: simWeather })[l.sim](sim, l) || (() => {});
+    const stopMain = ({ usb: simUsb, hello: simHello, led: simLed, display: simDisplay, showcase: simShowcase, wifi: simWifi, phone: simPhone, weather: simWeather, rfid: simRfid })[l.sim](sim, l) || (() => {});
     const stopDiagram = l.diagram ? wiringDiagram(document.getElementById("diagram")) : () => {};
     const stopButton = l.buttonDiagram ? buttonDiagram(document.getElementById("btn-diagram")) : () => {};
     const stopFull = l.fullWiring ? fullWiring(document.getElementById("full-wiring")) : () => {};
@@ -960,8 +1185,9 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
     const stopRemote = l.remoteConcepts ? remoteConcepts(document.getElementById("remote-concepts")) : () => {};
     const stopHttps = l.httpsConcepts ? httpsConcepts(document.getElementById("https-concepts")) : () => {};
     if (l.compare) renderCompare(document.getElementById("compare"));
+    const stopPanels = (l.panels || []).map((p, i) => RFID_PANELS[p.fn](document.getElementById(`rpanel-${i}`), p, l) || (() => {}));
     lessonEl.querySelectorAll(".variants button").forEach((b) => b.addEventListener("click", () => { store.set(`esp-variant-${base.id}`, b.id.replace("var-", "")); render(); }));
-    stopSim = () => { stopMain(); stopDiagram(); stopButton(); stopFull(); stopConcepts(); stopWeb(); stopRemote(); stopHttps(); };
+    stopSim = () => { stopMain(); stopDiagram(); stopButton(); stopFull(); stopConcepts(); stopWeb(); stopRemote(); stopHttps(); stopPanels.forEach((f) => f()); };
   }
 
   function chipFor(text) {
@@ -1404,7 +1630,6 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
 
   // ---------- W3: follow one request, step by step (sequence diagram) ----------
   function httpsConcepts(root) {
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const FLOWS = {
       weather: {
         label: "Weather · Open-Meteo", wait: [1, 4],
@@ -1436,6 +1661,20 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
         ],
       },
     };
+    return sequenceDiagram(root, FLOWS, {
+      legend: `<span class="li"><span class="lg lg-msg"></span> message (orange: the current step)</span><span class="li"><span class="lg lg-wait"></span> worker waiting for the network</span><span class="li"><span class="lg lg-loop"></span> loop() keeps drawing frames</span>`,
+      frames: true, waitLane: 1,
+      live: (frame, secs) => `worker task  waiting on the network … ${secs} s\nloop()       frame ${frame} drawn, the sky still animating`,
+    });
+  }
+
+  // A steppable, animated sequence diagram: lanes, numbered messages, one explained step at a time.
+  // FLOWS: { key: { label, wait: [fromStep, toStep], lanes: [[name, sub]], steps: [{ f, t, msg, ms, net, live, title, text, code }] } }
+  // opts: legend (HTML) · frames (lane 0 counts frames) · waitLane (whose lifeline shows the wait bar) · live(frame, secs)
+  let seqIds = 0;
+  function sequenceDiagram(root, FLOWS, opts) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const arrowId = `seq-arrow-${++seqIds}`;
     root.innerHTML = `
       <div class="seq-top">
         <div class="flow-tabs scene-dots" role="group" aria-label="Which request">
@@ -1448,13 +1687,13 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
         </div>
       </div>
       <div class="seq-scroll"><svg class="seq" role="img"></svg></div>
-      <p class="sim-cap seq-legend"><span class="li"><span class="lg lg-msg"></span> message (orange: the current step)</span><span class="li"><span class="lg lg-wait"></span> worker waiting for the network</span><span class="li"><span class="lg lg-loop"></span> loop() keeps drawing frames</span></p>
+      <p class="sim-cap seq-legend">${opts.legend}</p>
       <div class="seq-cap" aria-live="polite">
         <p class="seq-step"></p><h4></h4><p class="seq-text"></p><pre class="seq-code"></pre>
       </div>`;
     const svg = root.querySelector("svg.seq");
     const ui = { step: root.querySelector(".seq-step"), title: root.querySelector(".seq-cap h4"), text: root.querySelector(".seq-text"), code: root.querySelector(".seq-code"), play: root.querySelector('[data-a="play"]') };
-    let key = "weather", step = 0, playing = !reduce, stepStart = performance.now(), frames = 0, raf, timer;
+    let key = Object.keys(FLOWS)[0], step = 0, playing = !reduce, stepStart = performance.now(), frames = 0, raf, timer;
     const NS = "http://www.w3.org/2000/svg";
     const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text !== undefined) e.textContent = text; return e; };
     let geo;
@@ -1465,15 +1704,15 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
       svg.setAttribute("aria-label", `Sequence diagram: ${flow.lanes.map((l) => l[0]).join(", ")}. ${flow.steps.length} steps; the text below explains the current one.`);
       svg.replaceChildren();
       const defs = el("defs", {});
-      defs.appendChild(Object.assign(el("marker", { id: "seq-arrow", viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse" }), {}));
+      defs.appendChild(Object.assign(el("marker", { id: arrowId, viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse" }), {}));
       defs.firstChild.appendChild(el("path", { d: "M0 0 L10 5 L0 10 z", class: "seq-head" }));
       svg.appendChild(defs);
       flow.lanes.forEach(([name, sub], i) => {
         const x = laneX(i);
         svg.appendChild(el("line", { x1: x, y1: 46, x2: x, y2: H - 8, class: "seq-life" }));
-        svg.appendChild(el("rect", { x: x - 62, y: 4, width: 124, height: 40, rx: 8, class: i === 0 ? "seq-lane seq-lane-loop" : "seq-lane" }));
+        svg.appendChild(el("rect", { x: x - 62, y: 4, width: 124, height: 40, rx: 8, class: i === 0 && opts.frames ? "seq-lane seq-lane-loop" : "seq-lane" }));
         svg.appendChild(el("text", { x, y: 21, class: "seq-name", "text-anchor": "middle" }, name));
-        svg.appendChild(el("text", { x, y: 36, class: "seq-sub", "text-anchor": "middle" }, i === 0 ? "frame 0" : sub));
+        svg.appendChild(el("text", { x, y: 36, class: "seq-sub", "text-anchor": "middle" }, i === 0 && opts.frames ? "frame 0" : sub));
       });
       const rows = flow.steps.map((st, i) => {
         const y = top + i * gap, x1 = laneX(st.f), x2 = laneX(st.t), g = el("g", { class: "seq-row" });
@@ -1482,10 +1721,10 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
         if (st.f === st.t) {
           const left = st.f === n - 1, dir = left ? -1 : 1;  // the last lane loops (and labels) to its left
           const d = `M${x1} ${y - 8} h ${28 * dir} v 16 h ${-28 * dir}`;
-          path = el("path", { d, class: "seq-msg", "marker-end": "url(#seq-arrow)" });
+          path = el("path", { d, class: "seq-msg", "marker-end": `url(#${arrowId})` });
           g.append(path, el("text", { x: x1 + 34 * dir, y: y + 4, class: "seq-label", "text-anchor": left ? "end" : "start" }, st.msg));
         } else {
-          path = el("path", { d: `M${x1} ${y} H${x2 + (x2 > x1 ? -4 : 4)}`, class: "seq-msg" + (st.net ? " seq-net" : ""), "marker-end": "url(#seq-arrow)" });
+          path = el("path", { d: `M${x1} ${y} H${x2 + (x2 > x1 ? -4 : 4)}`, class: "seq-msg" + (st.net ? " seq-net" : ""), "marker-end": `url(#${arrowId})` });
           g.append(path, el("text", { x: (x1 + x2) / 2, y: y - 6, class: "seq-label", "text-anchor": "middle" }, st.msg));
         }
         g.appendChild(num);
@@ -1504,9 +1743,9 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
       ui.step.textContent = `Step ${step + 1} of ${flow.steps.length} · ${flow.lanes[st.f][0]}${st.f === st.t ? "" : " → " + flow.lanes[st.t][0]}${st.ms ? ` · about ${st.ms >= 1000 ? (st.ms / 1000).toFixed(1) + " s" : st.ms + " ms"}` : ""}`;
       ui.title.textContent = st.title; ui.text.textContent = st.text; ui.code.textContent = st.code;
       // From sending the request until the reply arrives, the worker waits: a bar grows on its lifeline.
-      const [w0, w1] = flow.wait;
+      const [w0, w1] = flow.wait || [-1, -1];
       if (step >= w0 && step <= w1) {
-        geo.wait.setAttribute("x", geo.laneX(1) - 4); geo.wait.setAttribute("y", geo.top + w0 * geo.gap - 6);
+        geo.wait.setAttribute("x", geo.laneX(opts.waitLane ?? 1) - 4); geo.wait.setAttribute("y", geo.top + w0 * geo.gap - 6);
         geo.wait.setAttribute("height", (step - w0) * geo.gap + 12); geo.wait.style.display = "";
       } else geo.wait.style.display = "none";
       stepStart = performance.now();
@@ -1521,10 +1760,9 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
     function tick(now) {
       frames++;  // loop() keeps drawing: ~30 frames per second, whatever the worker is doing
       const frame = Math.floor(frames / 2);
-      if (frames % 2 === 0) geo.frameLabel.textContent = `frame ${frame}`;
+      if (opts.frames && frames % 2 === 0) geo.frameLabel.textContent = `frame ${frame}`;
       const st = FLOWS[key].steps[step], { path } = geo.rows[step], L = path.getTotalLength();
-      if (st.live && frames % 2 === 0)
-        ui.code.textContent = `worker task  waiting on the network … ${((now - stepStart) / 1000).toFixed(1)} s\nloop()       frame ${frame} drawn, the sky still animating`;
+      if (st.live && opts.live && frames % 2 === 0) ui.code.textContent = opts.live(frame, ((now - stepStart) / 1000).toFixed(1));
       const dur = Math.min(2200, Math.max(900, st.ms));
       const k = reduce ? 1 : Math.min(1, (now - stepStart) / dur);
       const pt = path.getPointAtLength(L * k);
@@ -2440,6 +2678,1365 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
   }
 
   // ---------- Bench log (mirrors test-esp/HARDWARE_LOG.md) ----------
+  // ---------- RFID track: shared helpers ----------
+  // Example UIDs used everywhere in the RFID lessons (your own card and tag print theirs in R2).
+  const RF = {
+    card: { name: "white card", uid: [0x9c, 0x4f, 0x2a, 0x1b] },
+    tag: { name: "key tag", uid: [0x9c, 0x4f, 0x6a, 0x0d] },
+  };
+  const hx = (n) => n.toString(16).toUpperCase().padStart(2, "0");
+  const hxs = (a) => a.map(hx).join(" ");
+  const bccOf = (u) => u[0] ^ u[1] ^ u[2] ^ u[3];
+  // ISO 14443-3 CRC_A, the same maths as lib/rfid-kit/src/rfid_format.h.
+  function crcA(bytes) {
+    let crc = 0x6363;
+    for (const b of bytes) {
+      let ch = (b ^ (crc & 0xff)) & 0xff;
+      ch = (ch ^ (ch << 4)) & 0xff;
+      crc = ((crc >> 8) ^ (ch << 8) ^ (ch << 3) ^ (ch >> 4)) & 0xffff;
+    }
+    return [crc & 0xff, crc >> 8];
+  }
+  const withCrc = (bytes) => [...bytes, ...crcA(bytes)];
+  const svgEl = (tag, attrs = {}, text) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (text !== undefined) n.textContent = text;
+    return n;
+  };
+
+  // Three.js is only loaded when a 3D panel opens (pinned, from jsDelivr).
+  let threeLoad;
+  const loadThree = () => (threeLoad ||= import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"));
+
+  // A 3D stage: renderer, camera that orbits on drag, labels that follow 3D points, pause when off-screen.
+  function stage3d(THREE, root, { target, radius, az = 0.7, el = 0.62, spin = true }) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const box = root.querySelector(".f3d-stage"), canvas = box.querySelector("canvas"), labelsEl = box.querySelector(".f3d-labels");
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(36, 1.6, 0.1, 200);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+    sun.position.set(4, 9, 6);
+    scene.add(sun);
+    const view = { az, el, radius, spinning: spin && !reduce, dragging: false };
+    const place = () => {
+      camera.position.set(target.x + view.radius * Math.cos(view.el) * Math.cos(view.az), target.y + view.radius * Math.sin(view.el), target.z + view.radius * Math.cos(view.el) * Math.sin(view.az));
+      camera.lookAt(target);
+    };
+    const resize = () => {
+      const w = box.clientWidth, h = box.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    const ro = new ResizeObserver(resize);
+    ro.observe(box);
+    resize();
+    let px = 0, py = 0, moved = 0;
+    const down = (e) => { view.dragging = true; px = e.clientX; py = e.clientY; moved = 0; box.setPointerCapture?.(e.pointerId); };
+    const move = (e) => {
+      if (!view.dragging) return;
+      const dx = e.clientX - px, dy = e.clientY - py;
+      px = e.clientX; py = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
+      view.az += dx * 0.008;
+      view.el = Math.min(1.45, Math.max(0.08, view.el + dy * 0.006));
+    };
+    const up = () => { view.dragging = false; };
+    box.addEventListener("pointerdown", down);
+    box.addEventListener("pointermove", move);
+    box.addEventListener("pointerup", up);
+    box.addEventListener("pointercancel", up);
+    // Labels: { el, at: Vector3 or () => Vector3, show: () => bool }
+    const labels = [];
+    const label = (text, at, show = () => true) => {
+      const s = document.createElement("span");
+      s.textContent = text;
+      labelsEl.appendChild(s);
+      labels.push({ s, at, show });
+      return s;
+    };
+    const v = new THREE.Vector3();
+    const drawLabels = () => {
+      const w = box.clientWidth, h = box.clientHeight;
+      for (const l of labels) {
+        v.copy(typeof l.at === "function" ? l.at() : l.at).project(camera);
+        const visible = l.show() && v.z < 1;
+        l.s.style.opacity = visible ? "1" : "0";
+        l.s.style.left = `${((v.x + 1) / 2) * w}px`;
+        l.s.style.top = `${((1 - v.y) / 2) * h - 10}px`;
+      }
+    };
+    let visible = true;
+    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; });
+    io.observe(box);
+    let raf = 0, last = performance.now();
+    const loop = (frame) => {
+      const tick = (now) => {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        if (visible) {
+          if (view.spinning && !view.dragging) view.az += dt * 0.12;
+          place();
+          frame(now / 1000, dt);
+          renderer.render(scene, camera);
+          drawLabels();
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+    const stop = () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      io.disconnect();
+      box.removeEventListener("pointerdown", down);
+      box.removeEventListener("pointermove", move);
+      box.removeEventListener("pointerup", up);
+      box.removeEventListener("pointercancel", up);
+      scene.traverse((o) => { o.geometry?.dispose?.(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m?.dispose?.()); });
+      renderer.dispose();
+    };
+    return { scene, camera, renderer, view, label, loop, stop, wasClick: () => moved < 6, reduce };
+  }
+
+  const stageHtml = (aria) => `<div class="f3d-stage"><canvas role="img" aria-label="${aria}"></canvas><div class="f3d-labels" aria-hidden="true"></div><p class="f3d-hint">drag to turn</p><p class="f3d-load">Loading the 3D view…</p></div>`;
+
+  // A rounded rectangle in the XZ plane, as points (for coils and traces).
+  function roundedRect(THREE, cx, y, cz, hw, hd, r, n = 10) {
+    const pts = [];
+    const corners = [[hw - r, hd - r, 0], [-(hw - r), hd - r, Math.PI / 2], [-(hw - r), -(hd - r), Math.PI], [hw - r, -(hd - r), Math.PI * 1.5]];
+    for (const [x, z, a0] of corners)
+      for (let i = 0; i <= n; i++) {
+        const a = a0 + (i / n) * (Math.PI / 2);
+        pts.push(new THREE.Vector3(cx + x + r * Math.cos(a), y, cz + z + r * Math.sin(a)));
+      }
+    return pts;
+  }
+
+  // ---------- R2: the field in 3D ----------
+  // A simple, honest model: on-axis field of a 20 mm loop, B(z) = (a²/(a²+z²))^1.5 (1 at the antenna).
+  // The card wakes above NEED; the reader hears the card's answer (∝ B²) above a level set by the gain.
+  const FIELD = {
+    a: 20, need: 0.12, gains: [18, 23, 33, 38, 43, 48],
+    B: (z) => Math.pow(400 / (400 + z * z), 1.5),
+    hear: (db) => Math.sqrt(0.081 * Math.pow(10, -(db - 18) / 20)),
+  };
+  // WUPA (52h, 7 bits, LSB first) in modified Miller: Z = pause at the start, X = pause mid-bit, Y = no pause.
+  const WUPA_SYMBOLS = (() => {
+    const bits = [0, 1, 0, 0, 1, 0, 1];
+    const out = [{ s: "Z", t: "start" }];
+    let prev = 0;
+    bits.forEach((b, i) => {
+      out.push({ s: b ? "X" : prev === 1 ? "Y" : "Z", t: `bit ${i} = ${b}` });
+      prev = b;
+    });
+    out.push({ s: prev === 1 ? "Y" : "Z", t: "end 0" }, { s: "Y", t: "end" });
+    return out;
+  })();
+
+  function rfidField3d(root) {
+    root.innerHTML = `<div class="f3d">
+      ${stageHtml("3D view: the RC522 board with its antenna coil, the magnetic field lines around it, and a card held above it. Drag to turn.")}
+      <div class="f3d-ctl">
+        <label>Card height above the antenna <output data-o="dist">25 mm</output><input type="range" min="0" max="80" step="1" value="25" data-k="dist"></label>
+        <label>Receiver gain (RFCfgReg) <output data-o="gain">33 dB</output><input type="range" min="0" max="5" step="1" value="2" data-k="gain"></label>
+        <div class="quick"><button type="button" class="btn" data-a="talk">▶ Send WUPA</button><button type="button" class="btn" data-a="spin" aria-pressed="true">Turn</button><button type="button" class="btn" data-a="slice" aria-pressed="false">One slice</button></div>
+      </div>
+      <div class="pills" aria-live="polite"><span data-p="power">card powered</span><span data-p="hear">reader hears it</span><span data-p="range">range at this gain: –</span></div>
+      <div class="bitstrip" aria-label="What is on the air right now"></div>
+      <svg class="rf-chart" viewBox="0 0 680 210" role="img" aria-label="Field strength at the card against height, on a log scale, with the level the card needs to wake up and the level the reader needs to hear its answer."></svg>
+      <div class="wd-cap"><span class="sw" style="background:var(--w-sda)"></span><strong data-c="t">The field</strong><span data-c="x">The antenna is a flat coil on the board. 13.56 million times a second its current reverses, and so does the magnetic field around it: the lines leave the coil's centre, curve around and come back. Here it reverses every 2 seconds.</span></div>
+    </div>`;
+    const ui = {
+      dist: root.querySelector('[data-k="dist"]'), gain: root.querySelector('[data-k="gain"]'),
+      oDist: root.querySelector('[data-o="dist"]'), oGain: root.querySelector('[data-o="gain"]'),
+      power: root.querySelector('[data-p="power"]'), hear: root.querySelector('[data-p="hear"]'), range: root.querySelector('[data-p="range"]'),
+      strip: root.querySelector(".bitstrip"), chart: root.querySelector(".rf-chart"),
+      capT: root.querySelector('[data-c="t"]'), capX: root.querySelector('[data-c="x"]'),
+      talk: root.querySelector('[data-a="talk"]'), spin: root.querySelector('[data-a="spin"]'), slice: root.querySelector('[data-a="slice"]'),
+    };
+    const caption = (t, x) => { ui.capT.textContent = t; ui.capX.textContent = x; };
+    const st = { dist: 25, db: 33, talk: null };
+    const powered = () => FIELD.B(st.dist) >= FIELD.need;
+    const heard = () => FIELD.B(st.dist) >= FIELD.hear(st.db);
+    const rangeAt = (db) => { let z = 0; while (z < 120 && FIELD.B(z) >= Math.max(FIELD.need, FIELD.hear(db))) z += 0.5; return z; };
+
+    // The chart: field at the card vs height (log scale), the two thresholds, the zone that works.
+    function chart() {
+      const svg = ui.chart, W = 680, H = 210, L = 58, R = 14, T = 14, B = 34;
+      const x = (mm) => L + (mm / 80) * (W - L - R);
+      const y = (b) => T + (1 - (Math.log10(b) + 2) / 2) * (H - T - B); // 0.01 … 1
+      svg.replaceChildren();
+      [1, 0.1, 0.01].forEach((b) => {
+        svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(b), y2: y(b), class: "ax" }), svgEl("text", { x: L - 6, y: y(b) + 4, "text-anchor": "end", class: "tk" }, b === 1 ? "1" : String(b)));
+      });
+      for (let mm = 0; mm <= 80; mm += 10) svg.append(svgEl("text", { x: x(mm), y: H - B + 16, "text-anchor": "middle", class: "tk" }, `${mm}`));
+      svg.append(svgEl("text", { x: W - R, y: H - 4, "text-anchor": "end", class: "tk" }, "card height above the antenna (mm)"));
+      svg.append(svgEl("text", { x: 4, y: T + 4, class: "tk" }, "field"));
+      const r = rangeAt(st.db);
+      if (r > 0) svg.append(svgEl("rect", { x: x(0), y: T, width: x(Math.min(r, 80)) - x(0), height: H - T - B, class: "zone" }));
+      let d = "";
+      for (let mm = 0; mm <= 80; mm += 1) d += `${mm ? "L" : "M"}${x(mm).toFixed(1)} ${y(Math.max(0.01, FIELD.B(mm))).toFixed(1)}`;
+      svg.append(svgEl("path", { d, class: "curve" }));
+      const hearB = FIELD.hear(st.db);
+      svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(FIELD.need), y2: y(FIELD.need), class: "need" }), svgEl("text", { x: W - R - 4, y: y(FIELD.need) - 5, "text-anchor": "end", class: "lbl" }, "card wakes above this"));
+      if (hearB > 0.01) svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(hearB), y2: y(hearB), class: "hear" }), svgEl("text", { x: W - R - 4, y: y(hearB) + 13, "text-anchor": "end", class: "lbl" }, `reader hears it above this (${st.db} dB)`));
+      svg.append(svgEl("text", { x: x(Math.min(r, 80) / 2), y: T + 14, "text-anchor": "middle", class: "lbl" }, r > 0 ? `works: 0–${Math.round(r)} mm` : "nothing works"));
+      const b = Math.max(0.01, FIELD.B(st.dist));
+      svg.append(svgEl("line", { x1: x(st.dist), x2: x(st.dist), y1: T, y2: H - B, class: "mark" }), svgEl("circle", { cx: x(st.dist), cy: y(b), r: 5, fill: "var(--copper)" }));
+    }
+    function status() {
+      ui.oDist.textContent = `${st.dist} mm`;
+      ui.oGain.textContent = `${st.db} dB`;
+      ui.power.className = powered() ? "yes" : "no";
+      ui.power.textContent = powered() ? "card powered" : "card has no power";
+      ui.hear.className = !powered() ? "" : heard() ? "yes" : "no";
+      ui.hear.textContent = !powered() ? "reader hears it: nothing to hear" : heard() ? "reader hears it" : "reader can't hear it";
+      ui.range.textContent = `range at ${st.db} dB: about ${Math.round(rangeAt(st.db))} mm`;
+      chart();
+    }
+    ui.strip.innerHTML = WUPA_SYMBOLS.map((s) => `<span>${s.s}<small>${s.t}</small></span>`).join("");
+    ui.dist.addEventListener("input", () => { st.dist = +ui.dist.value; status(); });
+    ui.gain.addEventListener("input", () => { st.db = FIELD.gains[+ui.gain.value]; status(); });
+    status();
+
+    let stopped = false, stop3d = () => {};
+    loadThree().then((THREE) => {
+      if (stopped) return;
+      root.querySelector(".f3d-load").remove();
+      const S = stage3d(THREE, root, { target: new THREE.Vector3(0.6, 1.4, 0), radius: 13, az: 0.9, el: 0.5 });
+      stop3d = S.stop;
+      const col = (n) => new THREE.Color(css(n));
+      const std = (c, extra = {}) => new THREE.MeshStandardMaterial({ color: col(c), roughness: 0.6, metalness: 0.1, ...extra });
+      // Board: 60 x 40 mm, 1 unit = 10 mm, top face at y = 0.
+      const board = new THREE.Mesh(new THREE.BoxGeometry(6, 0.16, 4), std("--rc522"));
+      board.position.y = -0.08;
+      S.scene.add(board);
+      const AX = 0.7; // antenna centre
+      const copper = new THREE.LineBasicMaterial({ color: col("--copper") });
+      for (let k = 0; k < 4; k++) S.scene.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(roundedRect(THREE, AX, 0.01, 0, 2.05 - k * 0.14, 1.75 - k * 0.14, 0.35)), copper));
+      const antennaGlow = new THREE.Mesh(new THREE.RingGeometry(1.2, 1.55, 48), new THREE.MeshBasicMaterial({ color: col("--rfid"), transparent: true, opacity: 0, side: THREE.DoubleSide }));
+      antennaGlow.rotation.x = -Math.PI / 2;
+      antennaGlow.position.set(AX, 0.02, 0);
+      S.scene.add(antennaGlow);
+      const chip = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.5), std("--pcb", { roughness: 0.4 }));
+      chip.position.set(-1.9, 0.05, 0.4);
+      S.scene.add(chip);
+      const chipLed = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.16), new THREE.MeshBasicMaterial({ color: col("--rfid") }));
+      chipLed.position.set(-1.9, 0.11, 0.4);
+      S.scene.add(chipLed);
+      const xtal = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.14, 0.18), std("--silk-dim", { metalness: 0.7, roughness: 0.3 }));
+      xtal.position.set(-1.9, 0.07, -0.5);
+      S.scene.add(xtal);
+      const pinMat = std("--gold", { metalness: 0.8, roughness: 0.3 });
+      for (let i = 0; i < 8; i++) {
+        const p = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.6), pinMat);
+        p.position.set(-2.75 + 0, 0.05, -1.4 + i * 0.4);
+        p.rotation.y = Math.PI / 2;
+        S.scene.add(p);
+      }
+      // Card: 85.6 x 54 x 0.8 mm, with its own coil and chip (drawn as if the card were glass).
+      const card = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(8.56, 0.08, 5.4), std("--card-white", { transparent: true, opacity: 0.82, roughness: 0.3 }));
+      card.add(body);
+      const cardCoilMat = new THREE.LineBasicMaterial({ color: col("--copper"), transparent: true, opacity: 0.9 });
+      for (let k = 0; k < 4; k++) card.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(roundedRect(THREE, 0, 0.05, 0, 3.75 - k * 0.12, 2.25 - k * 0.12, 0.4)), cardCoilMat));
+      const cardChipMat = new THREE.MeshStandardMaterial({ color: col("--gold"), emissive: col("--rfid"), emissiveIntensity: 0, metalness: 0.6, roughness: 0.35 });
+      const cardChip = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.5), cardChipMat);
+      cardChip.position.set(2.9, 0.06, 1.4);
+      card.add(cardChip);
+      S.scene.add(card);
+      // Field lines: dipole lines r = L sin²θ around the antenna's axis, in 6 vertical planes.
+      const lines = [];
+      const lineMatBase = new THREE.LineBasicMaterial({ color: col("--w-sda"), transparent: true, opacity: 0.55 });
+      const dotGeo = new THREE.BufferGeometry();
+      const DOTS_PER = 7;
+      [2.6, 3.7, 5.2].forEach((L, li) => {
+        for (let k = 0; k < 6; k++) {
+          const phi = (k / 6) * Math.PI * 2 + li * 0.3;
+          const pts = [];
+          for (let i = 0; i <= 80; i++) {
+            const th = 0.14 + (i / 80) * (Math.PI - 0.28), r = L * Math.sin(th) ** 2;
+            pts.push(new THREE.Vector3(AX + r * Math.sin(th) * Math.cos(phi), r * Math.cos(th), r * Math.sin(th) * Math.sin(phi)));
+          }
+          const mat = lineMatBase.clone();
+          const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat);
+          S.scene.add(line);
+          lines.push({ line, mat, pts, phi, L, u: Array.from({ length: DOTS_PER }, (_, d) => d / DOTS_PER) });
+        }
+      });
+      const dotPos = new Float32Array(lines.length * DOTS_PER * 3);
+      dotGeo.setAttribute("position", new THREE.BufferAttribute(dotPos, 3));
+      const dotMat = new THREE.PointsMaterial({ color: col("--w-sda"), size: 0.16, transparent: true, opacity: 0.95 });
+      S.scene.add(new THREE.Points(dotGeo, dotMat));
+      // The card's answer: rings that travel from the card to the antenna.
+      const rings = Array.from({ length: 4 }, () => {
+        const m = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.03, 8, 48), new THREE.MeshBasicMaterial({ color: col("--copper"), transparent: true, opacity: 0 }));
+        m.rotation.x = Math.PI / 2;
+        S.scene.add(m);
+        return m;
+      });
+      const cardY = () => st.dist / 10 + 0.12;
+      S.label("antenna coil · 13.56 MHz", new THREE.Vector3(AX + 2.0, 0.05, 1.6));
+      S.label("MFRC522", new THREE.Vector3(-1.9, 0.15, 0.4));
+      S.label("8 pins → ESP32", new THREE.Vector3(-2.75, 0.1, -1.4));
+      S.label("card coil: power + antenna", () => new THREE.Vector3(AX + 3.75, cardY() + 0.05, -2.25));
+      S.label("card chip (no battery)", () => new THREE.Vector3(AX + 2.9, cardY() + 0.1, 1.4));
+
+      ui.spin.addEventListener("click", () => { S.view.spinning = !S.view.spinning; ui.spin.setAttribute("aria-pressed", String(S.view.spinning)); });
+      let slice = false;
+      ui.slice.addEventListener("click", () => { slice = !slice; ui.slice.setAttribute("aria-pressed", String(slice)); });
+      ui.talk.addEventListener("click", () => { st.talk = { t0: performance.now() / 1000, powered: powered(), heard: heard() }; });
+
+      // Talk timeline (seconds from the click): WUPA symbols, the card's wait, the answer.
+      const SYM = 0.32, nSym = WUPA_SYMBOLS.length, tFdt = nSym * SYM, tAns = tFdt + 0.7, tEnd = tAns + 2.2;
+      let flow = 0, lastPhase = "";
+      S.loop((t, dt) => {
+        card.position.set(AX, cardY(), 0);
+        let fieldOn = 1, answer = 0, phase = "idle";
+        if (st.talk) {
+          const k = t - st.talk.t0;
+          if (k < tFdt) {
+            const i = Math.floor(k / SYM), f = (k % SYM) / SYM, s = WUPA_SYMBOLS[i].s;
+            // 100 % ASK: a short pause in the field at the symbol's position.
+            fieldOn = (s === "Z" && f < 0.28) || (s === "X" && f > 0.5 && f < 0.78) ? 0.04 : 1;
+            ui.strip.querySelectorAll("span").forEach((e, j) => e.classList.toggle("now", j === i));
+            phase = "send";
+          } else if (k < tAns) phase = "wait";
+          else if (k < tEnd) { phase = "answer"; answer = st.talk.powered ? 1 : 0; }
+          else { st.talk = null; ui.strip.querySelectorAll("span").forEach((e) => e.classList.remove("now")); phase = "done"; }
+          if (phase !== lastPhase) {
+            if (phase === "send") caption("The reader sends WUPA", "100 % ASK: for each bit the chip switches its field off for about 3 µs, at the start (Z) or in the middle (X) of the bit, or not at all (Y). 7 bits plus start and end take about 85 µs; here a third of a second each. The card keeps its power through the gaps.");
+            if (phase === "wait") caption(st.talk.powered ? "The card wakes up and waits" : "The card stays dark", st.talk.powered ? "Its chip powered up from the field and decoded WUPA. Every card waits exactly the same time (about 86 µs) before answering, so all cards in the field answer at once." : "At this height the field is too weak to run the card's chip. More gain doesn't help here: gain makes the reader a better listener, it doesn't send more power.");
+            if (phase === "answer" && st.talk?.powered) caption(st.talk.heard ? "The card answers: ATQA 04 00" : "The card answers… too quietly", st.talk.heard ? "The card can't transmit. It switches a small load on its coil 847,000 times a second (fc/16); the reader's antenna feels its own field wobble and decodes 2 bytes. The chip raises RxIRq, the IRQ wire drops, the reader task wakes." : "The card is powered and answering, but at this gain the reader can't tell its tiny load changes from noise. Turn the gain up, or bring the card closer.");
+            lastPhase = phase;
+          }
+        }
+        // Field lines: brightness from the field strength; flow reverses every 2 s (the real field 27 million times a second).
+        flow += (S.reduce ? 0 : dt * 0.09 * Math.cos((t * Math.PI) / 2));
+        let n = 0;
+        for (const ln of lines) {
+          const inSlice = !slice || Math.abs(Math.sin(ln.phi)) < 0.2;
+          ln.mat.opacity = inSlice ? 0.5 * fieldOn : 0;
+          for (let d = 0; d < DOTS_PER; d++) {
+            const u = (((ln.u[d] + flow) % 1) + 1) % 1, idx = Math.min(ln.pts.length - 1, Math.floor(u * (ln.pts.length - 1)));
+            const p = ln.pts[idx];
+            dotPos[n++] = p.x; dotPos[n++] = inSlice ? p.y : -50; dotPos[n++] = p.z;
+          }
+        }
+        dotGeo.attributes.position.needsUpdate = true;
+        dotMat.opacity = 0.9 * fieldOn;
+        const lit = powered() ? 0.35 + 0.25 * Math.sin(t * 4) : 0;
+        cardChipMat.emissiveIntensity = st.talk && phase !== "idle" && st.talk.powered ? 1.2 : lit;
+        cardCoilMat.opacity = answer ? 0.45 + 0.55 * Math.abs(Math.sin(t * 30)) : 0.9;
+        rings.forEach((m, i) => {
+          if (!answer) { m.material.opacity = 0; return; }
+          const k = ((t * 0.9 + i / rings.length) % 1);
+          const reach = st.talk?.heard ? 1 : 0.55; // a quiet answer fades before it reaches the antenna
+          m.position.set(AX, cardY() * (1 - k * reach), 0);
+          m.scale.setScalar(1 + k * 0.4);
+          m.material.opacity = (1 - k / reach) * 0.8 * (k < reach ? 1 : 0);
+        });
+        const ok = phase === "answer" && st.talk?.heard;
+        antennaGlow.material.opacity = ok ? 0.35 + 0.3 * Math.sin(t * 12) : 0;
+        chipLed.material.color.set(css(ok ? "--ok" : "--rfid"));
+      });
+    }).catch(() => {
+      const l = root.querySelector(".f3d-load");
+      if (l) l.textContent = "The 3D view needs three.js from cdn.jsdelivr.net, which didn't load. The chart and controls below still work.";
+    });
+    return () => { stopped = true; stop3d(); };
+  }
+
+  // ---------- R4: the card's memory in 3D ----------
+  function exampleCard(after) {
+    const u = RF.card.uid, blocks = Array.from({ length: 64 }, () => new Array(16).fill(0));
+    blocks[0] = [...u, bccOf(u), 0x08, 0x04, 0x00, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69];
+    for (let s = 0; s < 16; s++) blocks[s * 4 + 3] = [0, 0, 0, 0, 0, 0, 0xff, 0x07, 0x80, 0x69, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+    if (after) {
+      blocks[4] = [..."hello bench"].map((c) => c.charCodeAt(0)).concat(new Array(5).fill(0));
+      blocks[8] = valueBlock(47, 8);
+      blocks[9] = valueBlock(50, 9);
+    }
+    return blocks;
+  }
+  function valueBlock(v, addr) {
+    const le = (x) => [x & 0xff, (x >>> 8) & 0xff, (x >>> 16) & 0xff, (x >>> 24) & 0xff];
+    return [...le(v >>> 0), ...le(~v >>> 0), ...le(v >>> 0), addr, ~addr & 0xff, addr, ~addr & 0xff];
+  }
+  function blockKind(b, i) {
+    if (i % 4 === 3) return "trailer";
+    if (i === 0) return "maker";
+    const v = b.slice(0, 4), nv = b.slice(4, 8), v2 = b.slice(8, 12);
+    const isValue = v.every((x, k) => x === v2[k] && x === (~nv[k] & 0xff)) && b[12] === b[14] && b[13] === b[15] && (~b[12] & 0xff) === b[13];
+    if (isValue && b.some((x) => x)) return "value";
+    return b.every((x) => x === 0) ? "empty" : "data";
+  }
+  const KIND_COLOR = { maker: "--warn", empty: "--line", data: "--ok", value: "--w-sda", trailer: "--danger" };
+  // One block's 16 bytes as coloured cells (trailer: key A · access bits · user byte · key B).
+  function blockBytes(b, i, kind) {
+    const cls = (k) => {
+      if (kind === "trailer") return k < 6 ? "ka" : k < 9 ? "ab" : k === 9 ? "ud" : "kb";
+      if (kind === "maker") return k < 5 ? "uid" : "";
+      if (kind === "value") return "val";
+      if (kind === "data" && b[k]) return "txt";
+      return "";
+    };
+    return `<div class="mem-bytes">${b.map((x, k) => `<i class="${cls(k)}" title="byte ${k}">${hx(x)}</i>`).join("")}</div>`;
+  }
+
+  function rfidMemory3d(root) {
+    root.innerHTML = `<div class="f3d">
+      ${stageHtml("3D view: the card's 16 sectors as cabinets of 4 blocks each, the top block of each being the sector trailer with a lock. Click a sector to open it.")}
+      <div class="quick"><button type="button" class="btn" data-a="after" aria-pressed="false">After R5</button><button type="button" class="btn" data-a="auth">🔑 Authenticate this sector</button><button type="button" class="btn" data-a="spin" aria-pressed="true">Turn</button></div>
+      <div class="vb-legend">${Object.entries(KIND_COLOR).map(([k, c]) => `<span><i style="background:var(${c})"></i>${k}</span>`).join("")}</div>
+      <div class="wd-cap"><span class="sw" style="background:var(--danger)"></span><strong data-c="t">Sector 1, locked</strong><span data-c="x">Click a sector in the 3D view (or use the buttons) to choose it. Its trailer, the top block, is the lock: authenticate with key A first, then the blocks can be read.</span></div>
+      <div class="mem-scroll"><div class="mem-side"></div></div>
+    </div>`;
+    const capT = root.querySelector('[data-c="t"]'), capX = root.querySelector('[data-c="x"]'), side = root.querySelector(".mem-side");
+    const btnAfter = root.querySelector('[data-a="after"]'), btnAuth = root.querySelector('[data-a="auth"]'), btnSpin = root.querySelector('[data-a="spin"]');
+    const st = { sector: 1, open: new Set(), after: false, anim: null };
+    let blocks = exampleCard(false);
+    function panel() {
+      const s = st.sector, first = s * 4, open = st.open.has(s);
+      capT.textContent = `Sector ${s}${open ? ", open" : ", locked"}`;
+      capX.textContent = open
+        ? `Authenticated with key A (the factory key FF FF FF FF FF FF). Blocks ${first}–${first + 3} can be read. Key A reads back as 00: the card never reveals it. Bytes 6–8 of the trailer are the access bits; byte 9 is free.`
+        : `Blocks ${first}–${first + 3} stay unreadable until the reader proves it knows this sector's key: press Authenticate.`;
+      side.innerHTML = [0, 1, 2, 3].map((k) => {
+        const i = first + k, kind = blockKind(blocks[i], i);
+        const shown = open ? blocks[i] : new Array(16).fill(null);
+        return `<div class="mem-row"><b>${i}</b>${open ? blockBytes(shown, i, kind) : `<div class="mem-bytes">${shown.map(() => "<i>··</i>").join("")}</div>`}</div>`;
+      }).join("") + (open
+        ? `<p class="vb-legend">${[["--danger", "key A (reads as 00)"], ["--copper", "access bits"], ["--gnd", "user byte"], ["--w-sda", "key B · value"], ["--w-cs", "UID + BCC"], ["--ok", "your text"]].map(([c, t]) => `<span><i style="background:var(${c})"></i>${t}</span>`).join("")}</p>`
+        : `<p class="sim-cap">Locked: every sector has its own keys, so opening sector 1 doesn't open sector 2.</p>`);
+    }
+    btnAfter.addEventListener("click", () => { st.after = !st.after; btnAfter.setAttribute("aria-pressed", String(st.after)); blocks = exampleCard(st.after); recolor(); panel(); });
+    btnAuth.addEventListener("click", () => { st.anim = { s: st.sector, t0: performance.now() / 1000 }; });
+    panel();
+    let recolor = () => {};
+
+    let stopped = false, stop3d = () => {};
+    loadThree().then((THREE) => {
+      if (stopped) return;
+      root.querySelector(".f3d-load").remove();
+      const S = stage3d(THREE, root, { target: new THREE.Vector3(0, 1.0, 0), radius: 17, az: 0.75, el: 0.55 });
+      stop3d = S.stop;
+      btnSpin.addEventListener("click", () => { S.view.spinning = !S.view.spinning; btnSpin.setAttribute("aria-pressed", String(S.view.spinning)); });
+      const col = (n) => new THREE.Color(css(n));
+      const cabinets = [];
+      const slabGeo = new THREE.BoxGeometry(2.0, 0.24, 1.3);
+      for (let s = 0; s < 16; s++) {
+        const g = new THREE.Group();
+        g.position.set(((s % 4) - 1.5) * 2.7, 0, (Math.floor(s / 4) - 1.5) * 2.0);
+        const slabs = [0, 1, 2, 3].map((b) => {
+          const m = new THREE.Mesh(slabGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, transparent: true, opacity: 1 }));
+          m.position.y = 0.2 + b * 0.32;
+          m.userData = { sector: s, block: b };
+          g.add(m);
+          return m;
+        });
+        // The lock on the trailer: a body and a shackle that swings open.
+        const lock = new THREE.Group();
+        const bodyM = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.28, 0.12), new THREE.MeshStandardMaterial({ color: col("--gold"), metalness: 0.7, roughness: 0.3 }));
+        const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.035, 8, 24, Math.PI), bodyM.material);
+        shackle.position.y = 0.14;
+        lock.add(bodyM, shackle);
+        lock.position.set(0, 0.2 + 3 * 0.32, 0.72);
+        g.add(lock);
+        S.scene.add(g);
+        cabinets.push({ g, slabs, shackle });
+      }
+      recolor = () => cabinets.forEach((c, s) => c.slabs.forEach((m, b) => m.material.color.set(css(KIND_COLOR[blockKind(blocks[s * 4 + b], s * 4 + b)]))));
+      recolor();
+      const key = new THREE.Group();
+      const keyMat = new THREE.MeshStandardMaterial({ color: col("--gold"), metalness: 0.8, roughness: 0.25, emissive: col("--warn"), emissiveIntensity: 0.2 });
+      key.add(new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.05, 8, 24), keyMat));
+      const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.06), keyMat);
+      shaft.position.x = 0.45;
+      key.add(shaft);
+      key.visible = false;
+      S.scene.add(key);
+      S.label("sector 0 · block 0 = maker", () => cabinets[0].g.localToWorld(new THREE.Vector3(0, 0.2, 0.7)));
+      S.label("trailer: keys + access bits", () => cabinets[st.sector].g.localToWorld(new THREE.Vector3(0, 1.3, 0)));
+      S.label("sector 15", () => cabinets[15].g.localToWorld(new THREE.Vector3(0, 1.3, 0)));
+      const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+      const box = root.querySelector(".f3d-stage");
+      box.addEventListener("click", (e) => {
+        if (!S.wasClick()) return;
+        const r = box.getBoundingClientRect();
+        ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+        ray.setFromCamera(ndc, S.camera);
+        const hit = ray.intersectObjects(cabinets.flatMap((c) => c.slabs))[0];
+        if (hit) { st.sector = hit.object.userData.sector; panel(); }
+      });
+      S.loop((t) => {
+        cabinets.forEach((c, s) => {
+          const sel = s === st.sector, open = st.open.has(s);
+          const lift = sel ? 0.9 : 0, spread = sel ? 1.7 : 1;
+          c.g.position.y += (lift - c.g.position.y) * 0.12;
+          c.slabs.forEach((m, b) => {
+            m.position.y += (0.2 + b * 0.32 * spread - m.position.y) * 0.15;
+            m.material.opacity = sel ? 1 : 0.4;
+            m.material.emissive?.set(open && sel ? css("--rfid") : 0x000000);
+            m.material.emissiveIntensity = open && sel ? 0.15 + 0.1 * Math.sin(t * 3 + b) : 0;
+          });
+          c.shackle.parent.position.y = 0.2 + 3 * 0.32 * spread;
+          const swing = open ? -1.1 : 0;
+          c.shackle.rotation.y += (swing - c.shackle.rotation.y) * 0.15;
+        });
+        // Authentication: the key flies from the camera side to the lock, turns, the lock opens.
+        if (st.anim) {
+          const k = t - st.anim.t0, c = cabinets[st.anim.s];
+          const lockAt = c.g.localToWorld(new THREE.Vector3(0, 0.2 + 3 * 0.32 * 1.7, 1.0));
+          const from = S.camera.position.clone().lerp(lockAt, 0.55);
+          key.visible = true;
+          if (k < 1.2) key.position.lerpVectors(from, lockAt, S.reduce ? 1 : k / 1.2);
+          else key.position.copy(lockAt);
+          key.rotation.set(0, Math.PI / 2, k > 1.2 ? Math.min(1, (k - 1.2) / 0.6) * Math.PI / 2 : 0);
+          if (k > 1.2 && k < 1.25) { capT.textContent = "3-pass authentication"; capX.textContent = "The chip asks the card for sector " + st.anim.s + " with key A; the card sends a random challenge, the chip answers with its own, and both prove they know the key without ever sending it. From now on Crypto1 encrypts every frame."; }
+          if (k > 2.2) { st.open.add(st.anim.s); key.visible = false; st.anim = null; panel(); }
+        }
+      });
+    }).catch(() => {
+      const l = root.querySelector(".f3d-load");
+      if (l) l.textContent = "The 3D view needs three.js from cdn.jsdelivr.net, which didn't load. The byte table below still works.";
+    });
+    return () => { stopped = true; stop3d(); };
+  }
+  // ---------- RFID: step-by-step flows (the same diagram as W3) ----------
+  function rfidFlows() {
+    const u = RF.card.uid, b = bccOf(u), sel = withCrc([0x93, 0x70, ...u, b]), sak = withCrc([0x08]);
+    const lanes = [["reader task", "ESP32 core 0"], ["MFRC522", "the reader chip"], ["card", "no battery"]];
+    return {
+      wake: {
+        label: "Wake (WUPA → ATQA)", wait: [1, 5], lanes,
+        steps: [
+          { f: 0, t: 1, msg: "FIFO ← 52 · 7 bits", ms: 0.05, title: "Load the frame into the chip", text: "Over SPI the reader task writes WUPA (52h) into the chip's 64-byte FIFO and tells it to send only 7 bits: a short frame.", code: "SPI  12 52   FIFODataReg ← 52   (09h, write: 09 << 1 = 12)\nSPI  1A 07   BitFramingReg ← 7 bits in the last byte" },
+          { f: 0, t: 1, msg: "Transceive + StartSend", ms: 0.02, title: "Send, then listen", text: "One command makes the chip send the FIFO and then switch to receiving. From here the reader task waits: on the IRQ wire, or by reading ComIrqReg again and again.", code: "SPI  02 0C   CommandReg ← Transceive\nSPI  1A 87   BitFramingReg ← StartSend | 7 bits" },
+          { f: 1, t: 2, msg: "WUPA 52 · 7 bits", ms: 0.085, net: true, title: "100 % ASK: the field pauses", text: "The chip modulates its own 13.56 MHz field: a pause of about 3 µs at the start (Z) or the middle (X) of a bit, or none (Y). The card is powered by this same field, through the pauses.", code: "air  52h, least significant bit first: 0 1 0 0 1 0 1\n     symbols Z (start) · Z X Y Z X Y X (7 bits) · Y Y (end)\n     9.44 µs per bit = 128 carrier cycles → 106 kbit/s" },
+          { f: 2, t: 2, msg: "wake · wait 86 µs", ms: 0.086, title: "The card wakes and waits its turn", text: "The card's chip powers up from the field, decodes WUPA, then waits a fixed time before answering. Every card waits exactly the same, so they all answer at the same instant: that is what makes collisions possible.", code: "frame delay time = 1172 / fc ≈ 86.4 µs  (last bit 0)\n                   1236 / fc ≈ 91.2 µs  (last bit 1)" },
+          { f: 2, t: 1, msg: "ATQA 04 00", ms: 0.19, net: true, title: "Load modulation: the card answers", text: "The card can't transmit. It switches a load on its coil on and off at 847 kHz (fc/16), and the reader's antenna feels its own field wobble. Manchester-coded, 2 bytes.", code: "air  04 00   ATQA, low byte first\n     bits 7-6 of 04h = 00 → UID is 4 bytes\n     bit 2 → bit-frame anticollision supported" },
+          { f: 1, t: 0, msg: "IRQ ↓ (RxIRq)", ms: 0.01, title: "The chip says “done”", text: "The chip sets RxIRq and IdleIRq in ComIrqReg. With the IRQ wire the pin drops low and wakes the reader task at once; without it the task has been polling ComIrqReg over SPI (R6 counts the cost).", code: "IRQ pin   high → low\nor poll   SPI 88 → 30   ComIrqReg = RxIRq | IdleIRq" },
+          { f: 0, t: 1, msg: "read FIFO", ms: 0.05, title: "Collect the answer", text: "No errors, 2 bytes waiting, last byte complete. The driver hands ATQA up to the protocol layer.", code: "SPI  8C → 00        ErrorReg: no error\nSPI  94 → 02        FIFOLevelReg: 2 bytes\nSPI  92 92 00 → 04 00   FIFODataReg, burst\nSPI  98 → 00        ControlReg: 0 = all 8 bits valid" },
+        ],
+      },
+      select: {
+        label: "Select (UID → SAK)", lanes,
+        steps: [
+          { f: 1, t: 2, msg: "93 20 · ANTICOLL", ms: 0.2, net: true, title: "Who are you?", text: "SEL 93h = cascade level 1. NVB 20h = 2 bytes sent, no extra bits: “tell me all 32 bits of your UID”.", code: "air  93 20" },
+          { f: 2, t: 1, msg: `${hxs(u)} ${hx(b)}`, ms: 0.47, net: true, title: "UID + BCC", text: "The card sends its 4 UID bytes and a check byte, the XOR of all four. With two cards, this is where their bits collide (R3).", code: `air  ${hxs(u)} ${hx(b)}\n     BCC = ${u.map(hx).join(" ^ ")} = ${hx(b)}` },
+          { f: 1, t: 1, msg: "check BCC · CRC_A", ms: 0.1, title: "Check, then add a CRC", text: "The driver checks the BCC, then adds a 2-byte CRC_A to the SELECT frame (R6 races the chip's CRC unit against the ESP32 doing the same maths).", code: `BCC ${hx(b)} ✓\nCRC_A(93 70 ${hxs(u)} ${hx(b)}) = ${hxs(sel.slice(7))}` },
+          { f: 1, t: 2, msg: "93 70 … SELECT", ms: 0.78, net: true, title: "SELECT this one", text: "NVB 70h: 7 whole bytes follow. Only the card with exactly this UID answers; any other goes quiet.", code: `air  ${hxs(sel)}` },
+          { f: 2, t: 1, msg: `SAK ${hxs(sak)}`, ms: 0.27, net: true, title: "SAK: what kind of card", text: "08h: MIFARE Classic 1K, and bit 2 is clear, so the UID is complete. If bit 2 were set, the UID would continue at cascade level 2 (95h).", code: `air  ${hxs(sak)}\n     08h → MIFARE Classic 1K · UID complete` },
+          { f: 1, t: 2, msg: "50 00 · HLTA", ms: 0.36, net: true, title: "HLTA: go to sleep", text: "Our poll halts the card at once. A halted card ignores REQA but wakes on WUPA, so the next poll (80 ms later) finds it again: that is how the card view knows it is still there.", code: `air  ${hxs(withCrc([0x50, 0x00]))}\n     no answer within 1 ms = halted` },
+        ],
+      },
+      read: {
+        label: "Authenticate + read block 4", lanes,
+        steps: [
+          { f: 0, t: 1, msg: "FIFO ← 60 04 key UID", ms: 0.05, title: "Hand the key to the chip", text: "12 bytes into the FIFO: AUTH with key A (60h), block 4, the 6-byte key, the last 4 UID bytes. Then the MFAuthent command: the chip does the rest by itself.", code: `FIFO 60 04 FF FF FF FF FF FF ${hxs(u)}\nSPI  02 0E   CommandReg ← MFAuthent\n(the key never goes into the sniffer)` },
+          { f: 1, t: 2, msg: `60 04 ${hxs(crcA([0x60, 0x04]))}`, ms: 0.36, net: true, title: "Pass 1: which sector, which key", text: "The chip asks the card to open the sector of block 4 (sector 1) with key A." },
+          { f: 2, t: 1, msg: "challenge nT", ms: 0.36, net: true, title: "Pass 2: the card's challenge", text: "The card answers with a 4-byte random number." },
+          { f: 1, t: 2, msg: "nR + answer", ms: 0.7, net: true, title: "Pass 3: the reader proves it has the key", text: "The chip sends its own random number and an answer to the card's challenge, both computed with the key. From here on, Crypto1 encrypts every frame." },
+          { f: 2, t: 1, msg: "card's answer", ms: 0.36, net: true, title: "The card proves it too", text: "The card's answer shows that it knows the same key. The chip sets MFCrypto1On in Status2Reg; the driver checks it.", code: "SPI  90 → 08   Status2Reg: MFCrypto1On" },
+          { f: 1, t: 2, msg: "30 04 + CRC (encrypted)", ms: 0.36, net: true, title: "READ block 4", text: "The FIFO holds plain bytes; the chip encrypts them on the way out. The sniffer marks these frames “encrypted on air”." },
+          { f: 2, t: 1, msg: "16 bytes + CRC", ms: 1.55, net: true, title: "The block", text: "18 bytes come back, decrypted by the chip.", code: "68 65 6C 6C 6F 20 62 65 6E 63 68 00 00 00 00 00  |hello bench.....|  + CRC_A" },
+          { f: 1, t: 0, msg: "18 bytes → ESP32", ms: 0.06, title: "Check the CRC ourselves", text: "The driver reads 18 bytes from the FIFO and checks CRC_A over the first 16. A wrong CRC means a disturbed frame: the stress test in R6 counts how often." },
+        ],
+      },
+      credits: {
+        label: "credits use 3", lanes,
+        steps: [
+          { f: 1, t: 2, msg: "C2 08 · RESTORE", ms: 0.36, net: true, title: "Load the value", text: "The card checks that block 8 is a valid value block (value, inverted value, value, address ×4) and loads it into its internal register. NAK if the format is broken.", code: "air  C2 08 + CRC → ACK (4 bits: A)\n     00 00 00 00 + CRC → silence = ok" },
+          { f: 1, t: 2, msg: "B0 09 · TRANSFER", ms: 0.36, net: true, title: "Store it in the backup", text: "TRANSFER writes the register into block 9. The backup now holds the value from before the change.", code: "air  B0 09 + CRC → ACK\nblock 9 ← 50" },
+          { f: 1, t: 2, msg: "C0 08 · DECREMENT 3", ms: 0.4, net: true, title: "Subtract, on the card", text: "The card loads block 8 and subtracts the operand in its register. Block 8 itself doesn't change yet.", code: "air  C0 08 + CRC → ACK\n     03 00 00 00 + CRC → silence = ok\nregister = 50 − 3 = 47" },
+          { f: 1, t: 2, msg: "B0 08 · TRANSFER", ms: 0.36, net: true, title: "Commit", text: "Until this TRANSFER, block 8 still says 50. The card writes the whole 16-byte block or nothing, so a card pulled away mid-way leaves 50 or 47, never a broken number.", code: "air  B0 08 + CRC → ACK\nblock 8 ← 47" },
+          { f: 1, t: 0, msg: "read 8 and 9", ms: 3, title: "Check what the card says now", text: "The firmware reads both blocks back and decodes them.", code: "credits 47 (block 8) · backup 50 (block 9)" },
+        ],
+      },
+    };
+  }
+  function rfidSeq(root, panel) {
+    const all = rfidFlows(), flows = {};
+    (panel.flows || Object.keys(all)).forEach((k) => (flows[k] = all[k]));
+    return sequenceDiagram(root, flows, {
+      legend: `<span class="li"><span class="lg lg-msg"></span> SPI access or radio frame (orange: this step)</span><span class="li"><span class="lg lg-wait"></span> reader task waiting (IRQ wire or polling)</span>`,
+      waitLane: 0,
+    });
+  }
+
+  // ---------- R1: one SPI register access, bit by bit ----------
+  function rfidSpi(root) {
+    const REGS = [
+      { name: "VersionReg", a: 0x37, v: 0x92, what: "92h = MFRC522 version 2.0" },
+      { name: "ComIrqReg", a: 0x04, v: 0x14, what: "14h after reset: IdleIRq + LoAlertIRq" },
+      { name: "TxControlReg", a: 0x14, v: 0x83, what: "83h: both antenna drivers on (bits 1-0)" },
+      { name: "RFCfgReg", a: 0x26, v: 0x48, what: "48h: receiver gain 100b = 33 dB" },
+    ];
+    const FAULTS = { none: "wired correctly", miso: "MISO wire loose", power: "no 3.3 V", ss: "SDA (chip select) wire loose" };
+    root.innerHTML = `<div class="wd">
+      <div class="spi-ctl"><select aria-label="Register">${REGS.map((r, i) => `<option value="${i}">${r.name} (${hx(r.a)}h)</option>`).join("")}</select>
+        <select aria-label="Read or write" data-k="dir"><option value="r">read</option><option value="w">write 03h</option></select>
+        <select aria-label="Fault to simulate" data-k="fault">${Object.entries(FAULTS).map(([k, t]) => `<option value="${k}">${t}</option>`).join("")}</select>
+        <button type="button" class="btn" data-a="prev">◀</button><button type="button" class="btn" data-a="play">❚❚</button><button type="button" class="btn" data-a="next">▶</button></div>
+      <div class="la"><svg viewBox="0 0 680 230" role="img" aria-label="Logic analyser view of one SPI transfer: chip select, clock, MOSI and MISO over 16 clock cycles." style="width:100%;height:auto;display:block"></svg><p></p></div>
+    </div>`;
+    const svg = root.querySelector("svg"), cap = root.querySelector(".la p");
+    const selReg = root.querySelector("select"), selDir = root.querySelector('[data-k="dir"]'), selFault = root.querySelector('[data-k="fault"]');
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let bit = 0, playing = !reduce, timer;
+    const X0 = 96, BW = (660 - X0) / 16, rows = { SDA: 40, SCK: 86, MOSI: 132, MISO: 178 };
+    const ink = "var(--term-ink)", dim = "var(--term-dim)";
+    function bits(byte) { return [...Array(8)].map((_, i) => (byte >> (7 - i)) & 1); }
+    function frame() {
+      const r = REGS[+selReg.value], read = selDir.value === "r", fault = selFault.value;
+      const addr = read ? 0x80 | (r.a << 1) : (r.a << 1) & 0x7e, data = read ? 0x00 : 0x03;
+      const answer = fault === "power" ? 0x00 : fault === "miso" || fault === "ss" ? 0xff : r.v;
+      return { r, read, fault, addr, data, answer, mosi: [...bits(addr), ...bits(data)], miso: bits(answer) };
+    }
+    function draw() {
+      const f = frame();
+      svg.replaceChildren();
+      Object.entries(rows).forEach(([n, y]) => svg.append(svgEl("text", { x: 8, y: y + 4, fill: dim, "font-family": "var(--font-mono)", "font-size": 12 }, n === "SDA" ? "SDA (SS)" : n)));
+      const line = (pts, color) => svg.append(svgEl("polyline", { points: pts.map((p) => p.join(",")).join(" "), fill: "none", stroke: color, "stroke-width": 2 }));
+      const hi = (y) => y - 12, lo = (y) => y + 12;
+      // SS: low during the 16 bits (unless its wire is loose).
+      const ssLow = f.fault !== "ss";
+      line([[X0 - 30, hi(rows.SDA)], [X0 - 8, hi(rows.SDA)], [X0 - 8, ssLow ? lo(rows.SDA) : hi(rows.SDA)], [X0 + 16 * BW + 8, ssLow ? lo(rows.SDA) : hi(rows.SDA)], [X0 + 16 * BW + 8, hi(rows.SDA)], [670, hi(rows.SDA)]], "var(--scope-amber)");
+      // SCK: mode 0, idle low, rising edge in the middle of each bit.
+      const sck = [[X0 - 30, lo(rows.SCK)]];
+      for (let i = 0; i < 16; i++) { const x = X0 + i * BW; sck.push([x + BW * 0.25, lo(rows.SCK)], [x + BW * 0.25, hi(rows.SCK)], [x + BW * 0.75, hi(rows.SCK)], [x + BW * 0.75, lo(rows.SCK)]); }
+      sck.push([670, lo(rows.SCK)]);
+      line(sck, "var(--scope-trace)");
+      const data = (y, arr, color, from = 0) => {
+        const pts = [];
+        arr.forEach((b, i) => { const x = X0 + (i + from) * BW, yy = b ? hi(y) : lo(y); pts.push([x, yy], [x + BW, yy]); });
+        line(pts, color);
+      };
+      data(rows.MOSI, f.mosi, "var(--scope-coral)");
+      // MISO: don't-care during the address byte, the answer during the second (read only).
+      svg.append(svgEl("rect", { x: X0, y: rows.MISO - 12, width: 8 * BW, height: 24, fill: "var(--scope-dim)", opacity: 0.7 }));
+      svg.append(svgEl("text", { x: X0 + 4 * BW, y: rows.MISO + 4, "text-anchor": "middle", fill: dim, "font-family": "var(--font-mono)", "font-size": 11 }, "don't care"));
+      if (f.read) data(rows.MISO, f.miso, "var(--w-sda)", 8);
+      else svg.append(svgEl("text", { x: X0 + 12 * BW, y: rows.MISO + 4, "text-anchor": "middle", fill: dim, "font-family": "var(--font-mono)", "font-size": 11 }, "don't care (write)"));
+      const names = ["R/W", "A5", "A4", "A3", "A2", "A1", "A0", "0", "D7", "D6", "D5", "D4", "D3", "D2", "D1", "D0"];
+      names.forEach((n, i) => {
+        const x = X0 + i * BW + BW / 2;
+        svg.append(svgEl("text", { x, y: rows.MOSI - 18, "text-anchor": "middle", fill: i === bit ? "var(--scope-amber)" : dim, "font-family": "var(--font-mono)", "font-size": 10 }, n));
+        svg.append(svgEl("text", { x, y: rows.MOSI + 28, "text-anchor": "middle", fill: ink, "font-family": "var(--font-mono)", "font-size": 10.5 }, String(f.mosi[i])));
+        if (i >= 8 && f.read) svg.append(svgEl("text", { x, y: rows.MISO + 28, "text-anchor": "middle", fill: ink, "font-family": "var(--font-mono)", "font-size": 10.5 }, String(f.miso[i - 8])));
+      });
+      svg.append(svgEl("rect", { x: X0 + bit * BW, y: 22, width: BW, height: 186, fill: "var(--scope-amber)", opacity: 0.14 }));
+      svg.append(svgEl("line", { x1: X0 + 8 * BW, x2: X0 + 8 * BW, y1: 22, y2: 214, stroke: dim, "stroke-dasharray": "3 3" }));
+      svg.append(svgEl("text", { x: X0 + 4 * BW, y: 222, "text-anchor": "middle", fill: ink, "font-family": "var(--font-mono)", "font-size": 11 }, `byte 0 · MOSI ${hx(f.addr)}h`));
+      svg.append(svgEl("text", { x: X0 + 12 * BW, y: 222, "text-anchor": "middle", fill: ink, "font-family": "var(--font-mono)", "font-size": 11 }, f.read ? `byte 1 · MISO ${hx(f.answer)}h` : `byte 1 · MOSI ${hx(f.data)}h`));
+      // Caption for the bit under the cursor.
+      let text;
+      if (bit === 0) text = `<span class="k">bit 7 of the address byte:</span> ${f.read ? "1 = read" : "0 = write"}. MSB first; data changes on the falling clock edge and is read on the rising one (SPI mode 0).`;
+      else if (bit < 7) text = `<span class="k">bits 6-1:</span> the register address ${hx(f.r.a)}h = ${f.r.a.toString(2).padStart(6, "0")}, one bit per clock. So ${f.r.name} ${f.read ? "reads" : "writes"} as ${hx(f.addr)}h.`;
+      else if (bit === 7) text = `<span class="k">bit 0:</span> always 0. The chip has 64 registers, 6 bits are enough.`;
+      else if (!f.read) text = `<span class="k">byte 1:</span> the value to write, ${hx(f.data)}h. MISO carries nothing useful during a write.`;
+      else if (f.fault === "none") text = `<span class="k">byte 1 on MISO:</span> ${hx(f.answer)}h. ${f.r.what}. Meanwhile MOSI sends 00 (or the next address in a burst).`;
+      else if (f.fault === "power") text = `<span class="k">byte 1 on MISO:</span> 00h. An unpowered chip can't drive MISO high: every register reads 00. The firmware prints “nothing (MISO stuck low?)”: check 3.3V and GND.`;
+      else text = `<span class="k">byte 1 on MISO:</span> FFh (usually). Nobody drives MISO, so it floats high: every register reads FF. ${f.fault === "ss" ? "With SDA loose the chip is never selected and stays silent." : "The chip answers, but the wire never arrives."}`;
+      cap.innerHTML = text;
+    }
+    const go = (i) => { bit = (i + 16) % 16; draw(); };
+    const setPlaying = (on) => { playing = on; root.querySelector('[data-a="play"]').textContent = on ? "❚❚" : "▶ Play"; clearInterval(timer); if (on) timer = setInterval(() => go(bit + 1), 700); };
+    root.querySelector('[data-a="prev"]').addEventListener("click", () => { setPlaying(false); go(bit - 1); });
+    root.querySelector('[data-a="next"]').addEventListener("click", () => { setPlaying(false); go(bit + 1); });
+    root.querySelector('[data-a="play"]').addEventListener("click", () => setPlaying(!playing));
+    [selReg, selDir, selFault].forEach((s) => s.addEventListener("change", draw));
+    setPlaying(playing);
+    draw();
+    return () => clearInterval(timer);
+  }
+
+  // ---------- R3: anticollision, a walk down the bits ----------
+  function rfidAnticoll(root) {
+    root.innerHTML = `<div class="wd">
+      <div class="ac-inputs">
+        <label>Card A UID<input data-k="a" value="${hxs(RF.card.uid)}" spellcheck="false" aria-label="Card A UID, 4 bytes in hex"></label>
+        <label>Card B UID<input data-k="b" value="${hxs(RF.tag.uid)}" spellcheck="false" aria-label="Card B UID, 4 bytes in hex"></label>
+        <button type="button" class="btn" data-a="random">Random pair</button>
+        <span class="wd-count" data-o="step"></span>
+      </div>
+      <div class="wd-bar"><button type="button" class="btn" data-a="prev">◀ Back</button><button type="button" class="btn" data-a="play">❚❚ Pause</button><button type="button" class="btn" data-a="next">Next ▶</button></div>
+      <div class="ac-grid" role="img" aria-label="The UID bits of both cards and what the reader hears, in the order they travel."></div>
+      <svg class="ac-tree" viewBox="0 0 680 150" role="img" aria-label="The binary tree the walk follows: shared bits, then a branch at the first collision."></svg>
+      <div class="wd-cap"><span class="sw" style="background:var(--copper)"></span><strong data-c="t"></strong><span data-c="x"></span></div>
+    </div>`;
+    const inA = root.querySelector('[data-k="a"]'), inB = root.querySelector('[data-k="b"]'), grid = root.querySelector(".ac-grid"), tree = root.querySelector(".ac-tree");
+    const capT = root.querySelector('[data-c="t"]'), capX = root.querySelector('[data-c="x"]'), counter = root.querySelector('[data-o="step"]');
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let step = 0, playing = !reduce, timer;
+    const parse = (s) => { const b = s.replace(/[^0-9a-f]/gi, "").match(/../g); return b && b.length === 4 ? b.map((x) => parseInt(x, 16)) : null; };
+    // Bits in the order they travel: byte 0 bit 0 first.
+    const order = (u) => u.flatMap((byte) => [...Array(8)].map((_, j) => (byte >> j) & 1));
+    function model() {
+      const a = parse(inA.value) || RF.card.uid, b = parse(inB.value) || RF.tag.uid;
+      const A = order(a), B = order(b);
+      const p = A.findIndex((x, i) => x !== B[i]) + 1; // 1-based, 0 = identical
+      const winner = p && A[p - 1] === 1 ? "A" : "B";
+      return { a, b, A, B, p, winner };
+    }
+    function steps(m) {
+      if (!m.p) return [{ t: "Identical UIDs", x: "Two cards never share a UID (that is the point of it). Change one byte." }];
+      const byte = Math.floor((m.p - 1) / 8), bitIn = (m.p - 1) % 8, nvb = ((2 + Math.floor(m.p / 8)) << 4) | (m.p % 8);
+      const W = m.winner, L = W === "A" ? "B" : "A", wu = W === "A" ? m.a : m.b, lu = W === "A" ? m.b : m.a;
+      return [
+        { t: "WUPA: both cards wake", x: "Both answer ATQA 04 00 at the same instant. Identical bits on top of each other look like one card, so no collision yet." },
+        { t: "93 20: “all of you, send your UID”", x: `Both cards send 32 bits at once. Bits 1–${m.p - 1} are the same and arrive clean. At bit ${m.p} one card sends 0 and the other 1: the reader hears both halves of the bit, a collision. CollReg says CollPos = ${m.p}. Bits after it read as 0 (ValuesAfterColl = 0).` },
+        { t: `Pick 1 at bit ${m.p}, ask again`, x: `The reader sends the ${m.p} bits it now knows, ending in 1: SEL 93, NVB ${hx(nvb)}h (${2 + Math.floor(m.p / 8)} whole bytes + ${m.p % 8} bits). Bit ${m.p} is bit ${bitIn} of UID byte ${byte}. Card ${L} has 0 there, so it stops answering until the next REQA or WUPA.` },
+        { t: `Only card ${W} answers the rest`, x: `Card ${W} sends bits ${m.p + 1}–32 and its BCC. No collision: the reader now has the full UID ${hxs(wu)}, and BCC ${hx(bccOf(wu))} checks out.` },
+        { t: `SELECT ${hxs(wu)} → SAK 08`, x: `93 70 + UID + BCC + CRC_A. Card ${W} is now ACTIVE, ready for authentication and reads. The walk always takes 1 at a collision, which is why the same card wins every time.` },
+        { t: `HLTA card ${W}, then REQA again`, x: `Card ${W} goes to HALT and ignores REQA. Card ${L} was only waiting (READY → back to IDLE), so it answers REQA alone.` },
+        { t: `93 20 → card ${L} alone: ${hxs(lu)}`, x: `No collision this time. SELECT, SAK, HLTA. The next REQA gets no answer at all: the inventory found 2 cards. This is what the firmware's inventory command prints.` },
+      ];
+    }
+    function draw() {
+      const m = model(), list = steps(m);
+      step = Math.min(step, list.length - 1);
+      const s = list[step];
+      capT.textContent = s.t; capX.textContent = s.x;
+      counter.textContent = `step ${step + 1} / ${list.length}`;
+      const p = m.p, W = m.winner;
+      // What the reader hears at this step.
+      const heard = (i) => {
+        if (!p) return "";
+        if (step === 0) return "";
+        if (step === 1) return i < p - 1 ? ["got", m.A[i]] : i === p - 1 ? ["coll", "×"] : ["", "0"];
+        const w = W === "A" ? m.A : m.B, l = W === "A" ? m.B : m.A;
+        if (step === 2) return i < p - 1 ? ["sent", w[i]] : i === p - 1 ? ["pick", 1] : ["", "·"];
+        if (step <= 4) return i < p ? ["sent", w[i]] : ["got", w[i]];
+        if (step === 5) return ["", "·"];
+        return ["got", l[i]];
+      };
+      const silent = (who) => (step >= 2 && step <= 4 && who !== W) || (step >= 5 && who === W);
+      const row = (name, cls, cells) => `<div class="ac-row ${cls}"><span class="ac-name">${name}</span><div class="ac-bits">${cells}</div></div>`;
+      const cell = (c, v, i) => `<i class="${c}${i % 8 === 0 && i ? " byte" : ""}">${v}</i>`;
+      const bitsRow = (bits) => bits.map((x, i) => cell(i === p - 1 && step >= 1 ? "coll" : "", x, i)).join("");
+      grid.innerHTML =
+        row(`card A ${hxs(m.a)}`, silent("A") ? "silent" : "", bitsRow(m.A)) +
+        row(`card B ${hxs(m.b)}`, silent("B") ? "silent" : "", bitsRow(m.B)) +
+        row("reader hears", "", [...Array(32)].map((_, i) => { const h = heard(i); return cell(h ? h[0] : "", h ? h[1] : "·", i); }).join("")) +
+        row("bit #", "", [...Array(32)].map((_, i) => cell("", (i + 1) % 8 === 1 || i + 1 === p ? i + 1 : "", i)).join(""));
+      // Tree: the shared prefix, a branch at bit p, card B on the 0 side or 1 side.
+      tree.replaceChildren();
+      if (!p) return;
+      const yTop = 18, yFork = 70, leafY = 128;
+      const one = W, zero = W === "A" ? "B" : "A";
+      const onPath1 = step >= 2 && step <= 4, onPath0 = step >= 5;
+      tree.append(svgEl("line", { x1: 340, y1: yTop, x2: 340, y2: yFork, class: `edge ${step >= 1 ? "on" : ""}` }));
+      tree.append(svgEl("text", { x: 350, y: (yTop + yFork) / 2 + 4, class: "tk" }, `bits 1–${p - 1}: shared (${p - 1} bits)`));
+      tree.append(svgEl("path", { d: `M340 ${yFork} Q 260 ${yFork + 10} 200 ${leafY - 14}`, class: `edge ${onPath0 ? "on" : ""}` }));
+      tree.append(svgEl("path", { d: `M340 ${yFork} Q 420 ${yFork + 10} 480 ${leafY - 14}`, class: `edge ${onPath1 ? "on" : ""}` }));
+      tree.append(svgEl("circle", { cx: 340, cy: yFork, r: 7, class: "node" }));
+      tree.append(svgEl("text", { x: 352, y: yFork + 4, class: "tk" }, `bit ${p}: collision`));
+      tree.append(svgEl("text", { x: 236, y: yFork + 6, class: "tk", "text-anchor": "end" }, "bit = 0"));
+      tree.append(svgEl("text", { x: 444, y: yFork + 6, class: "tk", "text-anchor": "start" }, "bit = 1, taken first"));
+      tree.append(svgEl("text", { x: 200, y: leafY + 4, class: "leaf", "text-anchor": "middle" }, `card ${zero}${onPath0 && step === 6 ? " ✓ found second" : ""}`));
+      tree.append(svgEl("text", { x: 480, y: leafY + 4, class: "leaf", "text-anchor": "middle" }, `card ${one}${step >= 4 ? " ✓ found first" : ""}`));
+    }
+    const go = (i) => { const n = steps(model()).length; step = (i + n) % n; draw(); };
+    const setPlaying = (on) => { playing = on; root.querySelector('[data-a="play"]').textContent = on ? "❚❚ Pause" : "▶ Play"; clearInterval(timer); if (on) timer = setInterval(() => go(step + 1), 3200); };
+    root.querySelector('[data-a="prev"]').addEventListener("click", () => { setPlaying(false); go(step - 1); });
+    root.querySelector('[data-a="next"]').addEventListener("click", () => { setPlaying(false); go(step + 1); });
+    root.querySelector('[data-a="play"]').addEventListener("click", () => setPlaying(!playing));
+    root.querySelector('[data-a="random"]').addEventListener("click", () => {
+      const r = () => [...Array(4)].map(() => Math.floor(Math.random() * 256));
+      inA.value = hxs(r()); inB.value = hxs(r()); step = 1; draw();
+    });
+    [inA, inB].forEach((x) => x.addEventListener("input", () => { step = Math.max(step, 1); draw(); }));
+    setPlaying(playing);
+    draw();
+    return () => clearInterval(timer);
+  }
+
+  // ---------- R4: access bits ----------
+  const DATA_RULE = [
+    "read and write with key A or B; increment, decrement (transport setting)",
+    "read, decrement with A or B; no writes (a value that can only go down)",
+    "read with A or B; never written again",
+    "read and write with key B only",
+    "read with A or B, write with B",
+    "read with key B only; never written",
+    "read with A or B; write and increment with B; decrement with A or B (value block)",
+    "nothing, ever",
+  ];
+  const TRAILER_RULE = [
+    "key A writes both keys; access bits fixed; key B readable (so it can't be a key)",
+    "key A writes keys and access bits (transport setting)",
+    "nothing can change any more; key B readable",
+    "key B writes keys and access bits",
+    "key B writes the keys; access bits fixed",
+    "key B writes the access bits; keys fixed",
+    "nothing can change any more",
+    "nothing can change any more",
+  ];
+  function rfidAccess(root) {
+    const PRESETS = { "factory FF 07 80": [0, 0, 0, 1], "value blocks": [0, 6, 6, 3], "read-only, forever": [2, 2, 2, 6] };
+    root.innerHTML = `<div class="wd">
+      <div class="quick">${Object.keys(PRESETS).map((k) => `<button type="button" class="btn" data-p="${k}">${k}</button>`).join("")}
+        <span class="ac-inputs"><label>or type bytes 6–8<input data-k="bytes" value="FF 07 80" spellcheck="false"></label></span></div>
+      <div class="table-scroll"><table class="ab-table"><thead><tr><th>Block</th><th>C1</th><th>C2</th><th>C3</th><th>What it allows</th></tr></thead><tbody></tbody></table></div>
+      <div class="ab-bytes"></div><div class="ab-warn"></div>
+    </div>`;
+    const body = root.querySelector("tbody"), bytesEl = root.querySelector(".ab-bytes"), warn = root.querySelector(".ab-warn"), input = root.querySelector('[data-k="bytes"]');
+    let cond = [0, 0, 0, 1], hl = -1;
+    const C = (b) => [(cond[b] >> 2) & 1, (cond[b] >> 1) & 1, cond[b] & 1];
+    const encode = () => {
+      let c1 = 0, c2 = 0, c3 = 0;
+      for (let b = 0; b < 4; b++) { const [x, y, z] = C(b); c1 |= x << b; c2 |= y << b; c3 |= z << b; }
+      return [((~c2 & 15) << 4) | (~c1 & 15), ((c1 & 15) << 4) | (~c3 & 15), ((c3 & 15) << 4) | (c2 & 15)];
+    };
+    // Which (Cn, block, inverted) each bit of bytes 6-8 holds, bit 7 first.
+    const MAP = [
+      [[2, 3, 1], [2, 2, 1], [2, 1, 1], [2, 0, 1], [1, 3, 1], [1, 2, 1], [1, 1, 1], [1, 0, 1]],
+      [[1, 3, 0], [1, 2, 0], [1, 1, 0], [1, 0, 0], [3, 3, 1], [3, 2, 1], [3, 1, 1], [3, 0, 1]],
+      [[3, 3, 0], [3, 2, 0], [3, 1, 0], [3, 0, 0], [2, 3, 0], [2, 2, 0], [2, 1, 0], [2, 0, 0]],
+    ];
+    function renderBytes(fromInput = false) {
+      const bytes = encode();
+      if (!fromInput) input.value = hxs(bytes);
+      bytesEl.innerHTML = bytes.map((v, i) => `<div class="ab-byte"><b>byte ${6 + i}</b><span class="hex">${hx(v)}</span><div class="bits">${MAP[i].map(([n, b, inv], k) => `<i class="${inv ? "inv" : ""} ${b === hl ? "hl" : ""}" title="${inv ? "inverted " : ""}C${n} of ${b === 3 ? "the trailer" : "block " + b}">${(v >> (7 - k)) & 1}</i>`).join("")}</div><small>${["~C2 | ~C1", "C1 | ~C3", "C3 | C2"][i]} · each half: blocks 3 2 1 0</small></div>`).join("");
+    }
+    function draw(fromInput = false) {
+      body.innerHTML = [0, 1, 2, 3].map((b) => `<tr data-b="${b}"><td class="mono">${b === 3 ? "trailer" : `block ${b}`}</td>${C(b).map((v, k) => `<td class="c"><input type="checkbox" data-b="${b}" data-k="${k}" ${v ? "checked" : ""} aria-label="C${k + 1} of ${b === 3 ? "the trailer" : "block " + b}"></td>`).join("")}<td>${(b === 3 ? TRAILER_RULE : DATA_RULE)[cond[b]]}</td></tr>`).join("");
+      renderBytes(fromInput);
+      const locked = [2, 6, 7].includes(cond[3]);
+      warn.innerHTML = locked ? `<div class="warn-box"><b>Never write this to a card.</b> With trailer setting ${cond[3].toString(2).padStart(3, "0")} no key can change this sector's keys again. The lab's firmware never writes trailers at all.</div>` : "";
+      body.querySelectorAll("input").forEach((x) => x.addEventListener("change", () => {
+        const b = +x.dataset.b, k = +x.dataset.k, bit = 4 >> k;
+        cond[b] = x.checked ? cond[b] | bit : cond[b] & ~bit;
+        draw();
+      }));
+      // Hovering or focusing a row lights up where its 3 bits (and their inverted copies) live.
+      body.querySelectorAll("tr").forEach((tr) => {
+        const on = () => { if (hl !== +tr.dataset.b) { hl = +tr.dataset.b; renderBytes(true); } };
+        tr.addEventListener("mouseenter", on);
+        tr.addEventListener("focusin", on);
+      });
+    }
+    root.querySelectorAll("[data-p]").forEach((b) => b.addEventListener("click", () => { cond = [...PRESETS[b.dataset.p]]; draw(); }));
+    input.addEventListener("input", () => {
+      const v = input.value.replace(/[^0-9a-f]/gi, "").match(/../g);
+      if (!v || v.length !== 3) return;
+      const [b6, b7, b8] = v.map((x) => parseInt(x, 16));
+      const c1 = b7 >> 4, c2 = b8 & 15, c3 = b8 >> 4;
+      const ok = (b6 & 15) === (~c1 & 15) && b6 >> 4 === (~c2 & 15) && (b7 & 15) === (~c3 & 15);
+      if (!ok) { warn.innerHTML = `<div class="warn-box"><b>Inconsistent:</b> the inverted copies don't match. A card refuses such a trailer, or locks the sector.</div>`; return; }
+      cond = [0, 1, 2, 3].map((b) => (((c1 >> b) & 1) << 2) | (((c2 >> b) & 1) << 1) | ((c3 >> b) & 1));
+      draw(true);
+    });
+    draw();
+    return () => {};
+  }
+
+  // ---------- R5: a value block, byte by byte ----------
+  function rfidValue(root) {
+    root.innerHTML = `<div class="wd">
+      <div class="ac-inputs"><label>Value<input type="number" data-k="v" value="47" min="-2147483648" max="2147483647"></label><label>Address byte<input type="number" data-k="a" value="8" min="0" max="255"></label>
+        <button type="button" class="btn" data-a="add">add 10</button><button type="button" class="btn" data-a="use">use 3</button></div>
+      <div class="mem-scroll"><div class="vb" role="img" aria-label="The 16 bytes of a MIFARE value block"></div></div>
+      <div class="vb-legend"><span><i style="background:var(--w-sda)"></i>value, little-endian (bytes 0–3 and 8–11)</span><span><i style="background:var(--muted)"></i>value inverted (4–7)</span><span><i style="background:var(--copper)"></i>address</span><span><i style="background:var(--gnd)"></i>address inverted</span></div>
+      <p class="sim-cap" data-o="why"></p>
+    </div>`;
+    const vIn = root.querySelector('[data-k="v"]'), aIn = root.querySelector('[data-k="a"]'), grid = root.querySelector(".vb"), why = root.querySelector('[data-o="why"]');
+    const CLS = ["v", "v", "v", "v", "nv", "nv", "nv", "nv", "v", "v", "v", "v", "a", "na", "a", "na"];
+    const LBL = ["v0", "v1", "v2", "v3", "~v0", "~v1", "~v2", "~v3", "v0", "v1", "v2", "v3", "adr", "~adr", "adr", "~adr"];
+    function draw(changed = -1) {
+      const v = Math.max(-2147483648, Math.min(2147483647, Math.trunc(+vIn.value || 0))), a = Math.max(0, Math.min(255, Math.trunc(+aIn.value || 0)));
+      const bytes = valueBlock(v, a);
+      grid.innerHTML = bytes.map((x, i) => `<div class="${CLS[i]}" style="${changed >= 0 && CLS[i] !== "a" && CLS[i] !== "na" ? "outline:2px solid var(--copper)" : ""}">${hx(x)}<small>${LBL[i]}</small></div>`).join("");
+      why.textContent = `${v} = ${hxs(bytes.slice(0, 4))} (lowest byte first). Stored three times, once inverted: the card refuses INCREMENT, DECREMENT and RESTORE on a block where the copies disagree. The address byte is free for you (we put the block number in it).`;
+    }
+    root.querySelector('[data-a="add"]').addEventListener("click", () => { vIn.value = +vIn.value + 10; draw(1); });
+    root.querySelector('[data-a="use"]').addEventListener("click", () => { if (+vIn.value >= 3) { vIn.value = +vIn.value - 3; draw(1); } else why.textContent = "Not enough credits: the firmware checks the balance before it asks the card to decrement."; });
+    [vIn, aIn].forEach((x) => x.addEventListener("input", () => draw()));
+    draw();
+    return () => {};
+  }
+  // ---------- R6: the edge lab ----------
+  // Example numbers are illustrative (a typical RC522 on 15 cm jumpers), not measured on your board.
+  // Each parser reads the exact table the firmware prints (src/rfid-lab/edge.h).
+  const rows = (t, re, f) => [...t.matchAll(re)].map(f);
+  const EDGE = [
+    { key: "spi", label: "SPI clock", cmd: "edge spi", unit: "% bytes wrong", xTitle: "SPI clock (MHz)",
+      what: "64 random bytes into the chip's FIFO and back, 20 times at each clock speed, plus VersionReg read twice.",
+      look: "The MFRC522 is rated for 10 Mbit/s. Past that, your jumper wires decide: long or loose ones round off the clock edges, and MISO (the chip's weak output) usually fails first. At the default 4 MHz you want exactly 0.",
+      example: [["1", 0], ["2", 0], ["4", 0], ["8", 0], ["10", 0], ["13", 0], ["16", 0.4], ["20", 3.1], ["26", 22], ["40", 61]], mark: "10", markText: "datasheet max",
+      parse: (t) => rows(t, /^\s*(\d+)\s+([\d.]+)\s*%\s+\d+\s*\/\s*\d+/gm, (m) => [m[1], +m[2]]) },
+    { key: "gain", label: "Gain vs distance", cmd: "edge gain", unit: "% found", max: 100, xTitle: "receiver gain (dB)",
+      what: "30 wake + select attempts at each receiver gain, with the card held still at one height.",
+      look: "Gain makes the reader a better listener; it doesn't give the card more power. Close up every gain works. Further away low gains fail first, until even 48 dB can't help because the card has no power left (the R2 3D view shows why).",
+      example: [["18", 0], ["23", 13], ["33", 87], ["38", 100], ["43", 100], ["48", 100]], mark: "33", markText: "default",
+      parse: (t) => rows(t, /^\s*(\d+)\s*dB\s+(\d+)\s*%/gm, (m) => [m[1], +m[2]]) },
+    { key: "timeout", label: "Card reply time", cmd: "edge timeout", unit: "% WUPA answered", max: 100, xTitle: "chip timer (µs unless marked ms)",
+      what: "The chip's timer decides how long to wait for an answer after our frame. The test shrinks it step by step and counts answers to WUPA, 20 tries each.",
+      look: "ISO 14443 says a card answers about 86 µs after the reader's last bit, and the timer counts in 25 µs ticks: expect answers to stop between 100 and 75 µs. The 25 ms default is 250 times longer than a card needs; it is what an empty poll costs.",
+      example: [["25ms", 100], ["5ms", 100], ["1ms", 100], ["500", 100], ["300", 100], ["200", 100], ["150", 100], ["120", 100], ["100", 95], ["80", 0], ["60", 0], ["40", 0]], between: 8, betweenText: "ISO: ~86 µs",
+      parse: (t) => rows(t, /^\s*(\d+)\s*us\s+(\d+)\s*%\s+(\d+)\s*%/gm, (m) => [+m[1] >= 1000 ? `${+m[1] / 1000}ms` : m[1], +m[2]]) },
+    { key: "timing", label: "Time per step", cmd: "edge timing", unit: "µs, average", xTitle: "protocol step",
+      what: "40 full cycles of WUPA, the final SELECT frame, authentication and one block read, each timed from the command's start to its end.",
+      look: "The dashed outline is pure air time at 106 kbit/s; everything above it is SPI traffic and the ESP32's own work. Authentication is three exchanges inside the chip, so expect it to be the slowest.",
+      example: [["WUPA", 480], ["SELECT", 1260], ["AUTH", 2350], ["READ", 2210]], ghost: [360, 1140, 1950, 1990], ghostText: "air time alone",
+      parse: (t) => rows(t, /^\s*(WUPA|SELECT|AUTH|READ)\s+(\d+)\s+([\d.]+)\s+(\d+)/gm, (m) => [m[1], +m[3]]) },
+    { key: "irq", label: "Polling vs IRQ", cmd: "edge irq", unit: "SPI accesses per WUPA", xTitle: "how the reader task waits",
+      what: "30 WUPAs while polling ComIrqReg over SPI, then 30 sleeping until the IRQ wire fires, counting SPI accesses per command.",
+      look: "With a card present both finish fast, but polling keeps the bus busy while it waits. Run it again with no card: every WUPA now waits out the 25 ms timer, and polling's count shoots up while IRQ's stays the same.",
+      example: [["poll", 37], ["irq", 16]],
+      parse: (t) => rows(t, /^\s*(poll|irq)\s+([\d.]+)\s+([\d.]+)\s*$/gm, (m) => [m[1], +m[2]]) },
+    { key: "crc", label: "CRC: chip vs CPU", cmd: "edge crc", unit: "µs per frame", xTitle: "who computes CRC_A",
+      what: "300 random frames: CRC_A from the chip's coprocessor (bytes go over SPI and back) and from the ESP32 (the same five lines as rfid_format.h).",
+      look: "Both must agree on every frame: 0 mismatches. The coprocessor itself is quick, but the SPI round trip costs far more than the ESP32 doing the maths: here offloading loses.",
+      example: [["chip", 95], ["ESP32", 0.6]],
+      parse: (t) => { const m = t.match(/chip coprocessor ([\d.]+) us\/frame.*?ESP32 ([\d.]+) us\/frame/s); return m ? [["chip", +m[1]], ["ESP32", +m[2]]] : []; } },
+    { key: "stress", label: "Stress run", cmd: "edge stress 500", unit: "cycles", xTitle: "outcome of each wake → select → auth → read cycle",
+      what: "Hundreds of complete cycles in a row: wake, select, authenticate, read block 4, halt. Every outcome counted.",
+      look: "Held still and close, expect 99 % or better. Lift or tilt the card slowly while it runs: misses start as “absent” (no answer), then CRC and protocol errors appear right at the edge of range.",
+      example: [["ok", 496], ["absent", 2], ["CRC", 1], ["proto", 1], ["coll", 0], ["NAK", 0], ["other", 0]], mark: "ok",
+      parse: (t) => rows(t, /^\s*(ok|absent|CRC|proto|coll|NAK|other)\s+(\d+)\s*$/gm, (m) => [m[1], +m[2]]) },
+  ];
+  const cleanMonitor = (t) => t.replace(/^\d{2}:\d{2}:\d{2}\.\d{3} > ?/gm, "");
+
+  // Bars on one scale. `mine` solid, `example` outlined beside it (or alone when there is no paste).
+  function barChart(svg, e, mine) {
+    const W = 680, H = 250, L = 56, R = 12, T = 30, B = 46;
+    svg.replaceChildren();
+    const main = mine && mine.length ? mine : e.example;
+    const exampleBy = Object.fromEntries(e.example);
+    const all = [...main.map((r) => r[1]), ...(mine && mine.length ? e.example.map((r) => r[1]) : []), ...(e.ghost || [])];
+    // Round the top up to 1, 2 or 5 × 10ⁿ so the 4 grid lines land on plain numbers.
+    const nice = (v) => { const p = Math.pow(10, Math.floor(Math.log10(v))); return [1, 2, 4, 5, 10].map((k) => k * p).find((x) => x >= v); };
+    const top = e.max || nice(Math.max(0.01, ...all) * 1.08);
+    const y = (v) => T + (1 - Math.min(v, top) / top) * (H - T - B);
+    const slot = (W - L - R) / main.length, bw = Math.min(46, slot * 0.5);
+    for (let k = 0; k <= 4; k++) {
+      const v = (top * k) / 4;
+      svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "ax" }), svgEl("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end", class: "tk" }, String(+v.toPrecision(3))));
+    }
+    svg.append(svgEl("text", { x: 4, y: 12, class: "tk" }, e.unit));
+    svg.append(svgEl("text", { x: W - R, y: H - 6, "text-anchor": "end", class: "tk" }, e.xTitle));
+    main.forEach(([label, v], i) => {
+      const cx = L + slot * (i + 0.5);
+      const g = svgEl("g", {});
+      g.append(svgEl("title", {}, `${label}: ${v} ${e.unit}${mine && mine.length && exampleBy[label] !== undefined ? ` (example ${exampleBy[label]})` : ""}`));
+      if (e.ghost && e.ghost[i] !== undefined) g.append(svgEl("rect", { x: cx - bw / 2 - 4, y: y(e.ghost[i]), width: bw + 8, height: H - B - y(e.ghost[i]), class: "ghost", rx: 2 }));
+      if (mine && mine.length && exampleBy[label] !== undefined) g.append(svgEl("rect", { x: cx + bw / 2 + 2, y: y(exampleBy[label]), width: 8, height: Math.max(1, H - B - y(exampleBy[label])), class: "ghost", rx: 2 }));
+      const h = Math.max(v > 0 ? 2 : 0, H - B - y(v));
+      g.append(svgEl("rect", { x: cx - bw / 2, y: H - B - h, width: bw, height: h, rx: 3, fill: "var(--w-sda)", class: "bar" }));
+      g.append(svgEl("text", { x: cx, y: H - B - h - 6, "text-anchor": "middle", class: "val" }, String(v)));
+      g.append(svgEl("text", { x: cx, y: H - B + 16, "text-anchor": "middle", class: "tk" }, label));
+      if (e.mark === label) {
+        g.append(svgEl("rect", { x: cx - slot / 2 + 3, y: T - 4, width: slot - 6, height: H - B - T + 26, class: "mark", rx: 4 }));
+        g.append(svgEl("text", { x: cx, y: T - 8, "text-anchor": "middle", class: "lbl" }, e.markText));
+      }
+      svg.append(g);
+    });
+    if (e.between !== undefined && e.between < main.length) {
+      const x = L + slot * (e.between + 1);
+      svg.append(svgEl("line", { x1: x, x2: x, y1: T, y2: H - B, class: "need" }), svgEl("text", { x: x + 4, y: T + 10, class: "lbl" }, e.betweenText));
+    }
+    if (e.ghost) svg.append(svgEl("text", { x: W - R, y: T - 6, "text-anchor": "end", class: "tk" }, `dashed: ${e.ghostText}`));
+  }
+
+  function rfidEdge(root) {
+    root.innerHTML = `<div class="edge-tabs scene-dots" role="group" aria-label="Experiment">${EDGE.map((e, i) => `<button type="button" data-i="${i}" aria-current="${i === 0}">${e.label}</button>`).join("")}</div>
+      <div class="edge-body">
+        <h4></h4><p data-o="what"></p>
+        <div class="cmd"><code data-o="cmd"></code><button type="button" data-a="copy">Copy</button></div>
+        <svg class="rf-chart" viewBox="0 0 680 250" role="img"></svg>
+        <p class="edge-src" data-o="src"></p>
+        <p data-o="look"></p>
+        <div class="edge-paste"><label class="edge-src" for="edge-paste">Paste the table from the serial monitor (the time stamps can stay):</label><textarea id="edge-paste" spellcheck="false" placeholder="e.g.   1     0.0 %        0 / 20"></textarea></div>
+      </div>`;
+    const ui = { h: root.querySelector("h4"), what: root.querySelector('[data-o="what"]'), look: root.querySelector('[data-o="look"]'), cmd: root.querySelector('[data-o="cmd"]'), src: root.querySelector('[data-o="src"]'), svg: root.querySelector("svg"), paste: root.querySelector("textarea") };
+    const saved = store.get("esp-rfid-edge", {});
+    let i = 0;
+    function show() {
+      const e = EDGE[i], text = saved[e.key] || "";
+      ui.h.textContent = e.label; ui.what.textContent = e.what; ui.look.textContent = e.look; ui.cmd.textContent = e.cmd;
+      ui.paste.value = text;
+      plot();
+    }
+    function plot() {
+      const e = EDGE[i], mine = ui.paste.value.trim() ? e.parse(cleanMonitor(ui.paste.value)) : [];
+      ui.svg.setAttribute("aria-label", `${e.label}: ${e.unit} per ${e.xTitle}. ${(mine.length ? mine : e.example).map(([l, v]) => `${l}: ${v}`).join(", ")}`);
+      barChart(ui.svg, e, mine);
+      ui.src.textContent = mine.length ? `Solid: your ${mine.length} rows. Thin outline beside each bar: the example.` : ui.paste.value.trim() ? "No rows recognised: paste the lines under the table's header." : "Example numbers (a typical RC522 on 15 cm jumpers), not your board. Paste your table below to replace them.";
+    }
+    root.querySelectorAll(".edge-tabs button").forEach((b) => b.addEventListener("click", () => {
+      i = +b.dataset.i;
+      root.querySelectorAll(".edge-tabs button").forEach((x) => x.setAttribute("aria-current", String(x === b)));
+      show();
+    }));
+    ui.paste.addEventListener("input", () => { saved[EDGE[i].key] = ui.paste.value; store.set("esp-rfid-edge", saved); plot(); });
+    root.querySelector('[data-a="copy"]').addEventListener("click", (ev) => {
+      const btn = ev.currentTarget;
+      navigator.clipboard?.writeText(EDGE[i].cmd).then(() => { btn.textContent = "Copied"; setTimeout(() => (btn.textContent = "Copy"), 1400); }).catch(() => {
+        const r = document.createRange(); r.selectNodeContents(ui.cmd); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      });
+    });
+    show();
+    return () => {};
+  }
+
+  const RFID_PANELS = { spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge };
+  // ---------- Sim R1-R6: the rfid-lab screen + serial monitor (example data) ----------
+  function simRfid(parent, lesson) {
+    const W = 320, H = 170, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const VIEWS = ["chip", "card", "trace", "memory", "credits", "edge"];
+    const HINTS = ["double: self-test", "double: inventory", "double: sniffer on/off", "double: dump", "double: +1 credit", "double: next test"];
+    const row = document.createElement("div"); row.className = "boot-row";
+    row.innerHTML = `<button type="button" class="boot-btn" aria-label="Push button: click next view, double-click this view's action, hold to pause polling">BUTTON</button>
+      <div class="scene-dots" role="group" aria-label="Views">${VIEWS.map((v, i) => `<button type="button" data-v="${i}">${i + 1}</button>`).join("")}</div><span class="auto-flag"></span>`;
+    const field = document.createElement("div"); field.className = "quick";
+    field.innerHTML = `<button type="button" class="btn" data-f="card">lay the card</button><button type="button" class="btn" data-f="tag">lay the tag</button><button type="button" class="btn" data-f="both">both</button><button type="button" class="btn" data-f="none">remove</button>`;
+    const frame = document.createElement("div"); frame.className = "screen-frame";
+    frame.innerHTML = `<canvas width="${W}" height="${H}" aria-label="Simulated board screen"></canvas>`;
+    const cap = document.createElement("p"); cap.className = "sim-cap";
+    cap.textContent = "Example data: the UIDs, timings and numbers are made up. Your board prints its own.";
+    parent.append(row, field, frame, cap);
+    const term = terminal(parent, "$ uv run pio device monitor", true);
+    const quick = document.createElement("div"); quick.className = "quick";
+    const QUICK = { R1: ["selftest", "loopback", "regs", "spi 20"], R2: ["trace on", "gain 0", "gain 7", "poll off"], R3: ["inventory", "help"], R4: ["dump", "read 0", "read 1"], R5: ["write 4 hello bench", "write 3 test", "credits init 50", "credits use 3", "credits add 10"], R6: ["edge spi", "edge timeout", "edge timing", "edge stress 500"] }[lesson.id] || ["help"];
+    quick.innerHTML = QUICK.map((c) => `<button type="button" class="btn">${c}</button>`).join("");
+    parent.appendChild(quick);
+    const g = frame.querySelector("canvas").getContext("2d");
+    const C = { paper: css("--scope-paper"), ink: css("--scope-ink"), muted: css("--scope-muted"), dim: css("--scope-dim"), teal: css("--scope-trace"), amber: css("--scope-amber"), coral: css("--scope-coral"), blue: css("--scope-blue"), card: css("--card-white"), chip: css("--pcb") };
+    const cards = { card: { uid: RF.card.uid, mem: exampleCard(false) }, tag: { uid: RF.tag.uid, mem: exampleCard(false) } };
+    cards.tag.mem[0] = [...RF.tag.uid, bccOf(RF.tag.uid), 0x08, 0x04, 0x00, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69];
+    const st = { view: lesson.rfidView ?? 1, on: "none", polling: true, trace: true, taps: 0, rate: 0, selfTest: -1, gain: 4, irq: true, mhz: 4, timeout: 25000, frames: [], dump: null, credits: null, edge: null, note: "", noteBad: false, busy: null, progress: 0, coll: 0, nextEdge: 0, flashUntil: 0 };
+    // The card the walk picks when both lie there: the one with a 1 at the first differing bit (the tag here).
+    const selected = () => (st.on === "both" ? "tag" : st.on === "none" ? null : st.on);
+    const log = (text, cls = "i") => term.line(text, cls);
+    const say = (text, bad = false) => { st.note = text; st.noteBad = bad; log(`[${bad ? "W" : "I"}][reader.h] say(): ${text}`, bad ? "w" : "i"); };
+    const id = (u, sep = ":") => u.map(hx).join(sep);
+
+    // ---- Trace of one wake-up, as the firmware records it ----
+    function wakeFrames(u, collisionBit) {
+      const b = bccOf(u), f = [];
+      let t = 0;
+      const add = (dir, bytes, name, dt, extra = "") => { t += dt; f.push({ t, dir, bytes, name: name + extra }); };
+      add(">", [0x52], "WUPA", 0, " (short)");
+      add("<", [0x04, 0x00], "ATQA", 0.371);
+      add(">", [0x93, 0x20], "ANTICOLL CL1", 0.27);
+      if (collisionBit) {
+        add("<", [0x9c, 0x4f, 0x2a & 0x3f], "UID + BCC", 0.57, `  collision at bit ${collisionBit}`);
+        add(">", [0x93, 0x47, 0x9c, 0x4f, 0x6a], "ANTICOLL CL1", 0.31, "  23 bits known");
+        add("<", [0x6a, u[3], b], "UID + BCC", 0.3);
+      } else add("<", [...u, b], "UID + BCC", 0.565);
+      add(">", withCrc([0x93, 0x70, ...u, b]), "SELECT CL1", 0.3);
+      add("<", withCrc([0x08]), "SAK", 1.08);
+      add(">", withCrc([0x50, 0x00]), "HLTA", 0.21);
+      return f;
+    }
+    function printFrames() {
+      if (!st.trace) return;
+      st.frames.forEach((fr) => log(`  ${fr.t.toFixed(3).padStart(8)} ms  ${fr.dir === ">" ? "reader >" : "  card >"} ${hxs(fr.bytes).padEnd(40)} ${fr.name}`, ""));
+    }
+    function setField(on) {
+      const before = selected();
+      st.on = on;
+      const now = selected();
+      if (!now) { if (before) log("[I][reader.h] pollOnce(): card removed"); st.rate = 0; return; }
+      if (now !== before) {
+        const u = cards[now].uid;
+        st.taps++; st.flashUntil = performance.now() + 200; st.rate = 100;
+        st.coll = on === "both" ? 23 : 0;
+        st.frames = wakeFrames(u, st.coll);
+        log(`[I][reader.h] pollOnce(): card ${id(u)} · MIFARE Classic 1K · ATQA 0004 SAK 08${st.coll ? " · collision resolved" : ""}`);
+        printFrames();
+      }
+    }
+    function need() {
+      const s = selected();
+      if (!s) { say("no card: hold it on the reader (no answer)", true); return null; }
+      return cards[s];
+    }
+    // ---- Commands (the same words as src/rfid-lab/main.cpp) ----
+    function busyFor(what, ms, done) {
+      st.busy = what; st.progress = 0;
+      const t0 = performance.now();
+      const tick = () => {
+        st.progress = Math.min(100, ((performance.now() - t0) / ms) * 100);
+        if (st.progress < 100 && !stopped) setTimeout(tick, 60);
+        else { st.busy = null; done(); }
+      };
+      tick();
+    }
+    function dumpLines(c) {
+      log(`Dump of ${id(c.uid)} (MIFARE Classic 1K), factory key A, sectors 0-15`, "");
+      log("  blk  data                                             ascii", "");
+      c.mem.forEach((b, i) => {
+        const kind = blockKind(b, i);
+        const ascii = b.map((x) => (x >= 32 && x < 127 ? String.fromCharCode(x) : ".")).join("");
+        const tag = kind === "trailer" ? "trailer ok: A writes all (transport)" : i === 0 ? "maker: UID, BCC, SAK, ATQA" : kind === "value" ? `value ${b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)} · read AB write AB inc AB dec AB` : "read AB write AB inc AB dec AB";
+        log(`  ${String(i).padStart(3)}  ${hxs(b)}  |${ascii}|  ${tag}`, "");
+      });
+      log("  Key A always reads back as 00: the card never reveals it.", "");
+    }
+    function edgeRun(key) {
+      const e = EDGE.find((x) => x.key === key);
+      if (!e) return;
+      if (key !== "spi" && key !== "crc" && key !== "irq" && !selected()) { say(`${e.label}: no card answered, hold it on the reader`, true); return; }
+      st.view = 5;
+      busyFor(e.label, 1600, () => {
+        const ex = e.example;
+        if (key === "spi") { log("  MHz   bytes wrong   VersionReg reads wrong", ""); ex.forEach(([l, v]) => log(`  ${l.padStart(3)}   ${v.toFixed(1).padStart(5)} %        ${v > 5 ? 4 : 0} / 20`, "")); }
+        if (key === "gain") { log("  gain    found (wake + select, 30 tries)", ""); ex.forEach(([l, v]) => log(`  ${l} dB   ${String(v).padStart(3)} %`, "")); }
+        if (key === "timeout") { log("  timer     WUPA answered   wake + select ok   (20 tries each)", ""); ex.forEach(([l, v]) => log(`  ${String(l.endsWith("ms") ? parseInt(l) * 1000 : l).padStart(5)} us   ${String(v).padStart(3)} %            ${String(v).padStart(3)} %`, "")); }
+        if (key === "timing") { log("  step      min      avg      max   (us, start of command to answer)", ""); ex.forEach(([l, v]) => log(`  ${l.padEnd(6)}  ${String(Math.round(v * 0.9)).padStart(6)}   ${String(v).padStart(6)}   ${String(Math.round(v * 1.3)).padStart(6)}`, "")); }
+        if (key === "irq") log(`  mode   SPI accesses / WUPA   ms / WUPA\n  poll   ${ex[0][1].toFixed(1).padStart(8)}                0.52\n  irq    ${ex[1][1].toFixed(1).padStart(8)}                0.47`, "");
+        if (key === "crc") log(`  chip coprocessor ${ex[0][1].toFixed(1)} us/frame (mostly SPI), ESP32 ${ex[1][1].toFixed(2)} us/frame, 0 mismatches`, "");
+        if (key === "stress") { log("  wake + select + auth + read block 4, 500 times in 9.8 s", ""); ex.forEach(([l, v]) => log(`  ${l.padEnd(7)} ${String(v).padStart(4)}`, "")); }
+        st.edge = e;
+        say(`${e.label}: example result (paste yours in the Experiments panel)`);
+      });
+    }
+    function run(raw) {
+      const line = raw.trim(); if (!line) return;
+      log(line, "you");
+      const [cmd, ...rest] = line.split(/\s+/); const arg = rest.join(" "); const c = cmd.toLowerCase(), a = arg.toLowerCase();
+      const n = parseInt(arg, 10);
+      if (c === "help" || c === "?") {
+        ["R1 chip    chip | selftest | loopback | regs | spi <MHz> | gain <0-7> | irq on|off | timeout <us>", "R2 wake    poll on|off | trace on|off", "R3 who     inventory", "R4 memory  dump | read <block>", "R5 write   write <block> <text> | credits | credits init|add|use <n>", "R6 edge    edge spi | gain | timeout | timing | irq | crc | stress [n]", "           view <1-6> | help"].forEach((x) => log(x, ""));
+        return;
+      }
+      if (c === "chip") { log("RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz", ""); log("VersionReg 0x92: MFRC522 v2.0", ""); return; }
+      if (c === "selftest") {
+        st.view = 0;
+        return busyFor("self-test", 600, () => {
+          const v2 = [0x00, 0xEB, 0x66, 0xBA, 0x57, 0xBF, 0x23, 0x95, 0xD0, 0xE3, 0x0D, 0x3D, 0x27, 0x89, 0x5C, 0xDE, 0x9D, 0x3B, 0xA7, 0x00, 0x21, 0x5B, 0x89, 0x82, 0x51, 0x3A, 0xEB, 0x02, 0x0C, 0xA5, 0x00, 0x49, 0x7C, 0x84, 0x4D, 0xB3, 0xCC, 0xD2, 0x1B, 0x81, 0x5D, 0x48, 0x76, 0xD5, 0x71, 0x61, 0x21, 0xA9, 0x86, 0x96, 0x83, 0x38, 0xCF, 0x9D, 0x5B, 0x6D, 0xDC, 0x15, 0xBA, 0x3E, 0x7D, 0x95, 0x3B, 0x2F];
+          log("Self-test (datasheet 16.1.1), chip 0x92, FIFO level 64:", "");
+          for (let r = 0; r < 4; r++) log(v2.slice(r * 16, r * 16 + 16).map((x) => hx(x) + " ").join(""), "");
+          st.selfTest = 1; say("self-test passed: 64/64 bytes match");
+        });
+      }
+      if (c === "loopback") return say(`FIFO loopback: ${st.mhz > 16 ? 41 : 0} of 3200 bytes wrong at ${st.mhz} MHz`, st.mhz > 16);
+      if (c === "regs") {
+        log("  addr  register        value  bits      meaning", "");
+        [["01", "CommandReg", 0x00, "bits 3-0: running command (0 = idle)"], ["04", "ComIrqReg", 0x14, "Tx Rx Idle HiA LoA Err Timer"], ["06", "ErrorReg", 0x00, "WrErr Temp - Ovfl Coll CRC Parity Proto"], ["14", "TxControlReg", 0x83, "bits 1-0: antenna drivers TX2 TX1"], ["26", "RFCfgReg", st.gain << 4, "bits 6-4: receiver gain"], ["2B", "TPrescalerReg", 0xa9, "timer prescaler (A9h = 25 us ticks)"], ["37", "VersionReg", 0x92, "91h v1.0 · 92h v2.0"]]
+          .forEach(([ad, name, v, what]) => log(`  ${ad}h   ${name.padEnd(15)} ${hx(v)}h    ${v.toString(2).padStart(8, "0")}  ${what}`, ""));
+        log("  SPI address bytes: read = 0x80 | reg << 1, write = reg << 1 (e.g. VersionReg read = 0xEE)", "");
+        return;
+      }
+      if (c === "spi") { if (!(n >= 1 && n <= 40)) return log("[W][main.cpp] warn(): spi <MHz>, 1-40 (the chip is rated for 10)", "w"); st.mhz = n; return say(`SPI clock ${n} MHz${n > 10 ? ": above the chip's 10 MHz spec" : ""}`, n > 10); }
+      if (c === "gain") { if (!(n >= 0 && n <= 7)) return log("[W][main.cpp] warn(): gain <0-7>: 0=18 1=23 4=33 5=38 6=43 7=48 dB", "w"); st.gain = n; return say(`receiver gain ${FIELD.gains[[0, 1, 0, 1, 2, 3, 4, 5][n]]} dB`); }
+      if (c === "timeout") { if (!(n >= 25)) return log("[W][main.cpp] warn(): timeout <us>, 25-1000000 (default 25000)", "w"); st.timeout = n; return say(`chip timer ${n} us`); }
+      if (["irq", "poll", "trace"].includes(c)) {
+        if (a !== "on" && a !== "off") return log(`[W][main.cpp] warn(): ${c} on | ${c} off`, "w");
+        const on = a === "on";
+        if (c === "irq") { st.irq = on; return say(`waiting by ${on ? "IRQ wire" : "polling"}`); }
+        if (c === "poll") { st.polling = on; return say(`card polling ${on ? "on" : "paused"}`); }
+        st.trace = on; return say(`sniffer ${on ? "on" : "off"}`);
+      }
+      if (c === "inventory") {
+        return busyFor("inventory", 500, () => {
+          log("Inventory: REQA, select one, halt it, repeat until nobody answers.", "");
+          const found = st.on === "both" ? ["tag", "card"] : selected() ? [selected()] : [];
+          found.forEach((k, i) => log(`  #${i + 1}  ${id(cards[k].uid)}  MIFARE Classic 1K  SAK 08${st.on === "both" && i === 0 ? "  collision at level 1 bit 23 -> chose 1" : ""}`, ""));
+          say(`inventory: ${found.length} card${found.length === 1 ? "" : "s"} in the field`);
+        });
+      }
+      if (c === "dump") {
+        st.view = 3;
+        const card = need(); if (!card) return;
+        return busyFor("dump", 1400, () => { dumpLines(card); st.dump = card; say("dump: 16 sectors read"); });
+      }
+      if (c === "read") {
+        if (!(n >= 0 && n <= 63)) return log("[W][main.cpp] warn(): read <block>, 0-63", "w");
+        const card = need(); if (!card) return;
+        const b = card.mem[n], ascii = b.map((x) => (x >= 32 && x < 127 ? String.fromCharCode(x) : ".")).join("");
+        log(`  ${String(n).padStart(3)}  ${hxs(b)}  |${ascii}|  ${blockKind(b, n) === "value" ? "value block" : ""}`, "");
+        if (st.trace) { log(`  ${(0).toFixed(3).padStart(8)} ms  reader > ${hxs([0x60, n])}${" ".repeat(35)} 3-pass auth inside the chip: ok`, ""); log(`  ${(2.4).toFixed(3).padStart(8)} ms  reader > ${hxs(withCrc([0x30, n])).padEnd(40)} READ [encrypted on air]`, ""); log(`  ${(4.6).toFixed(3).padStart(8)} ms    card > ${(hxs(b.slice(0, 9)) + " ..").padEnd(40)} 16 bytes + CRC [encrypted on air]`, ""); }
+        return say(`block ${n} read`);
+      }
+      if (c === "write") {
+        const m = arg.match(/^(\d+)\s+(.+)$/);
+        if (!m || +m[1] < 1 || +m[1] > 63) return log("[W][main.cpp] warn(): write <block> <text>, e.g. write 4 hello bench", "w");
+        const blk = +m[1];
+        if (blk % 4 === 3) return say(`block ${blk}: not writable here (block 0 and trailers are off limits)`, true);
+        const card = need(); if (!card) return;
+        const data = [...m[2].slice(0, 16)].map((ch) => ch.charCodeAt(0) & 0xff).concat(new Array(16).fill(0)).slice(0, 16);
+        card.mem[blk] = data;
+        log(`  ${String(blk).padStart(3)}  ${hxs(data)}  |${data.map((x) => (x >= 32 && x < 127 ? String.fromCharCode(x) : ".")).join("")}|  written and read back`, "");
+        return say(`block ${blk}: "${m[2].slice(0, 16)}"`);
+      }
+      if (c === "credits") {
+        st.view = 4;
+        const card = need(); if (!card) return;
+        const [op, val] = a.split(/\s+/), v = parseInt(val, 10), cur = card.mem[8];
+        const has = blockKind(cur, 8) === "value";
+        const value = (b) => b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24);
+        if (op === "init") { if (!(v >= 0)) return log("[W][main.cpp] warn(): credits init|add|use <n>, 0-100000", "w"); card.mem[8] = valueBlock(v, 8); card.mem[9] = valueBlock(v, 9); }
+        else if (op === "add" || op === "use") {
+          if (!has) return say("no credits on this card yet: credits init <n>", true);
+          if (!(v >= 0)) return log("[W][main.cpp] warn(): credits init|add|use <n>, 0-100000", "w");
+          if (op === "use" && value(cur) < v) return say(`only ${value(cur)} credits, can't use ${v}`, true);
+          card.mem[9] = valueBlock(value(cur), 9);
+          card.mem[8] = valueBlock(value(cur) + (op === "add" ? v : -v), 8);
+        } else if (op) return log("[W][main.cpp] warn(): credits init|add|use <n>", "w");
+        if (blockKind(card.mem[8], 8) !== "value") return say("block 8 is not a value block: credits init <n>", true);
+        st.credits = { v: value(card.mem[8]), b: value(card.mem[9]) };
+        log(`  credits ${st.credits.v} (block 8) · backup ${st.credits.b} (block 9)`, "");
+        return say(`credits: ${st.credits.v}`);
+      }
+      if (c === "edge") {
+        const k = a.split(/\s+/)[0];
+        if (!EDGE.some((e) => e.key === k)) return log("[W][main.cpp] warn(): edge spi | gain | timeout | timing | irq | crc | stress [n]", "w");
+        return edgeRun(k);
+      }
+      if (c === "view") { if (!(n >= 1 && n <= 6)) return log("[W][main.cpp] warn(): view <1-6>", "w"); return setView(n - 1); }
+      log(`[W][main.cpp] handleCommand(): unknown command '${line}' (type help)`, "w");
+    }
+    function setView(v) { st.view = (v + 6) % 6; log(`[I][main.cpp] setView(): view ${st.view + 1}: ${VIEWS[st.view]}`); }
+    function action() {
+      if (st.view === 0) run("selftest"); else if (st.view === 1) run("inventory"); else if (st.view === 2) run(`trace ${st.trace ? "off" : "on"}`);
+      else if (st.view === 3) run("dump"); else if (st.view === 4) run(st.credits ? "credits add 1" : "credits init 50");
+      else { run(`edge ${EDGE[st.nextEdge].key}`); st.nextEdge = (st.nextEdge + 1) % EDGE.length; }
+    }
+
+    // ---- Drawing: the same six views as rfid_views.h ----
+    const T = (x, y, s, col, font = "8px 'IBM Plex Mono', monospace") => { g.font = font; g.fillStyle = col; g.fillText(s, x, y); };
+    const BOLD = "bold 12px Archivo, sans-serif", SANS = "11px Archivo, sans-serif";
+    function header() {
+      T(8, 18, "RFID", C.ink, BOLD); T(42, 18, VIEWS[st.view], C.muted, SANS);
+      for (let i = 0; i < 6; i++) { g.fillStyle = i === st.view ? C.ink : C.dim; g.beginPath(); g.arc(236 + i * 10, 18, 3, 0, 7); g.fill(); }
+      g.fillStyle = selected() ? C.teal : C.dim; g.beginPath(); g.arc(304, 18, 5, 0, 7); g.fill();
+      g.fillStyle = C.dim; g.fillRect(0, 28, W, 1);
+    }
+    function footer() {
+      g.fillStyle = C.paper; g.fillRect(0, H - 11, W, 11);
+      T(6, H - 3, `click: view  ${HINTS[st.view]}`, C.muted);
+      const right = st.busy ? `${st.busy} ${Math.round(st.progress)}%` : st.note.slice(0, 34);
+      g.font = "8px 'IBM Plex Mono', monospace";
+      T(W - 6 - g.measureText(right).width, H - 3, right, st.busy ? C.amber : st.noteBad ? C.coral : C.teal);
+      if (st.busy) { g.fillStyle = C.amber; g.fillRect(0, H - 1, (W * st.progress) / 100, 1); }
+    }
+    const stat = (x, y, label, value, col = C.ink) => { T(x, y + 7, label, C.muted); T(x, y + 24, value, col, BOLD); };
+    function viewChip(t) {
+      const cx = 52, cy = 92;
+      g.fillStyle = C.muted;
+      for (let i = 0; i < 8; i++) { const o = -21 + i * 6; g.fillRect(cx + o, cy - 34, 2, 6); g.fillRect(cx + o, cy + 28, 2, 6); g.fillRect(cx - 34, cy + o, 6, 2); g.fillRect(cx + 28, cy + o, 6, 2); }
+      g.fillStyle = C.chip; g.fillRect(cx - 28, cy - 28, 56, 56);
+      g.globalAlpha = 0.55 + 0.4 * Math.sin(t * 3); g.fillStyle = C.teal; g.fillRect(cx - 9, cy - 9, 18, 18); g.globalAlpha = 1;
+      T(cx - 20, cy + 23, "MFRC522", C.muted);
+      stat(104, 38, "VersionReg", "92h", C.teal);
+      stat(220, 38, "self-test", ["not run", "FAILED", "passed"][st.selfTest + 1], st.selfTest === 1 ? C.teal : C.muted);
+      stat(104, 80, "SPI clock (max 10)", `${st.mhz} MHz`, st.mhz > 10 ? C.amber : C.ink);
+      stat(220, 80, "waits by", st.irq ? "IRQ wire" : "polling");
+      const db = [18, 23, 18, 23, 33, 38, 43, 48][st.gain];
+      T(104, 129, "receiver gain", C.muted);
+      g.strokeStyle = C.dim; g.strokeRect(104.5, 133.5, 100, 8); g.fillStyle = C.blue; g.fillRect(105, 134, ((db - 18) * 98) / 30, 7);
+      T(210, 140, `${db} dB`, C.ink);
+    }
+    function viewCard(t) {
+      const ax = 70, ay = 100;
+      for (let i = 0; i < 4; i++) {
+        const k = reduce ? i / 4 : (t * 0.6 + i * 0.25) % 1;
+        g.strokeStyle = C.blue; g.globalAlpha = 1 - k; g.beginPath(); g.arc(ax, ay, 14 + k * 52, 0, 7); g.stroke();
+      }
+      g.globalAlpha = 1; g.strokeStyle = C.amber; g.strokeRect(ax - 22, ay - 16, 44, 32); g.strokeRect(ax - 18, ay - 12, 36, 24);
+      const s = selected();
+      if (!s) { T(146, 76, "Hold a card or tag", C.ink, SANS); T(146, 96, "flat on the reader", C.ink, SANS); T(146, 112, `${st.polling ? "polling 12x/s" : "polling paused"}, ${st.taps} taps so far`, C.muted); return; }
+      const bob = reduce ? 0 : Math.sin(t * 2) * 2;
+      g.fillStyle = C.card; g.fillRect(ax - 30, ay - 52 + bob, 60, 38);
+      g.strokeStyle = C.muted; g.strokeRect(ax - 26, ay - 48 + bob, 34, 24);
+      g.fillStyle = C.amber; g.fillRect(ax + 14, ay - 42 + bob, 8, 8);
+      const u = cards[s].uid;
+      T(146, 43, "UID", C.muted); T(146, 58, id(u, " "), C.teal, BOLD); T(146, 72, "MIFARE Classic 1K", C.ink);
+      stat(146, 80, "ATQA", "00 04"); stat(210, 80, "SAK", "08"); stat(262, 80, "UID size", "4 B");
+      T(146, 129, "found in the last 20 polls", C.muted);
+      g.strokeStyle = C.dim; g.strokeRect(146.5, 133.5, 120, 8); g.fillStyle = C.teal; g.fillRect(147, 134, (st.rate * 118) / 100, 7);
+      T(272, 140, `${st.rate}%`, C.ink);
+      if (st.coll) T(146, 153, `collision at bit ${st.coll}`, C.amber);
+    }
+    function viewTrace() {
+      if (!st.trace) return T(8, 46, "Sniffer off. Serial: trace on", C.muted);
+      if (!st.frames.length) return T(8, 46, "Nothing yet: tap a card.", C.muted);
+      st.frames.slice(-10).forEach((f, i) => {
+        const y = 42 + i * 12;
+        T(4, y, f.t.toFixed(1).padStart(6), C.muted); T(44, y, f.dir === ">" ? ">" : "<", f.dir === ">" ? C.amber : C.teal);
+        T(54, y, hxs(f.bytes.slice(0, 9)) + (f.bytes.length > 9 ? " .." : ""), C.ink); T(228, y, f.name.replace(" (short)", "").slice(0, 15), f.dir === ">" ? C.amber : C.teal);
+      });
+      T(4, 154, "ms   > reader to card   < card to reader", C.dim);
+    }
+    function viewMemory() {
+      if (!st.dump) { T(8, 50, "No dump yet.", C.ink); T(8, 64, "Hold a card and double-click,", C.muted); T(8, 76, "or type: dump", C.muted); return; }
+      const col = { maker: C.amber, empty: C.dim, data: C.teal, value: C.blue, trailer: C.coral };
+      for (let s = 0; s < 16; s++) {
+        T(8 + s * 18 + (s < 10 ? 6 : 3), 41, String(s), C.muted);
+        for (let b = 0; b < 4; b++) { g.fillStyle = col[blockKind(st.dump.mem[s * 4 + b], s * 4 + b)]; g.fillRect(8 + s * 18, 44 + b * 18, 16, 16); }
+      }
+      ["maker", "empty", "data", "value", "trailer"].forEach((k, i) => { g.fillStyle = col[k]; g.fillRect(8 + i * 60, 124, 7, 7); T(18 + i * 60, 131, k, C.muted); });
+      T(8, 146, `${id(st.dump.uid)}  16 sectors x 4 blocks x 16 B`, C.ink);
+    }
+    function viewCredits(t) {
+      if (!st.credits) { T(110, 56, "No credits read yet.", C.ink); T(110, 70, "credits init 50   (serial)", C.muted); T(110, 82, "then: credits add 5 / use 3", C.muted); return; }
+      const coins = Math.max(0, Math.min(8, Math.floor(st.credits.v / 10) + (st.credits.v > 0 ? 1 : 0)));
+      for (let i = 0; i < coins; i++) { const y = 140 - i * 9 + (i === coins - 1 && !reduce ? Math.sin(t * 3) * 1.5 : 0); g.fillStyle = C.amber; g.fillRect(28, y, 56, 8); }
+      T(110, 47, "credits (block 8, a value block)", C.muted);
+      T(110, 82, String(st.credits.v), C.ink, "bold 28px Archivo, sans-serif");
+      T(110, 103, `backup ${st.credits.b} (block 9)`, C.muted);
+      T(110, 123, "The card does the maths: you send", C.muted); T(110, 134, "\"add 5\", it computes, TRANSFER commits.", C.muted);
+    }
+    function viewEdge() {
+      const e = st.edge;
+      if (!e) { T(8, 46, "No experiment yet. Serial:", C.ink); EDGE.forEach((x, i) => T(14, 60 + i * 12, `${x.cmd.padEnd(14)} ${x.label}`, C.muted)); return; }
+      T(8, 41, e.label, C.ink);
+      const data = e.example, top = e.max || Math.max(...data.map((r) => r[1])) * 1.1, base = 136, hMax = 84, slot = (W - 16) / data.length, bw = slot - 4;
+      g.fillStyle = C.dim; g.fillRect(8, base, W - 16, 1);
+      data.forEach(([l, v], i) => {
+        const h = (v / top) * hMax, x = 8 + i * slot + 2;
+        g.fillStyle = C.blue; g.fillRect(x, base - h, bw, h);
+        if (e.mark === l) { g.strokeStyle = C.ink; g.strokeRect(x - 2, base - hMax - 2, bw + 4, hMax + 4); }
+        g.font = "8px 'IBM Plex Mono', monospace";
+        const vs = String(v), ls = l;
+        T(x + (bw - g.measureText(vs).width) / 2, base - h - 3, vs, C.ink);
+        T(x + (bw - g.measureText(ls).width) / 2, base + 10, ls, C.muted);
+      });
+    }
+    let stopped = false, raf;
+    function draw(now) {
+      const t = now / 1000;
+      g.fillStyle = C.paper; g.fillRect(0, 0, W, H);
+      [viewChip, viewCard, viewTrace, viewMemory, viewCredits, viewEdge][st.view](t);
+      header(); footer();
+      row.querySelectorAll("[data-v]").forEach((b, i) => b.setAttribute("aria-current", String(i === st.view)));
+      row.querySelector(".auto-flag").textContent = `${VIEWS[st.view]} view · ${st.polling ? "polling" : "paused"}`;
+      rgbDot.setAttribute("fill", now < st.flashUntil ? "var(--silk)" : selected() ? "var(--rfid)" : "var(--silk-dim)");
+      raf = requestAnimationFrame(draw);
+    }
+    // ---- Inputs ----
+    const btn = row.querySelector(".boot-btn");
+    let downAt = 0, clicks = 0, clickTimer;
+    btn.addEventListener("pointerdown", () => { downAt = performance.now(); btn.classList.add("down"); });
+    btn.addEventListener("pointerup", () => {
+      btn.classList.remove("down");
+      if (performance.now() - downAt > 600) { run(`poll ${st.polling ? "off" : "on"}`); return; }
+      clicks++; clearTimeout(clickTimer);
+      clickTimer = setTimeout(() => { if (clicks >= 2) action(); else setView(st.view + 1); clicks = 0; }, 300);
+    });
+    btn.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(st.view + 1); } });
+    row.querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", () => setView(+b.dataset.v)));
+    field.querySelectorAll("[data-f]").forEach((b) => b.addEventListener("click", () => setField(b.dataset.f)));
+    quick.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => run(b.textContent)));
+    term.form.addEventListener("submit", (e) => { e.preventDefault(); run(term.input.value); term.input.value = ""; });
+    log("[I][main.cpp] setup(): rfid-lab: reader task started on core 0, screen on core 1");
+    log("RC522 on SPI3: SS 15 SCK 16 MOSI 17 MISO 18 RST 14 IRQ 13 · 4 MHz", "");
+    log("VersionReg 0x92: MFRC522 v2.0", "");
+    log("Type help, or use the buttons: lay the card on the reader first.", "");
+    raf = requestAnimationFrame(draw);
+    return () => { stopped = true; cancelAnimationFrame(raf); clearTimeout(clickTimer); rgbDot.setAttribute("fill", "var(--silk-dim)"); };
+  }
+
   const LOG = [
     { n: 1, types: ["install"], title: "Install PlatformIO into the project", where: "Mac · test-esp/.venv",
       cmd: "cd test-esp && uv sync && uv run pio --version",
@@ -2612,6 +4209,11 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
       why: "Any provider and model for the oracle: the board sends one OpenAI-style request to a LiteLLM gateway (test-esp/ai-gateway), which maps a name to a provider/model and holds the provider keys. The W3 diagram became an animated, steppable sequence diagram.",
       out: "litellm newest 1.105.0 (2026-10-11) · pinned 1.101.2 (2026-09-24, two weeks old)\nwifi-lab-w3  Flash 20.2% (1,322,878 B)  SUCCESS, no warnings",
       result: "Built. The gateway is not installed yet: uv sync in test-esp/ai-gateway waits for your go. Nothing was sent to the board." },
+    { n: 36, types: ["build", "read"], title: "RFID lab R1–R6: firmware, driver and guide chapter", where: "Mac · no board",
+      cmd: "NXP MFRC522 datasheet rev 3.9 (read-only: self-test bytes, VersionReg, SPI limit, RxGain, IRQ bits)\nuv run pio run -e rfid-lab\nc++ -std=c++17 -Wall -I lib/rfid-kit/src test/host/rfid_format_test.cpp -o <scratch>/rfid_test && <scratch>/rfid_test\nnode check.mjs (the repo's Playwright 1.63, headless Chromium: each RFID lesson at 1280 and 390 px, light and dark)",
+      why: "A new RFID & NFC theme for the RC522 with its white card and key tag: our own MFRC522 driver in lib/rfid-kit (registers, ISO 14443-A, MIFARE Classic, a frame sniffer), one rfid-lab firmware for six steps, an edge lab, and a guide chapter with a 3D field and 3D memory map.",
+      out: "first build: return log_w(...) in void functions (again) -> warn() helper\nrfid-lab  RAM 9.4% (30,764 B)  Flash 6.7% (436,695 B)  SUCCESS, no warnings\nhost test: all rfid format checks passed (CRC_A 50 00 -> 57 CD, 30 00 -> 02 A8, 60 00 -> F5 7B; access bits FF 07 80; value blocks)\nguide: R1-R6 render, three.js 0.160.0 loads, no page errors, no sideways scroll at 390 px",
+      result: "Built and checked on the Mac. No new libraries and nothing installed. Not flashed: rfid-lab waits for your wiring and your go. Nothing was sent to the board." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";
