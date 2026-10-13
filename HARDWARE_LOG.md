@@ -933,3 +933,32 @@ Flash: 18.1% (used 1,183,630 bytes from 6,553,600 bytes)
 ```
 
 **Next, by you:** `uv run pio run -e rfid-lab-r7 -t upload`, then `token` in the monitor, `door-app/.env`, `pnpm install` and `pnpm dev`. Nothing was sent to the board.
+
+### 43. R7 on your board: unreliable reads, EPIPE, UI pass · `build` (Mac) · no board
+
+You flashed R7: the app was live with the time, but a card "can't be read", the LED went red then off when you laid the card down, and Vite printed `ws proxy error: Error: write EPIPE`.
+
+**What I found** by comparing R7 with R1–R6, which work on your board:
+
+| Symptom                                | Likely cause                                                                                                                                                                             | Fix                                                                                                                                         |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| reads slow or failing                  | R7 waited on the IRQ wire but, unlike R1–R6, never fell back to polling when the wire stays quiet: every frame waited out the whole timeout                                              | IRQ fallback after every poll, reported once                                                                                                |
+| reads fail while the chip "looks fine" | a 3.3 V dip (Wi-Fi transmitting, loose header) resets the RC522: VersionReg still answers, but the antenna is off and the timer settings are gone. The health check only read VersionReg | every 2 s also check TPrescalerReg and TxControlReg; restore the settings and say so (`settingsLost()` / `restoreSettings()` in the driver) |
+| "card can't be read" with no reason    | jobs tried once and said "no card" for every failure                                                                                                                                     | three tries with the field off for 5 ms between; messages for no card, chip silent, garbled answer                                          |
+| `ws proxy error: EPIPE`                | React's development mode starts the app twice; the first WebSocket was closed mid-handshake                                                                                              | let it open, then close it; its handlers are detached first                                                                                 |
+
+The board's status now carries `reader` (IRQ or polling, settings restored ×, chip lost ×, last problem) and `board` (uptime, why it last started: power on, crash, watchdog, brownout), shown in the app and by the serial command `status`.
+
+**UI:** a status bar under the title (app ↔ board, board, reader chip, Wi-Fi, clock; amber or red with the reason), a problem banner with what to do, an "On the reader" slot in the door panel (name or "not in the list", Read it, Save its data, the failure reason inline), the access log under the door, card rows on two lines.
+
+```sh
+uv run pio run -e rfid-lab-r1 -e rfid-lab-r2 -e rfid-lab-r3 -e rfid-lab-r4 -e rfid-lab-r5 -e rfid-lab-r6 -e rfid-lab-r7   # build only
+door-app: tsc -p . · vitest run · vite + mock board + headless Chromium (1280 / 390 px)
+```
+
+```text
+rfid-lab-r1 … r7  SUCCESS, no warnings · r7: RAM 17.0% (55,700 B) · Flash 18.1% (1,185,990 B)
+door-app: typecheck clean · 10 tests passed · no page errors, no sideways scroll, no proxy errors in Vite's log
+```
+
+**Next, by you:** `uv run pio run -e rfid-lab-r7 -t upload`, restart `pnpm dev`, and watch the Reader chip cell and the banner while you tap. If it still fails, paste the serial monitor's lines, or say go and I'll read the port myself. Nothing was sent to the board.
