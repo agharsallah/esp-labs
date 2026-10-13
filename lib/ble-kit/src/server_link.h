@@ -130,12 +130,4 @@ class ServerLink : public NimBLEServerCallbacks {
   bool advertiseAgain_ = true;
 };
 
-// Every write or read that crosses the air, for the counters in the link view.
-inline void countRx(size_t bytes) {
-  link().edit([&](LinkState &s) { s.rxOps++, s.rxBytes += bytes; });
-}
-inline void countTx(size_t bytes) {
-  link().edit([&](LinkState &s) { s.txOps++, s.txBytes += bytes; });
-}
-
 }  // namespace ble

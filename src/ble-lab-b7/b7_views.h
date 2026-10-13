@@ -108,8 +108,8 @@ inline void keys(FrameBuffer &fb, const b7::Screen &s, float t) {
   }
   piano(fb, s, 22, 82, (s.octave) * 12, 2);
   char v[64];
-  snprintf(v, sizeof(v), "%s · octave %d · ch %d%s%s", b7::scaleInfo(s.scale).name, s.octave, s.channel + 1, s.touchOn ? " · touch on" : "",
-           s.tune ? " · playing" : "");
+  snprintf(v, sizeof(v), "%s, octave %d, ch %d%s%s", b7::scaleInfo(s.scale).name, s.octave, s.channel + 1, s.touchOn ? ", touch on" : "",
+           s.tune ? ", playing" : "");
   small(fb, 8, 122, pal::muted, v);
   fb.fillRect(8, 136, 8, 6, kOut);
   small(fb, 20, 135, pal::muted, "this board");
@@ -134,9 +134,9 @@ inline void sequencer(FrameBuffer &fb, const b7::Screen &s, float t) {
     }
   }
   char v[64];
-  snprintf(v, sizeof(v), "%s · %d bpm · %s · channel 10 (drums)", s.beat ? s.beat->name : "no beat", s.bpm, s.seqOn ? "playing" : "stopped");
+  snprintf(v, sizeof(v), "%s, %d bpm, %s, channel 10 (drums)", s.beat ? s.beat->name : "no beat", s.bpm, s.seqOn ? "playing" : "stopped");
   small(fb, 6, 130, s.seqOn ? pal::ink : pal::muted, v);
-  small(fb, 6, 142, pal::dim, "beat rock|funk|house|boom · seq on|off · bpm <n>");
+  small(fb, 6, 142, pal::dim, "beat rock|funk|house|boom, seq on|off, bpm <n>");
   (void)t;
 }
 
@@ -162,7 +162,7 @@ inline void roll(FrameBuffer &fb, const b7::Screen &s, float t) {
   }
   fb.drawFastVLine(x1, y0, y1 - y0, pal::muted);
   char v[64];
-  snprintf(v, sizeof(v), "out %lu msgs in %lu packets · in %lu · up to %u per packet", static_cast<unsigned long>(s.stats.msgsOut),
+  snprintf(v, sizeof(v), "out %lu msgs in %lu packets, in %lu, up to %u per packet", static_cast<unsigned long>(s.stats.msgsOut),
            static_cast<unsigned long>(s.stats.packetsOut), static_cast<unsigned long>(s.stats.msgsIn), s.stats.mostPerPacket);
   small(fb, 6, 152, pal::muted, v);
   (void)t;
@@ -205,7 +205,7 @@ inline void link(FrameBuffer &fb, const ble::LinkState &ls, const b7::Screen &s,
     snprintf(w, sizeof(w), "+%.1f ms", sent - presses[i]);
     small(fb, std::min(px, x1 - 50), yNote - 8, pal::amber, w);
   }
-  snprintf(v, sizeof(v), "%s · %lu notes sent · timestamps keep the rhythm", up ? (ls.peer.encrypted ? "encrypted" : "plain") : "advertising",
+  snprintf(v, sizeof(v), "%s, %lu notes sent, timestamps keep the rhythm", up ? (ls.peer.encrypted ? "encrypted" : "plain") : "advertising",
            static_cast<unsigned long>(s.stats.msgsOut));
   small(fb, 6, 146, pal::muted, v);
 }

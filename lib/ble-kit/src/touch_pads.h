@@ -6,7 +6,7 @@
 // touch on, then call it touched above +25 % and released below +15 %: the gap (hysteresis)
 // stops a finger hovering at the edge from flickering on and off.
 //
-// Nothing to wire beyond a jumper in the pin, the other end loose. Keep your hands off the wires
+// Shared by B5-B7 (lib/ble-kit). Nothing to wire beyond a jumper in the pin, the other end loose. Keep your hands off the wires
 // while `touch on` measures the baselines.
 #pragma once
 

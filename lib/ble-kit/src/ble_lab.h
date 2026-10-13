@@ -100,7 +100,7 @@ class BleLab {
     if (passkeyShowing()) bv::passkey(fb, link_, t);
     bv::header(fb, spec_.id, v.name, view_, spec_.viewCount, link_, t);
     char hint[40];
-    if (passkeyShowing() && link_.passkeyCompare) snprintf(hint, sizeof(hint), "click = yes · long = no");
+    if (passkeyShowing() && link_.passkeyCompare) snprintf(hint, sizeof(hint), "click = yes, long = no");
     else if (v.action) snprintf(hint, sizeof(hint), "2x: %s", v.action);
     else snprintf(hint, sizeof(hint), "click: next view");
     bv::footer(fb, hint);

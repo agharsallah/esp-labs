@@ -115,10 +115,10 @@ inline void media(FrameBuffer &fb, const b6::Screen &s, float t) {
   char v[48];
   if (s.lastMedia && since < 4000) snprintf(v, sizeof(v), "sent: %s%s", b6::mediaName(s.lastMedia), s.muted && s.lastMedia == b6::media::kMute ? " (toggle)" : "");
   else if (!s.ready) snprintf(v, sizeof(v), "pair me: Bluetooth settings > Bench B6");
-  else snprintf(v, sizeof(v), "volume %+d steps since power-on%s", s.volumeSteps, s.touchOn ? " · touch 1/2" : "");
+  else snprintf(v, sizeof(v), "volume %+d steps since power-on%s", s.volumeSteps, s.touchOn ? ", touch 1/2" : "");
   small(fb, 8, 96, s.ready ? pal::ink : pal::amber, v);
   soundPath(fb, 120, since, s.ready);
-  legend(fb, "click play/pause · 2x next · hold mute · hold 2 s: view");
+  legend(fb, "click play/pause, 2x next, hold mute, hold 2 s: view");
   (void)t;
 }
 
@@ -151,7 +151,7 @@ inline void slides(FrameBuffer &fb, const b6::Screen &s, float t) {
   fb.fillTriangle(60, 81, 72, 71, 72, 91, hot && s.slideDir < 0 ? kBlue : pal::dim);
   fb.fillTriangle(260, 81, 248, 71, 248, 91, hot && s.slideDir > 0 ? kBlue : pal::dim);
   small(fb, 8, 128, s.ready ? pal::muted : pal::amber, s.ready ? "keys: right arrow, left arrow, b" : "pair me first, then open your slides");
-  legend(fb, "click next · 2x back · hold black · hold 2 s: view");
+  legend(fb, "click next, 2x back, hold black, hold 2 s: view");
   (void)t;
 }
 

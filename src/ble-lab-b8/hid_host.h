@@ -13,7 +13,7 @@
 #include "ble_link.h"
 #include "hid_report.h"
 #include "host_state.h"
-#include "server_link.h"  // ble::countRx
+#include "ble_link.h"
 
 namespace b8 {
 

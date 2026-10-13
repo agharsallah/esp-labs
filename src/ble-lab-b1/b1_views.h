@@ -208,7 +208,7 @@ inline void inspect(FrameBuffer &fb, const ble::Heard *h, const b1::Settings &se
   snprintf(v, sizeof(v), "%s  %s  %s%s", addr, ad::addrKindName(h->addrKind()), h->connectable ? "connectable" : "broadcast only",
            h->scanResponse ? " +rsp" : "");
   small(fb, 6, 54, pal::muted, v);
-  snprintf(v, sizeof(v), "%d dBm (avg %d) ~%.1f m · %lu pkts · every %lu ms", h->rssi, int(h->rssiAvg), ad::distanceMeters(int(h->rssiAvg), set.rssiAt1m),
+  snprintf(v, sizeof(v), "%d dBm (avg %d) ~%.1f m, %lu pkts, every %lu ms", h->rssi, int(h->rssiAvg), ad::distanceMeters(int(h->rssiAvg), set.rssiAt1m),
            static_cast<unsigned long>(h->packets), static_cast<unsigned long>(h->lastInterval));
   small(fb, 6, 64, pal::ink, v);
   packetCells(fb, 6, 78, h->adv, h->advLen, "advert");
@@ -242,7 +242,7 @@ inline void air(FrameBuffer &fb, const b1::AirHistory &hist, const ble::Heard *r
   small(fb, x0, y0 + 4, pal::teal, v);
   snprintf(v, sizeof(v), "devices (max %u)", peakDev);
   small(fb, x0 + 80, y0 + 4, pal::amber, v);
-  snprintf(v, sizeof(v), "%s · %u/%u ms · %u%% listening", scanning ? (set.active ? "active" : "passive") : "paused", set.windowMs, set.intervalMs,
+  snprintf(v, sizeof(v), "%s, %u/%u ms, %u%% listening", scanning ? (set.active ? "active" : "passive") : "paused", set.windowMs, set.intervalMs,
            set.windowMs * 100 / set.intervalMs);
   small(fb, x0, y0 + 16, pal::muted, v);
 

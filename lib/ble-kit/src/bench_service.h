@@ -252,7 +252,9 @@ class BenchService : public NimBLECharacteristicCallbacks {
     BLE_NOTE(Rx, "%s %s (CCCD = %u)", subValue ? "subscribe" : "unsubscribe", chrName(i), subValue);
   }
 
-  // A refused read or write (not encrypted, not authenticated) ends up here.
+  // Errors on our own sends. A read or write refused for missing encryption usually never gets
+  // here: the NimBLE host checks the permission itself and answers the phone with "Insufficient
+  // Authentication" (the phone then starts pairing). Kept for the cases that do arrive.
   void onStatus(NimBLECharacteristic *c, NimBLEConnInfo &, int code) override {
     const int i = indexOf(c);
     if (code == 0 || i < 0) return;

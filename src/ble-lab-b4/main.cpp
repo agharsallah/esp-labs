@@ -211,7 +211,7 @@ void setup(BleLab &lab) {
   bench::advertise(lab.spec().deviceName, false);
   applyAllow();
   refreshBonds();
-  BLE_NOTE(Info, "pairing: %s · lock %s · %s may connect", b4v::methodName(settings.method), settings.lock ? "on" : "off",
+  BLE_NOTE(Info, "pairing: %s, lock %s, %s may connect", b4v::methodName(settings.method), settings.lock ? "on" : "off",
            settings.allowBondedOnly ? "bonded" : "anyone");
 }
 

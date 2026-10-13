@@ -83,6 +83,14 @@ inline Link &link() {
   return l;
 }
 
+// Every operation that crosses the air, for the traffic counters on the link view.
+inline void countRx(size_t bytes) {
+  link().edit([&](LinkState &s) { s.rxOps++, s.rxBytes += bytes; });
+}
+inline void countTx(size_t bytes) {
+  link().edit([&](LinkState &s) { s.txOps++, s.txBytes += bytes; });
+}
+
 // ---- The activity log ------------------------------------------------------------------------
 // Every lab writes what happens on the air here: "→ notify button click", "← write LED ff8000".
 // loop() prints new lines to serial and the log view draws the last few.

@@ -103,7 +103,7 @@ inline void ceremony(FrameBuffer &fb, const b4::Ceremony &c, const ble::LinkStat
       explain(fb, 100, waiting >= 0 ? waiting : b4::Bonded, c.how);
     }
   }
-  snprintf(v, sizeof(v), "board asks: %s · lock %s · %s", methodName(set.method), set.lock ? "on" : "off", set.allowBondedOnly ? "bonded only" : "anyone");
+  snprintf(v, sizeof(v), "board asks: %s, lock %s, %s", methodName(set.method), set.lock ? "on" : "off", set.allowBondedOnly ? "bonded only" : "anyone");
   small(fb, 6, 128, pal::muted, v);
   small(fb, 6, 140, pal::dim, "ring = inferred: NimBLE doesn't report that step");
 }
