@@ -87,7 +87,7 @@ flowchart LR
 | Wi-Fi           | W1    | Scan & join           | `wifi-lab-w1`          | built    | station mode, channels, RSSI in dBm, security types, NVS, NTP, mDNS                  |
 | Wi-Fi           | W2    | Phone control         | `wifi-lab-w2(-remote)` | on board | REST, WebSocket, captive portal, OTA, relay through a tunnel                         |
 | Wi-Fi           | W3    | Internet & AI         | `wifi-lab-w3`          | built    | HTTPS, JSON filters, worker tasks, AI function calling via LiteLLM                   |
-| RFID & NFC      | R1–R7 | RFID labs             | `rfid-lab-r1` … `r7`   | R1 works | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing |
+| RFID & NFC      | R1–R8 | RFID labs             | `rfid-lab-r1` … `r8`   | R1 works | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing |
 | Sensors         |       |                       |                        | planned  | I2C sensors (BME280), data over Wi-Fi                                                |
 | Bluetooth LE    |       |                       |                        | planned  | BLE advertising, talking to a phone                                                  |
 
@@ -254,15 +254,16 @@ sequenceDiagram
 
 Each lab is its own firmware with its own command, like the Wi-Fi labs:
 
-| Lab                | Command                                   | Views              | Adds these serial commands                                                             |
-| ------------------ | ----------------------------------------- | ------------------ | -------------------------------------------------------------------------------------- |
-| R1 Wire & talk     | `uv run pio run -e rfid-lab-r1 -t upload` | chip · card        | `chip` `reset` `selftest` `loopback` `regs` `spi` `gain` `timeout` `irq`               |
-| R2 Wake a card     | `uv run pio run -e rfid-lab-r2 -t upload` | + trace            | `poll` `trace`                                                                         |
-| R3 Who's there     | `uv run pio run -e rfid-lab-r3 -t upload` | (same)             | `inventory`                                                                            |
-| R4 Inside the card | `uv run pio run -e rfid-lab-r4 -t upload` | + memory           | `dump` `read`                                                                          |
-| R5 Write & count   | `uv run pio run -e rfid-lab-r5 -t upload` | + credits          | `write` `credits`                                                                      |
-| R6 Edge lab        | `uv run pio run -e rfid-lab-r6 -t upload` | + edge             | `edge`                                                                                 |
-| R7 Card manager    | `uv run pio run -e rfid-lab-r7 -t upload` | door · cards · log | a bench door managed from the React app in [`door-app`](door-app/README.md) over Wi-Fi |
+| Lab                | Command                                   | Views              | Adds these serial commands                                                               |
+| ------------------ | ----------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------- |
+| R1 Wire & talk     | `uv run pio run -e rfid-lab-r1 -t upload` | chip · card        | `chip` `reset` `selftest` `loopback` `regs` `spi` `gain` `timeout` `irq`                 |
+| R2 Wake a card     | `uv run pio run -e rfid-lab-r2 -t upload` | + trace            | `poll` `trace`                                                                           |
+| R3 Who's there     | `uv run pio run -e rfid-lab-r3 -t upload` | (same)             | `inventory`                                                                              |
+| R4 Inside the card | `uv run pio run -e rfid-lab-r4 -t upload` | + memory           | `dump` `read`                                                                            |
+| R5 Write & count   | `uv run pio run -e rfid-lab-r5 -t upload` | + credits          | `write` `credits`                                                                        |
+| R6 Edge lab        | `uv run pio run -e rfid-lab-r6 -t upload` | + edge             | `edge`                                                                                   |
+| R7 Card manager    | `uv run pio run -e rfid-lab-r7 -t upload` | door · cards · log | a bench door managed from the React app in [`door-app`](door-app/README.md) over Wi-Fi   |
+| R8 Card friends    | `uv run pio run -e rfid-lab-r8 -t upload` | stage · cards      | a kids' lab: each card's friend pops out in 3D in [`friends-app`](friends-app/README.md) |
 
 Each [`src/rfid-lab-rN/main.cpp`](src/rfid-lab-r1/main.cpp) is a short list: that lab's views (with what a double-click does on each) and its commands, so `help` shows exactly what the lesson teaches. The shared code is in [`lib/rfid-lab-kit`](lib/rfid-lab-kit/src): the reader task, the six screen views, the edge experiments, every command (`lab_commands.h`) and the lab shell (`lab.h`: screen, button, LED, serial). No RFID library: [`lib/rfid-kit`](lib/rfid-kit/src) is our own driver, written in layers so every byte stays visible. The reader runs in its own task on core 0 and owns the chip; `loop()` on core 1 only draws and parses commands.
 
@@ -310,6 +311,8 @@ flowchart LR
 | R6 Edge lab        | `edge spi`, `edge gain`, `edge timeout`, `edge timing`, `edge irq`, `edge crc`, `edge stress [n]`         | each setting pushed until it breaks: SPI clock vs the 10 MHz spec, gain vs distance, the card's ~86 µs reply time, per-step timing, IRQ vs polling, offloading the CRC, read reliability                               |
 
 **R7 · Card manager** (`src/rfid-lab-r7`, app in [`door-app`](door-app/README.md)): the board keeps a list of up to 20 cards in NVS (name, role, blocked, end date, hours, uses left) and decides every tap itself; the card only brings its UID. A JSON API and a WebSocket on port 80 (the same web libraries as W2) let the React app add cards (tap within 20 s), edit and block them, copy one card's rules to another, replace a lost card (the new one takes over its rules, the old one is blocked), write a name label, wipe the lab data blocks, open a lock remotely and switch on lockdown, with a live access log. Two simulated locks: the front door (every role) and the admin room (admin cards only); the one reader is mounted at one of them at a time (app or serial `at front|admin`). Card data: save a card's lab blocks (4-6, 8-10) as a snapshot on the board (`snapshots.h`, up to 8 in NVS), write it back, copy a card onto another (two taps), compare a snapshot with the card on the reader, download and import snapshots as JSON files. A copy never moves block 0 or the trailers, so it stays a different card to the door. Every change needs the admin token (shared with W2, now in `lib/wifi-kit/src/api_token.h`); the app's Vite proxy adds it from `.env`, so the browser never holds it. Rule order in `access_rules.h`, checked on the Mac by `test/host/door_rules_test.cpp`.
+
+**R8 · Card friends** (`src/rfid-lab-r8`, app in [`friends-app`](friends-app/README.md)): a playful lab for kids, built from R7's parts (driver, reader health checks, web libraries, admin token). Every card is the home of a friend: a fox, a robot, a dragon, a penguin, an alien, a cat, a frog or a unicorn. A card the board hasn't seen adds itself on its first tap (up to 12, in NVS namespace `friends`, separate from R7's list); the board stores only which friend lives on it and its name, and reads nothing but the UID. Tap a card: the friend pops out on the board's screen with stars (`friend_views.h`, drawn from circles and triangles in `characters.h`), the LED flashes in its colour, and the app's 3D stage (three.js, toon shading, no model files) plays its own move, sparkles, sky and tune. Card 1 and card 2 show different friends, and two cards tapped one after the other play together. The app has two tabs: **Play** (stage, cards, a shelf of friends to drag onto cards, also by tap-then-tap or keyboard) and **Setup** (real or pretend board, reader health, the card list, sound, calm motion, day/night). Serial: `cards`, `cast`, `give <n> <friend>`, `name <n> <name>`, `forget <n>`.
 
 **Guard rails:** the firmware only uses the factory key on your own cards; it never writes block 0 or a sector trailer (a trailer with broken access bits locks its sector for good), and it checks a block's access bits before writing. The key never goes into the trace.
 

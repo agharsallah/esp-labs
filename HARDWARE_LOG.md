@@ -6,19 +6,19 @@ Every command that installs software, talks to the board, or flashes it, with wh
 
 ## Overview
 
-| What                      | Value                                                                                                                                                                                                                              |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                                                                                       |
-| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                                                                                    |
-| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                                                                                         |
-| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                                                                                         |
-| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                                                                                  |
-| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                                                                                        |
-| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                                                             |
-| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                                                          |
-| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                                                              |
-| **Firmware on board now** | **`rfid-lab-r7`** with the entry 43 fixes, flashed by you: reads work, also with the card a little above the reader. Built, not flashed: entries 44-45 (names fix, loading states, admin room), `rfid-lab-r1` … `r6`, `wifi-lab-*` |
-| Flashes so far            | 14 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab, rfid-lab-r7 twice by you)                                                                                          |
+| What                      | Value                                                                                                                                                                                                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                                                                                                                 |
+| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                                                                                                              |
+| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                                                                                                                   |
+| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                                                                                                                   |
+| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                                                                                                            |
+| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                                                                                                                  |
+| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                                                                                       |
+| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                                                                                    |
+| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                                                                                        |
+| **Firmware on board now** | **`rfid-lab-r7`** with the entry 43 fixes, flashed by you: reads work, also with the card a little above the reader. Built, not flashed: entries 44-45 (names fix, loading states, admin room), `rfid-lab-r8` (entry 46), `rfid-lab-r1` … `r6`, `wifi-lab-*` |
+| Flashes so far            | 14 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab, rfid-lab-r7 twice by you)                                                                                                                    |
 
 ### What is installed on the Mac
 
@@ -1033,3 +1033,31 @@ door-app: typecheck clean · 10 tests passed · no page errors, no sideways scro
 ```
 
 **Next, by you:** `uv run pio run -e rfid-lab-r7 -t upload`, reload the app, set one card's role to admin (Edit → Role), press **Move reader here** on the Admin room, then tap that card and a resident card. Nothing was sent to the board.
+
+### 46. R8 Card friends: a kids' lab with 3D friends · `install` + `build` (Mac) · no board
+
+You asked for another RFID example for kids, reusing what we have: more animation, 3D and effects, tag 1 showing something different from tag 2, characters you can move onto a card, and two tabs (setup, play).
+
+| Part                          | What it is                                                                                                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Firmware `rfid-lab-r8`        | R7's driver, reader health checks, web libraries and admin token. New cards add themselves on their first tap (up to 12, NVS `friends`); the board stores friend + name     |
+| Board screen                  | stage view: the friend pops out of the card with stars, its name and visits; idle: the cast walks by. cards view: all 12 with their friends                                 |
+| API                           | `GET /api/status`, `/api/cards`, `/api/cast`, `PUT /api/card?uid=` `{character, name}`, `DELETE /api/card`, `POST /api/show`, `POST /api/chip-reset`, WS `/ws` (`tap` msgs) |
+| `friends-app` (React + three) | **Play**: 3D stage, card row, friend shelf (drag, tap-then-tap, keyboard). **Setup**: real or pretend board, reader health, card list, sound, calm motion, day/night        |
+| 8 friends                     | each with its own colours, sky, move (spin, dance, fly, slide, beam, wiggle, leap, gallop), sparkles and Web Audio tune                                                     |
+
+```sh
+uv run pio run -e rfid-lab-r8                      # build only; first build installed ESPAsyncWebServer 3.12.1, AsyncTCP 3.5.0, ArduinoJson 7.4.3 into .pio/libdeps/rfid-lab-r8
+cd friends-app && pnpm install                     # door-app's exact versions + three 0.186.1, @types/three 0.186.0
+pnpm typecheck · pnpm test · vite + pretend board + headless Chromium (390 / 1280 px)
+```
+
+```text
+rfid-lab-r8 SUCCESS, no warnings · RAM 16.3% (53,500 B) · Flash 17.6% (1,153,862 B)
+friends-app: typecheck clean · 8 tests passed · no page errors, no sideways scroll
+headless: tap card 1 (Foxy spins out), drag Bolt onto card 2 at 390 and 1280 px, tap-then-tap Ember onto card 1, a new card asks "who lives here?"
+```
+
+The first headless run found a real phone problem: at 390 px the friends sat below the screen, so a finger couldn't drag one onto a card. Fixed with a shorter stage on phones, smaller card tiles, the friends in one row that swipes sideways, and auto-scroll while dragging near the screen edge.
+
+**Next, by you:** `uv run pio run -e rfid-lab-r8 -t upload`, `token`, then `cp .env.example .env` in `test-esp/friends-app` (BENCH_TOKEN=…), `pnpm dev`, open `http://localhost:5175`. Tap the white card and the key tag once each, then drag a friend onto each. Nothing was sent to the board.
