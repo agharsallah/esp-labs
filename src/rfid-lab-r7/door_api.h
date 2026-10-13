@@ -1,0 +1,265 @@
+// R7's web side: a JSON API and a WebSocket on port 80, for the React app in test-esp/door-app.
+// ESPAsyncWebServer answers in its own network task, so the screen and the reader never wait.
+//
+// Endpoints (JSON). Reading is open on your Wi-Fi; every change needs the admin token
+// (header "Authorization: Bearer <token>", serial command `token`). The app's dev server adds it
+// from test-esp/door-app/.env, so the token never reaches the browser.
+//   GET    /api                  this list
+//   GET    /api/status           door, reader chip, Wi-Fi, clock, lockdown, enrollment
+//   GET    /api/cards            the card list, each with what a tap would do right now
+//   GET    /api/events?since=N   the access log after event N (the last 50 are kept)
+//   POST   /api/enroll           {"name": "Anna", "role": "resident|guest|maintenance"}  -> 202 job
+//   POST   /api/cancel-enroll    stop waiting for a new card
+//   PUT    /api/card?uid=HEX     any of {"name", "role", "blocked", "validUntil", "fromHour",
+//                                "toHour", "usesLeft"}                                   -> 200 card
+//   DELETE /api/card?uid=HEX     remove it from the list (the card itself is not touched)
+//   POST   /api/label?uid=HEX    write its name and role into blocks 4-5 (card on reader) -> 202 job
+//   POST   /api/wipe?uid=HEX     data blocks 4-6, 8-10 back to zeros (card on reader)     -> 202 job
+//   POST   /api/inspect          read whatever card is on the reader                     -> 202 job
+//   POST   /api/open             open the door for 5 s from the app
+//   PUT    /api/lockdown         {"on": true}: only maintenance cards open
+//   WS     /ws                   pushes {"type": "status" | "cards" | "event" | "job", "data": {...}}
+// A 202 answers {"job": id}; the result arrives later as a "job" message with that id.
+#pragma once
+
+#include <ArduinoJson.h>
+#include <AsyncJson.h>
+#include <ESPAsyncWebServer.h>
+
+#include <mutex>
+
+#include "api_token.h"
+#include "door.h"
+#include "registry.h"
+
+class DoorApi {
+ public:
+  DoorApi(Registry &reg, Door &door, const ApiToken &token) : reg_(reg), door_(door), token_(token) {}
+
+  void begin() {
+    ws_.onEvent([this](AsyncWebSocket *, AsyncWebSocketClient *client, AwsEventType type, void *, uint8_t *, size_t) {
+      if (type != WS_EVT_CONNECT) return;
+      std::lock_guard<std::mutex> lock(mutex_);  // the latest picture straight away
+      if (!status_.isEmpty()) client->text(wrap("status", status_));
+      client->text(wrap("cards", cardsJson()));
+    });
+    server_.addHandler(&ws_);
+
+    auto get = [this](const char *path, ArRequestHandlerFunction fn) { server_.on(AsyncURIMatcher::exact(path), HTTP_GET, fn); };
+    auto post = [this](const char *path, ArRequestHandlerFunction fn) { server_.on(AsyncURIMatcher::exact(path), HTTP_POST, fn); };
+
+    server_.on(AsyncURIMatcher::exact("/"), HTTP_GET, [](AsyncWebServerRequest *req) {
+      req->send(200, "text/plain", "rfid-lab-r7, the bench door. Use the React app in test-esp/door-app, or the JSON API at /api\n");
+    });
+    get("/api", [](AsyncWebServerRequest *req) { req->send(200, "application/json", kIndex); });
+    get("/api/status", [this](AsyncWebServerRequest *req) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (status_.isEmpty()) return error(req, 503, "starting up");
+      req->send(200, "application/json", status_);
+    });
+    get("/api/cards", [this](AsyncWebServerRequest *req) { req->send(200, "application/json", cardsJson()); });
+    get("/api/events", [this](AsyncWebServerRequest *req) {
+      const uint32_t since = req->hasParam("since") ? uint32_t(req->getParam("since")->value().toInt()) : 0;
+      JsonDocument d;
+      JsonArray a = d.to<JsonArray>();
+      for (const DoorEvent &e : door_.events(since)) {
+        JsonObject o = a.add<JsonObject>();
+        o["seq"] = e.seq, o["at"] = e.at, o["uid"] = e.uid, o["name"] = e.name, o["what"] = e.what, o["decision"] = e.decision;
+      }
+      send(req, 200, d);
+    });
+
+    json("/api/enroll", HTTP_POST, [this](AsyncWebServerRequest *req, JsonObjectConst body) {
+      Door::Request r;
+      r.job = Door::Job::Enroll;
+      const char *name = body["name"] | "";
+      if (!validName(name)) return error(req, 400, "name: 1-23 plain characters (A-Z, digits, space, - . ')");
+      strlcpy(r.name, name, sizeof(r.name));
+      if (!door::roleFromName(body["role"] | "resident", r.role)) return error(req, 400, "role: resident, guest or maintenance");
+      queued(req, door_.submit(r));
+    });
+    post("/api/cancel-enroll", [this](AsyncWebServerRequest *req) {
+      if (!admin(req)) return;
+      Door::Request r;
+      r.job = Door::Job::CancelEnroll;
+      queued(req, door_.submit(r));
+    });
+    json("/api/card", HTTP_PUT, [this](AsyncWebServerRequest *req, JsonObjectConst body) { editCard(req, body); });
+    server_.on(AsyncURIMatcher::exact("/api/card"), HTTP_DELETE, [this](AsyncWebServerRequest *req) {
+      uint8_t uid[10], len = 0;
+      if (!admin(req) || !uidParam(req, uid, len)) return;
+      if (!reg_.remove(uid, len)) return error(req, 404, "no card with this uid in the list");
+      req->send(200, "application/json", "{\"ok\":true}");
+    });
+    for (const char *path : {"/api/label", "/api/wipe"}) {
+      post(path, [this, path](AsyncWebServerRequest *req) {
+        Door::Request r;
+        if (!admin(req) || !uidParam(req, r.uid, r.uidLen)) return;
+        r.job = strcmp(path, "/api/label") == 0 ? Door::Job::Label : Door::Job::Wipe;
+        queued(req, door_.submit(r));
+      });
+    }
+    post("/api/inspect", [this](AsyncWebServerRequest *req) { simpleJob(req, Door::Job::Inspect); });
+    post("/api/open", [this](AsyncWebServerRequest *req) { simpleJob(req, Door::Job::Open); });
+    post("/api/chip-reset", [this](AsyncWebServerRequest *req) { simpleJob(req, Door::Job::ChipReset); });
+    json("/api/lockdown", HTTP_PUT, [this](AsyncWebServerRequest *req, JsonObjectConst body) {
+      if (!body["on"].is<bool>()) return error(req, 400, "send {\"on\": true} or {\"on\": false}");
+      reg_.setLockdown(body["on"].as<bool>());
+      req->send(200, "application/json", body["on"].as<bool>() ? "{\"lockdown\":true}" : "{\"lockdown\":false}");
+    });
+
+    server_.onNotFound([](AsyncWebServerRequest *req) { error(req, 404, "no such endpoint, see /api"); });
+    server_.begin();
+    log_i("Web server on port 80: API at /api, live updates at /ws");
+  }
+
+  // ---- From loop(): the status, card list changes and the reader's messages, to every client ----
+
+  void publishStatus(const String &json) {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      status_ = json;
+    }
+    if (ws_.count()) ws_.textAll(wrap("status", json));
+  }
+
+  void loop() {
+    const uint32_t now = millis();
+    if (now - lastCleanup_ > 2000) lastCleanup_ = now, ws_.cleanupClients();
+    String msg;
+    while (door_.takeMessage(msg))
+      if (ws_.count()) ws_.textAll(msg);
+    // The list changed (an edit, a tap, an enrollment), or a minute passed ("now" depends on the time).
+    const uint32_t v = reg_.version();
+    if (v != cardsVersion_ || now - cardsSent_ > 60'000) {
+      cardsVersion_ = v, cardsSent_ = now;
+      if (ws_.count()) ws_.textAll(wrap("cards", cardsJson()));
+    }
+  }
+
+  size_t clients() const { return ws_.count(); }
+
+ private:
+  using JsonFn = std::function<void(AsyncWebServerRequest *, JsonObjectConst)>;
+
+  // A JSON-body route; admin only (every route with a body changes something).
+  void json(const char *path, WebRequestMethodComposite method, JsonFn fn) {
+    auto *h = new AsyncCallbackJsonWebHandler(path, [this, fn](AsyncWebServerRequest *req, JsonVariant &body) {
+      if (!admin(req)) return;
+      if (!body.is<JsonObject>()) return error(req, 400, "send a JSON object");
+      fn(req, body.as<JsonObjectConst>());
+    });
+    h->setMethod(method);
+    h->setMaxContentLength(512);
+    server_.addHandler(h);
+  }
+
+  void simpleJob(AsyncWebServerRequest *req, Door::Job job) {
+    if (!admin(req)) return;
+    Door::Request r;
+    r.job = job;
+    queued(req, door_.submit(r));
+  }
+
+  void editCard(AsyncWebServerRequest *req, JsonObjectConst b) {
+    uint8_t uid[10], len = 0;
+    if (!uidParam(req, uid, len)) return;
+    // Check everything first, then change the card in one go.
+    const char *name = b["name"] | static_cast<const char *>(nullptr);
+    if (name && !validName(name)) return error(req, 400, "name: 1-23 plain characters (A-Z, digits, space, - . ')");
+    door::Role role{};
+    const bool hasRole = !b["role"].isNull();
+    if (hasRole && !door::roleFromName(b["role"] | "", role)) return error(req, 400, "role: resident, guest or maintenance");
+    if (!b["blocked"].isNull() && !b["blocked"].is<bool>()) return error(req, 400, "blocked: true or false");
+    const long until = b["validUntil"] | -1L, from = b["fromHour"] | -1L, to = b["toHour"] | -1L, uses = b["usesLeft"] | -2L;
+    if (!b["validUntil"].isNull() && until < 0) return error(req, 400, "validUntil: unix seconds, 0 = no end date");
+    if ((!b["fromHour"].isNull() && (from < 0 || from > 23)) || (!b["toHour"].isNull() && (to < 0 || to > 24)))
+      return error(req, 400, "fromHour 0-23, toHour 0-24 (equal = any time)");
+    if (!b["usesLeft"].isNull() && (uses < -1 || uses > 9999)) return error(req, 400, "usesLeft: -1 (unlimited) to 9999");
+    door::Card after;
+    const bool found = reg_.update(uid, len, [&](door::Card &c) {
+      if (name) strlcpy(c.name, name, sizeof(c.name));
+      if (hasRole) c.role = role;
+      if (b["blocked"].is<bool>()) c.blocked = b["blocked"].as<bool>();
+      if (!b["validUntil"].isNull()) c.validUntil = uint32_t(until);
+      if (!b["fromHour"].isNull()) c.fromHour = uint8_t(from);
+      if (!b["toHour"].isNull()) c.toHour = uint8_t(to == 24 ? 0 : to);
+      if (!b["usesLeft"].isNull()) c.usesLeft = int16_t(uses);
+    }, &after);
+    if (!found) return error(req, 404, "no card with this uid in the list");
+    door::Clock clk;
+    doorjson::clockNow(clk);
+    JsonDocument d;
+    d["ok"] = true;
+    doorjson::card(d["card"].to<JsonObject>(), after, clk, reg_.lockdown());
+    send(req, 200, d);
+  }
+
+  String cardsJson() {
+    door::Clock clk;
+    doorjson::clockNow(clk);
+    const bool lockdown = reg_.lockdown();
+    JsonDocument d;
+    JsonArray a = d.to<JsonArray>();
+    for (const door::Card &c : reg_.list()) doorjson::card(a.add<JsonObject>(), c, clk, lockdown);
+    String out;
+    serializeJson(d, out);
+    return out;
+  }
+
+  // Names go to a 16-character card block and a small screen font: plain ASCII only.
+  static bool validName(const char *s) {
+    const size_t n = strlen(s);
+    if (n == 0 || n > 23) return false;
+    for (size_t i = 0; i < n; i++)
+      if (!(isalnum(uint8_t(s[i])) || strchr(" -.'_", s[i]))) return false;
+    return true;
+  }
+
+  bool admin(AsyncWebServerRequest *req) {
+    if (req->hasHeader("Authorization") && token_.allows(req->header("Authorization"))) return true;
+    error(req, 401, "admin action: send Authorization: Bearer <token> (serial command: token)");
+    return false;
+  }
+
+  bool uidParam(AsyncWebServerRequest *req, uint8_t *uid, uint8_t &len) {
+    if (req->hasParam("uid") && door::uidFromHex(req->getParam("uid")->value().c_str(), uid, len)) return true;
+    error(req, 400, "uid: 8, 14 or 20 hex digits, e.g. ?uid=9C4F2A1B");
+    return false;
+  }
+
+  static void queued(AsyncWebServerRequest *req, uint32_t id) {
+    if (!id) return error(req, 503, "the reader is busy, try again");
+    req->send(202, "application/json", String("{\"job\":") + id + "}");
+  }
+
+  static void send(AsyncWebServerRequest *req, int code, JsonDocument &d) {
+    String out;
+    serializeJson(d, out);
+    req->send(code, "application/json", out);
+  }
+
+  static void error(AsyncWebServerRequest *req, int code, const char *message) {
+    JsonDocument d;
+    d["error"] = message;
+    send(req, code, d);
+  }
+
+  static String wrap(const char *type, const String &data) { return String("{\"type\":\"") + type + "\",\"data\":" + data + "}"; }
+
+  static constexpr const char *kIndex =
+      "{\"endpoints\":[\"GET /api/status\",\"GET /api/cards\",\"GET /api/events?since=N\",\"POST /api/enroll {name,role}\","
+      "\"POST /api/cancel-enroll\",\"PUT /api/card?uid=HEX {name,role,blocked,validUntil,fromHour,toHour,usesLeft}\","
+      "\"DELETE /api/card?uid=HEX\",\"POST /api/label?uid=HEX\",\"POST /api/wipe?uid=HEX\",\"POST /api/inspect\","
+      "\"POST /api/open\",\"POST /api/chip-reset\",\"PUT /api/lockdown {on}\",\"WS /ws\"],"
+      "\"admin\":\"every change: Authorization: Bearer <token>\"}";
+
+  Registry &reg_;
+  Door &door_;
+  const ApiToken &token_;
+  AsyncWebServer server_{80};
+  AsyncWebSocket ws_{"/ws"};
+  std::mutex mutex_;
+  String status_;
+  uint32_t lastCleanup_ = 0, cardsVersion_ = 0, cardsSent_ = 0;
+};

@@ -1,10 +1,10 @@
-// The admin token: a random secret that guards the actions that could hurt the bench
-// (firmware update, forgetting the Wi-Fi network, rebooting).
+// The admin token: a random secret that guards the actions that could change the bench (W2:
+// firmware update, forgetting the Wi-Fi network, rebooting; R7: every change to the card list).
 //
-// It is created on first boot from the chip's hardware random number generator and kept
-// in NVS. It is printed over serial on boot and with the `token` command, never sent by the
-// API. The dashboard's Node server keeps a copy in its .env file and adds it to admin requests
-// as "Authorization: Bearer <token>". `token new` makes a fresh one.
+// It is created on first boot from the chip's hardware random number generator and kept in NVS
+// (namespace "api", so every lab on this board shares it). It is printed over serial with the
+// `token` command, never sent by the API. The Mac side keeps a copy in a git-ignored .env file
+// and adds it to admin requests as "Authorization: Bearer <token>". `token new` makes a fresh one.
 #pragma once
 
 #include <Arduino.h>
