@@ -238,16 +238,16 @@ void publishStatus() {
   const DoorState &s = state.door;
   dj["mode"] = s.mode == DoorState::Mode::Open ? "open" : s.mode == DoorState::Mode::Denied ? "denied" : "locked";
   dj["msLeft"] = s.mode == DoorState::Mode::Locked ? 0 : max<int32_t>(0, int32_t(s.modeUntil - millis()));
-  dj["name"] = s.lastName;
-  dj["uid"] = s.lastUid;
-  dj["why"] = s.lastWhy;
-  if (s.present) d["present"] = s.presentUid;
+  dj["name"] = doorjson::copied(s.lastName);
+  dj["uid"] = doorjson::copied(s.lastUid);
+  dj["why"] = doorjson::copied(s.lastWhy);
+  if (s.present) d["present"] = doorjson::copied(s.presentUid);
   else d["present"] = nullptr;
   if (s.wait != DoorState::Wait::None) {
     JsonObject w = d["waiting"].to<JsonObject>();
     w["for"] = s.wait == DoorState::Wait::Enroll ? "enroll" : s.wait == DoorState::Wait::Replace ? "replace" : "copy";
-    w["name"] = s.waitName;
-    w["uid"] = s.waitUid;
+    w["name"] = doorjson::copied(s.waitName);
+    w["uid"] = doorjson::copied(s.waitUid);
     w["msLeft"] = max<int32_t>(0, int32_t(s.waitUntil - millis()));
   } else {
     d["waiting"] = nullptr;
@@ -259,7 +259,7 @@ void publishStatus() {
   reader["wait"] = s.irqMode ? "irq" : "poll";
   reader["restores"] = s.restores;
   reader["lost"] = s.lost;
-  reader["problem"] = s.problem;
+  reader["problem"] = doorjson::copied(s.problem);
   reader["problemAgo"] = s.problem[0] ? (millis() - s.problemAt) / 1000 : 0;
   JsonObject board = d["board"].to<JsonObject>();
   board["uptime"] = millis() / 1000;

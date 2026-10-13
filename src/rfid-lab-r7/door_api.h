@@ -76,7 +76,8 @@ class DoorApi {
       JsonArray a = d.to<JsonArray>();
       for (const DoorEvent &e : door_.events(since)) {
         JsonObject o = a.add<JsonObject>();
-        o["seq"] = e.seq, o["at"] = e.at, o["uid"] = e.uid, o["name"] = e.name, o["what"] = e.what, o["decision"] = e.decision;
+        o["seq"] = e.seq, o["at"] = e.at, o["uid"] = doorjson::copied(e.uid), o["name"] = doorjson::copied(e.name), o["what"] = doorjson::copied(e.what),
+        o["decision"] = doorjson::copied(e.decision);
       }
       send(req, 200, d);
     });

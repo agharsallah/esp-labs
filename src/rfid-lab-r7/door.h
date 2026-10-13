@@ -30,6 +30,12 @@
 
 namespace doorjson {
 
+// ArduinoJson 7 takes a `const char[N]` for a string literal: it keeps only the pointer and
+// sends all N-1 bytes. For a name field in a struct that is about to go away, that means the
+// JSON later shows whatever reused the memory (the bug where a card's name became the tail of
+// another card's JSON). Passing the field through here makes it a `const char *`, which is copied.
+inline const char *copied(const char *s) { return s; }
+
 inline void clockNow(door::Clock &c) {
   const time_t now = time(nullptr);
   c.synced = now > 1'700'000'000;
@@ -44,7 +50,7 @@ inline void card(JsonObject o, const door::Card &c, const door::Clock &clk, bool
   char uid[21];
   door::uidToHex(c.uid, c.uidLen, uid, sizeof(uid));
   o["uid"] = uid;
-  o["name"] = c.name;
+  o["name"] = copied(c.name);
   o["role"] = door::roleName(c.role);
   o["blocked"] = c.blocked;
   o["validUntil"] = c.validUntil;
@@ -62,7 +68,7 @@ inline void snapshot(JsonObject o, const snap::Snapshot &s) {
   char uid[21];
   door::uidToHex(s.uid, s.uidLen, uid, sizeof(uid));
   o["id"] = s.id;
-  o["name"] = s.name;
+  o["name"] = copied(s.name);
   o["uid"] = uid;  // "" when imported from a file
   o["at"] = s.at;
   JsonArray blocks = o["blocks"].to<JsonArray>();
@@ -256,7 +262,8 @@ class Door {
     }
     log_i("%s %s %s %s", what, name[0] ? name : uid, decision, e.at ? "" : "(no clock yet)");
     JsonDocument d;
-    d["seq"] = e.seq, d["at"] = e.at, d["uid"] = e.uid, d["name"] = e.name, d["what"] = e.what, d["decision"] = e.decision;
+    d["seq"] = e.seq, d["at"] = e.at, d["uid"] = doorjson::copied(e.uid), d["name"] = doorjson::copied(e.name), d["what"] = doorjson::copied(e.what),
+        d["decision"] = doorjson::copied(e.decision);
     send("event", d);
   }
 
@@ -621,7 +628,7 @@ class Door {
     d["uid"] = hex;
     d["type"] = rfid::cardType(u.sak);
     d["listed"] = reg_.get(u.bytes, u.size, c);
-    if (c.uidLen) d["name"] = c.name;
+    if (c.uidLen) d["name"] = doorjson::copied(c.name);
     JsonArray blocks = d["blocks"].to<JsonArray>();
     for (uint8_t first : {uint8_t(4), uint8_t(8)}) {
       rfid::AccessBits ab;
