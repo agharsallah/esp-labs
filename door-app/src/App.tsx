@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { BenchBar, ProblemBanner } from "./components/BenchBar.tsx";
 import { CardDataPanel } from "./components/CardDataPanel.tsx";
 import { CardList } from "./components/CardList.tsx";
 import { DoorPanel } from "./components/DoorPanel.tsx";
@@ -29,10 +30,18 @@ export function App() {
         <p className="sub">
           The board keeps the list and decides every tap. Your cards only bring their UID.
         </p>
+        <BenchBar status={status} connected={connected} />
       </header>
+      <ProblemBanner status={status} />
 
       <main className="grid">
-        <DoorPanel status={status} connected={connected} runJob={runJob} notify={notify} />
+        <DoorPanel
+          status={status}
+          cards={cards}
+          connected={connected}
+          runJob={runJob}
+          notify={notify}
+        />
         <section className="panel cards-panel" aria-labelledby="cards-title">
           <h2 id="cards-title">
             Cards <span className="count">{cards.length} / 20</span>

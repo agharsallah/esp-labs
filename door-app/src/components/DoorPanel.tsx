@@ -1,46 +1,61 @@
 import { useState } from "react";
-import { api, type Inspect as InspectData, Inspect, type JobResult, type Status } from "../api.ts";
+import {
+  api,
+  type Card,
+  Inspect,
+  type Inspect as InspectData,
+  type JobResult,
+  type Status,
+} from "../api.ts";
+import { tone } from "../rules.ts";
 
 interface Props {
   status: Status | null;
+  cards: Card[];
   connected: boolean;
   runJob: (start: () => Promise<number>) => Promise<JobResult>;
   notify: (text: string, ok: boolean) => void;
 }
 
-// The door as a lamp ring around a padlock: grey locked, green open (with a countdown), red denied.
-export function DoorPanel({ status, connected, runJob, notify }: Props) {
+// The door as a lamp ring around a padlock (grey locked, green open with a countdown, red
+// denied), then what lies on the reader right now, with what you can do with it.
+export function DoorPanel({ status, cards, connected, runJob, notify }: Props) {
   const [inspect, setInspect] = useState<InspectData | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
   const mode = status?.door.mode ?? "locked";
   const seconds = status ? Math.ceil(status.door.msLeft / 1000) : 0;
+  const present = status?.present ?? null;
+  const listed = present ? cards.find((c) => c.uid === present) : undefined;
 
-  const act = async (what: () => Promise<void>) => {
-    setBusy(true);
+  const act = async (what: string, run: () => Promise<void>) => {
+    setBusy(what);
+    setFailed(null);
     try {
-      await what();
+      await run();
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e), false);
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
   const read = () =>
-    act(async () => {
+    act("read", async () => {
       const r = await runJob(api.inspect);
-      if (!r.ok) return notify(r.message, false);
+      if (!r.ok) return setFailed(r.message);
       const parsed = Inspect.safeParse(r.data);
       setInspect(parsed.success ? parsed.data : null);
+    });
+  const save = () =>
+    act("save", async () => {
+      const r = await runJob(() => api.save(listed?.name ?? ""));
+      if (!r.ok) return setFailed(r.message);
+      notify(r.message, true);
     });
 
   return (
     <section className="door" data-mode={mode} aria-labelledby="door-title">
-      <div className="door-head">
-        <h2 id="door-title">Bench door</h2>
-        <span className={`link ${connected ? "on" : ""}`}>
-          {connected ? "live" : "connecting…"}
-        </span>
-      </div>
+      <h2 id="door-title">Bench door</h2>
       <div className="lamp" aria-live="polite">
         <svg viewBox="0 0 120 120" role="img" aria-label={`Door ${mode}`}>
           <circle className="ring" cx="60" cy="60" r="54" />
@@ -68,8 +83,8 @@ export function DoorPanel({ status, connected, runJob, notify }: Props) {
         <button
           type="button"
           className="btn primary"
-          disabled={!connected || busy}
-          onClick={() => act(async () => notify((await runJob(api.open)).message, true))}
+          disabled={!connected || !!busy}
+          onClick={() => act("open", async () => notify((await runJob(api.open)).message, true))}
         >
           Open for 5 s
         </button>
@@ -77,42 +92,62 @@ export function DoorPanel({ status, connected, runJob, notify }: Props) {
           <input
             type="checkbox"
             checked={status?.lockdown ?? false}
-            disabled={!connected || busy}
-            onChange={(e) => act(() => api.lockdown(e.target.checked))}
+            disabled={!connected || !!busy}
+            onChange={(e) => act("lockdown", () => api.lockdown(e.target.checked))}
           />
           <span>Lockdown</span>
         </label>
-        <button type="button" className="btn" disabled={!connected || busy} onClick={read}>
-          Read the card on the reader
-        </button>
       </div>
 
-      <dl className="facts">
-        <div>
-          <dt>Reader chip</dt>
-          <dd className={status && !status.chip.ok ? "bad" : ""}>
-            {status ? `${status.chip.version}h · ${status.chip.name}` : "–"}
-          </dd>
+      <div className={`slot ${present ? "on" : ""}`} aria-live="polite">
+        <span className="slot-card" aria-hidden="true">
+          <span className="chip" />
+        </span>
+        <div className="slot-text">
+          <span className="slot-label">On the reader</span>
+          {present ? (
+            <>
+              <strong>{listed ? listed.name : "a card not in the list"}</strong>
+              <span className="slot-meta">
+                <span className="mono">{present}</span>
+                {listed && (
+                  <span className={`now ${tone(listed.now)}`}>
+                    {listed.now === "granted" ? "opens now" : listed.now}
+                  </span>
+                )}
+              </span>
+            </>
+          ) : (
+            <>
+              <strong>nothing</strong>
+              <span className="slot-meta">lay a card or tag flat on the RC522</span>
+            </>
+          )}
         </div>
-        <div>
-          <dt>On the reader</dt>
-          <dd className="mono">{status?.present ?? "nothing"}</dd>
+        <div className="slot-actions">
+          <button
+            type="button"
+            className="btn"
+            disabled={!connected || !!busy || !present}
+            onClick={read}
+          >
+            {busy === "read" ? "Reading…" : "Read it"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={!connected || !!busy || !present}
+            onClick={save}
+          >
+            {busy === "save" ? "Saving…" : "Save its data"}
+          </button>
         </div>
-        <div>
-          <dt>Board</dt>
-          <dd className="mono">{status ? `${status.wifi.ip} · ${status.wifi.rssi} dBm` : "–"}</dd>
-        </div>
-        <div>
-          <dt>Clock</dt>
-          <dd className={status && !status.clock.synced ? "bad" : ""}>
-            {status
-              ? status.clock.synced
-                ? new Date(status.clock.now * 1000).toLocaleTimeString()
-                : "not set: dated cards are refused"
-              : "–"}
-          </dd>
-        </div>
-      </dl>
+        {failed && (
+          <p className="slot-error" role="alert">
+            {failed}
+          </p>
+        )}
+      </div>
 
       {inspect && (
         <div className="inspect">

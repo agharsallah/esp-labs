@@ -45,6 +45,17 @@ export const Status = z.object({
   lockdown: z.boolean(),
   cards: z.number(),
   busy: z.boolean(),
+  // Newer firmware only (optional, so an older rfid-lab-r7 still connects).
+  reader: z
+    .object({
+      wait: z.enum(["irq", "poll"]), // IRQ wire, or polling the chip
+      restores: z.number(), // the chip reset itself (3.3 V dip) and got its settings back
+      lost: z.number(), // the chip stopped answering on SPI
+      problem: z.string(), // the last thing that went wrong, "" if nothing
+      problemAgo: z.number(), // seconds
+    })
+    .optional(),
+  board: z.object({ uptime: z.number(), reset: z.string(), heap: z.number() }).optional(),
 });
 export type Status = z.infer<typeof Status>;
 

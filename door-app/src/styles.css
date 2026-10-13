@@ -101,32 +101,106 @@ h2 .count {
   color: var(--ink);
 }
 
+/* Desktop: the door and its log on the left, the cards on the right, card data below.
+   Phones: one column, the door first, then the cards. */
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 330px) minmax(0, 1fr) minmax(0, 300px);
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  grid-template-areas: "door cards" "log cards" "data data";
+  grid-template-rows: auto 1fr auto;
   gap: 16px;
   align-items: start;
 }
-@media (max-width: 1100px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-  .cards-panel {
-    grid-column: 1 / -1;
-    order: 3;
-  }
+.door {
+  grid-area: door;
 }
-@media (max-width: 720px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .cards-panel {
-    order: 0;
-  }
+.cards-panel {
+  grid-area: cards;
+}
+.log-panel {
+  grid-area: log;
 }
 .data-panel {
-  grid-column: 1 / -1;
-  order: 4;
+  grid-area: data;
+}
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "door" "cards" "log" "data";
+    grid-template-rows: none;
+  }
+}
+
+/* The bench at a glance */
+.bench-bar {
+  margin: 14px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.bench-bar > div {
+  padding: 8px 12px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin: 0 -1px -1px 0;
+  min-width: 0;
+  box-shadow: inset 3px 0 0 transparent;
+}
+.bench-bar dt {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bench-bar dt::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+}
+.bench-bar dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.bench-bar small {
+  display: block;
+  font: 400 12px var(--font-mono);
+  color: var(--muted);
+}
+.bench-bar .warn {
+  box-shadow: inset 3px 0 0 var(--warning);
+  background: var(--warning-soft);
+}
+.bench-bar .warn dt::before {
+  background: var(--warning);
+}
+.bench-bar .bad {
+  box-shadow: inset 3px 0 0 var(--critical);
+  background: var(--critical-soft);
+}
+.bench-bar .bad dt::before {
+  background: var(--critical);
+}
+.banner {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--warning);
+  background: var(--warning-soft);
+  font-size: 14px;
+}
+.banner.bad {
+  border-color: var(--critical);
+  background: var(--critical-soft);
 }
 .panel,
 .door {
@@ -185,30 +259,99 @@ select {
   min-width: 0;
 }
 
-/* Door: a lamp ring around a padlock */
-.door-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-.link {
-  font: 11px var(--font-mono);
-  color: var(--muted);
-  display: inline-flex;
+/* On the reader: a slot that fills when a card lies there */
+.slot {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px 12px;
   align-items: center;
-  gap: 6px;
+  transition:
+    border-color 0.3s,
+    background 0.3s;
 }
-.link::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.slot.on {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--bg);
+}
+.slot-card {
+  width: 46px;
+  height: 32px;
+  border-radius: 6px;
+  border: 2px dashed var(--line);
+  position: relative;
+  transition: transform 0.3s;
+}
+.slot.on .slot-card {
+  border: 2px solid var(--accent);
+  background: var(--surface);
+  transform: rotate(-6deg);
+  animation: field 1.6s ease-out infinite;
+}
+.slot-card .chip {
+  position: absolute;
+  left: 7px;
+  top: 9px;
+  width: 11px;
+  height: 9px;
+  border-radius: 2px;
   background: var(--line);
 }
-.link.on::before {
-  background: var(--good);
-  box-shadow: 0 0 0 4px var(--good-soft);
+.slot.on .slot-card .chip {
+  background: var(--accent);
 }
+@keyframes field {
+  0% {
+    box-shadow: 0 0 0 0 var(--info-soft);
+  }
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+.slot-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.slot-label {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.slot-text strong {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.slot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.slot-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.slot-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--critical-soft);
+  color: var(--critical);
+  font-size: 14px;
+}
+
+/* Door: a lamp ring around a padlock */
 .lamp {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
@@ -316,26 +459,6 @@ select {
   accent-color: var(--warning);
   width: 18px;
   height: 18px;
-}
-.facts {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px 14px;
-  margin: 16px 0 0;
-}
-.facts dt {
-  font: 600 11px var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.facts dd {
-  margin: 2px 0 0;
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-.facts dd.bad {
-  color: var(--critical);
 }
 .inspect {
   margin-top: 14px;
@@ -450,11 +573,24 @@ select {
 }
 .card-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) auto minmax(0, 1fr) auto;
-  grid-template-areas: "who now rules actions" "who now seen actions";
-  gap: 2px 12px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "who now actions" "meta meta actions";
+  gap: 4px 12px;
   align-items: center;
   padding: 10px 12px;
+}
+.card-meta {
+  grid-area: meta;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.here-tag {
+  font: 600 11px var(--font-mono);
+  color: var(--accent);
 }
 .who {
   grid-area: who;
@@ -467,10 +603,6 @@ select {
 .who strong {
   font-size: 16px;
 }
-.uid {
-  font-size: 12px;
-  color: var(--muted);
-}
 .role {
   font: 600 11px var(--font-mono);
   padding: 1px 7px;
@@ -481,15 +613,6 @@ select {
 .card-row .now {
   grid-area: now;
 }
-.rules {
-  grid-area: rules;
-  font-size: 13px;
-}
-.seen {
-  grid-area: seen;
-  font-size: 12px;
-  color: var(--muted);
-}
 .row-actions {
   grid-area: actions;
   display: flex;
@@ -498,7 +621,7 @@ select {
 @media (max-width: 640px) {
   .card-row {
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "who now" "rules rules" "seen seen" "actions actions";
+    grid-template-areas: "who now" "meta meta" "actions actions";
   }
 }
 .now {

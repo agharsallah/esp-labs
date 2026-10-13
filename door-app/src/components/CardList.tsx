@@ -32,18 +32,21 @@ export function CardList({ cards, present, waiting, runJob, notify }: Props) {
             <div className="who">
               <strong>{c.name}</strong>
               <span className={`role ${c.role}`}>{c.role}</span>
-              <span className="mono uid">{c.uid}</span>
+              {c.uid === present && <span className="here-tag">on the reader</span>}
             </div>
             <span className={`now ${tone(c.now)}`} title="what a tap would do right now">
               {c.now === "granted" ? "opens now" : c.now}
             </span>
-            <span className="rules">{rulesText(c)}</span>
-            <span className="seen">
-              {c.taps} tap{c.taps === 1 ? "" : "s"}
-              {c.lastSeen
-                ? ` · last ${new Date(c.lastSeen * 1000).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}`
-                : ""}
-            </span>
+            <p className="card-meta">
+              <span className="mono">{c.uid}</span>
+              <span>{rulesText(c)}</span>
+              <span>
+                {c.taps} tap{c.taps === 1 ? "" : "s"}
+                {c.lastSeen
+                  ? `, last ${new Date(c.lastSeen * 1000).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}`
+                  : ""}
+              </span>
+            </p>
             <div className="row-actions">
               <button type="button" className="btn" onClick={() => toggleBlock(c)}>
                 {c.blocked ? "Unblock" : "Block"}

@@ -66,7 +66,14 @@ export function useDoor() {
     return () => {
       stopped = true;
       clearTimeout(retry);
-      socket?.close();
+      // Closing a socket that is still connecting makes Vite's proxy log "ws proxy error: EPIPE"
+      // (React's StrictMode mounts twice in development): let it open, then close it.
+      const s = socket;
+      if (!s) return;
+      s.onclose = null; // this socket's end must not mark the next one as disconnected
+      s.onmessage = null;
+      if (s.readyState === WebSocket.CONNECTING) s.onopen = () => s.close();
+      else s.close();
     };
   }, []);
 
