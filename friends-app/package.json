@@ -1,0 +1,32 @@
+{
+  "name": "bench-friends-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "R8 Card friends: a kids' app for the rfid-lab-r8 firmware. Tap a card on the reader and its friend jumps out in 3D; drag friends onto cards. Vite's dev server forwards /api and /ws to the board, adding the admin token from .env.",
+  "type": "module",
+  "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": ">=24.14"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "three": "0.186.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  }
+}

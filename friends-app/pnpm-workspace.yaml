@@ -1,0 +1,6 @@
+# Its own pnpm project, outside the hardware-diary monorepo workspace one level up.
+packages: []
+# Deterministic installs: `pnpm add` writes exact versions.
+savePrefix: ""
+allowBuilds:
+  esbuild: true
