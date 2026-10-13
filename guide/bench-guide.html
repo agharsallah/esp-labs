@@ -577,7 +577,7 @@ ol.rules-list li.open b { color: var(--ok); }
 
 
   <dl class="overview" aria-label="On the bench now">
-    <div class="now"><dt>On the board now</dt><dd>rfid-lab<small>R1 all working (by you) · reader chip FM17522 clone (B2h) · built, not flashed: rfid-lab-r1 … r7, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
+    <div class="now"><dt>On the board now</dt><dd>rfid-lab-r7<small>R7 reads cards, also a little above the reader (by you) · reader chip FM17522 clone (B2h) · built, not flashed: R7 names fix (entry 44), rfid-lab-r1 … r6, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
     <div><dt>Connection</dt><dd>/dev/cu.usbserial-A5069RR4<small>FTDI FT232R · VID:PID 0403:6001</small></dd></div>
     <div><dt>Chip</dt><dd>ESP32-S3 rev v0.2<small>16 MB flash · 8 MB PSRAM · MAC 28:84:85:9E:3B:E4</small></dd></div>
     <div><dt>Verified</dt><dd class="flag">RGB · LED · screen · showcase<small>all seen working by you · display at 22 fps</small></dd></div>
@@ -1122,7 +1122,7 @@ ol.rules-list li.open b { color: var(--ok); }
           note: "Double-click on the edge view runs the next experiment. edge spi resets the chip afterwards, in case a fast, garbled write changed a setting. Pull the IRQ wire and run edge irq: the firmware notices and falls back to polling.",
         },
         {
-          ...common, id: "R7", title: "Card manager", sim: "door", cmd: "uv run pio run -e rfid-lab-r7 -t upload",
+          ...common, id: "R7", title: "Card manager", status: "on board, works", sim: "door", cmd: "uv run pio run -e rfid-lab-r7 -t upload",
           heading: "Manage your cards from a React app",
           goal: "Its own firmware (rfid-lab-r7) turns the bench into a door you manage from a small React app (test-esp/door-app) over your Wi-Fi. The board keeps the card list in its flash and decides every tap itself; the card only brings its UID. From the app you add cards, name them, give them a role, block them, limit them to hours, an end date or a number of uses, copy one card's rules to another, replace a lost card, write a name label onto them, wipe the data the labs wrote, save a card's data and write it back or copy it onto another card, open the door remotely, switch on lockdown, and watch every tap live. The door is simulated: the screen and the LED.",
           goalLine: "Run your two tags as a small access system: one resident, one guest, and see each rule decide a tap.",
@@ -4938,6 +4938,11 @@ ol.rules-list li.open b { color: var(--ok); }
       why: "You saw the app live with the time, but a card “can't be read”, the LED red then off, and Vite printing “ws proxy error: EPIPE”. Compared with R1-R6 (which work on your board), R7 never fell back from the IRQ wire to polling, and its health check only read VersionReg, which survives a 3.3 V dip that resets the chip's other settings (antenna off). Fixes: IRQ fallback after every poll; a settings check every 2 s that restores them; jobs try the card 3 times; failure messages say why (no card / chip silent / garbled answer); the status reports reader health, uptime and the last restart's reason (crash, brownout). EPIPE: React's development double start closed a socket mid-handshake; the app now lets it open first. UI: a status bar, a problem banner, an “On the reader” slot with Read it / Save its data, the log under the door, tidier card rows.",
       out: "rfid-lab-r1 … r7  SUCCESS, no warnings · r7 RAM 17.0%  Flash 18.1%\ndoor-app: typecheck clean · 10 tests passed · no page errors, no sideways scroll, no proxy errors",
       result: "Next, by you: uv run pio run -e rfid-lab-r7 -t upload, then watch the Reader chip cell and the banner while you tap. If it still fails, paste the serial lines (or say go and Claude reads the port). Nothing was sent to the board." },
+    { n: 44, types: ["build"], title: "R7 works; card names shown as JSON, loading states", where: "Mac · no board",
+      cmd: "c++ -std=c++17 … ajtest/main.cpp   (Mac only: ArduinoJson 7.4.3 check)\nuv run pio run -e rfid-lab-r7   (build only)\ndoor-app: tsc · vitest · vite + slow mock board, headless Chromium",
+      why: "R7 reads now, also with the card a little above the reader. Your Reader chip cell said “polling · settings restored 5× · lost 5×”: the IRQ wire stays quiet (so polling), and a 3.3 V dip reset the RC522 5 times, each time put right within 2 s. The supply still dips, so short 3.3V wires and pressed-in headers are worth it. New bug: a card's name, then a snapshot's, showed a piece of JSON. ArduinoJson 7.4 treats any const char[N] as a string literal and keeps only its pointer; the Card copy was gone by the time the JSON was sent, and the memory held the previous card's JSON. Fix: char-array fields go through doorjson::copied() (a const char *, which is copied). Nothing stored was damaged. App: grey placeholders until the list, saved data and log arrive; a turning ring with a “doing” label on every button that waits for the board.",
+      out: "before: [{\"name\":\"########################…\"}]  after: [{\"name\":\"abdu\"},{\"name\":\"card\"}]\nrfid-lab-r7 SUCCESS, no warnings · RAM 17.0%  Flash 18.1%\ndoor-app: typecheck clean · 10 tests passed · no page errors, no sideways scroll",
+      result: "Next, by you: uv run pio run -e rfid-lab-r7 -t upload, then reload the app. Cards and saved data stay (NVS). Nothing was sent to the board." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";
