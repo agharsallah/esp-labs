@@ -854,3 +854,33 @@ rfid-lab-r6  Flash 439,959 B  SUCCESS   no warnings in any
 ```
 
 Nothing was sent to the board. For R2: `uv run pio run -e rfid-lab-r2 -t upload`.
+
+### 40. R7 Card manager: firmware, React app, guide lesson · `build` (Mac) · waiting for your go
+
+Your request: a lab that controls the RFID module from a simple React app to manage your cards: add, reset, add information, block, open a door, and other scenarios.
+
+- **Firmware `rfid-lab-r7`** (`src/rfid-lab-r7`): a card list in NVS (`registry.h`, up to 20 cards: name, role, blocked, end date, hours, uses left), the access rules (`access_rules.h`: unknown → blocked → lockdown → no clock → expired → outside hours → no uses left → granted), a reader task that decides each tap and runs the app's jobs (`door.h`: enroll, label, wipe, inspect, open; factory key and data blocks of sectors 1-2 only, never keys, trailers or block 0), a JSON API + WebSocket (`door_api.h`, admin token for every change), three screen views (door, cards, log) and LED states.
+- **The admin token** moved from `src/wifi-lab-w2` to `lib/wifi-kit/src/api_token.h` so W2 and R7 share it.
+- **App `test-esp/door-app`**: React 19 + Vite 8 + zod (the dashboard's exact versions); Vite's proxy adds the token from `.env`. Door panel, cards with scenario presets, add-card flow, live log.
+- **Guide R7**: goal and commands, a "Which rule decides?" checker, step-through diagrams (a tap, a block, a new card), a door preview.
+
+Checks on the Mac (nothing installed: the app was type-checked and tested through a temporary link to the dashboard's identical packages, and shown against a mock board script; link and mock removed afterwards):
+
+```sh
+c++ -std=c++17 -Wall -I src/rfid-lab-r7 test/host/door_rules_test.cpp -o <scratch>/door_test && <scratch>/door_test
+uv run pio run -e wifi-lab-w2 -e wifi-lab-w2-remote      # after moving api_token.h
+door-app: tsc -p . · vitest run · vite + mock board + headless Chromium (1280 / 390 px)
+```
+
+```text
+all door rule checks passed
+wifi-lab-w2 SUCCESS · wifi-lab-w2-remote SUCCESS (no downloads)
+door-app: typecheck clean · 6 tests passed · no page errors, no sideways scroll
+```
+
+**Waiting for your go:**
+
+1. `uv run pio run -e rfid-lab-r7` (first build: copies ESPAsyncWebServer 3.12.1, AsyncTCP 3.5.0 and ArduinoJson 7.4.3, the libraries W2 already uses, into `test-esp/.pio/libdeps/rfid-lab-r7`). The firmware is not compiled yet.
+2. `cd test-esp/door-app && pnpm install` (the same packages the dashboard has).
+
+Nothing was sent to the board.

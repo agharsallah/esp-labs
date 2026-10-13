@@ -87,7 +87,7 @@ flowchart LR
 | Wi-Fi           | W1    | Scan & join           | `wifi-lab-w1`          | built    | station mode, channels, RSSI in dBm, security types, NVS, NTP, mDNS                  |
 | Wi-Fi           | W2    | Phone control         | `wifi-lab-w2(-remote)` | on board | REST, WebSocket, captive portal, OTA, relay through a tunnel                         |
 | Wi-Fi           | W3    | Internet & AI         | `wifi-lab-w3`          | built    | HTTPS, JSON filters, worker tasks, AI function calling via LiteLLM                   |
-| RFID & NFC      | R1–R6 | RFID labs             | `rfid-lab-r1` … `r6`   | R1 works | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing |
+| RFID & NFC      | R1–R7 | RFID labs             | `rfid-lab-r1` … `r7`   | R1 works | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing |
 | Sensors         |       |                       |                        | planned  | I2C sensors (BME280), data over Wi-Fi                                                |
 | Bluetooth LE    |       |                       |                        | planned  | BLE advertising, talking to a phone                                                  |
 
@@ -254,14 +254,15 @@ sequenceDiagram
 
 Each lab is its own firmware with its own command, like the Wi-Fi labs:
 
-| Lab                | Command                                   | Views       | Adds these serial commands                                               |
-| ------------------ | ----------------------------------------- | ----------- | ------------------------------------------------------------------------ |
-| R1 Wire & talk     | `uv run pio run -e rfid-lab-r1 -t upload` | chip · card | `chip` `reset` `selftest` `loopback` `regs` `spi` `gain` `timeout` `irq` |
-| R2 Wake a card     | `uv run pio run -e rfid-lab-r2 -t upload` | + trace     | `poll` `trace`                                                           |
-| R3 Who's there     | `uv run pio run -e rfid-lab-r3 -t upload` | (same)      | `inventory`                                                              |
-| R4 Inside the card | `uv run pio run -e rfid-lab-r4 -t upload` | + memory    | `dump` `read`                                                            |
-| R5 Write & count   | `uv run pio run -e rfid-lab-r5 -t upload` | + credits   | `write` `credits`                                                        |
-| R6 Edge lab        | `uv run pio run -e rfid-lab-r6 -t upload` | + edge      | `edge`                                                                   |
+| Lab                | Command                                   | Views              | Adds these serial commands                                                             |
+| ------------------ | ----------------------------------------- | ------------------ | -------------------------------------------------------------------------------------- |
+| R1 Wire & talk     | `uv run pio run -e rfid-lab-r1 -t upload` | chip · card        | `chip` `reset` `selftest` `loopback` `regs` `spi` `gain` `timeout` `irq`               |
+| R2 Wake a card     | `uv run pio run -e rfid-lab-r2 -t upload` | + trace            | `poll` `trace`                                                                         |
+| R3 Who's there     | `uv run pio run -e rfid-lab-r3 -t upload` | (same)             | `inventory`                                                                            |
+| R4 Inside the card | `uv run pio run -e rfid-lab-r4 -t upload` | + memory           | `dump` `read`                                                                          |
+| R5 Write & count   | `uv run pio run -e rfid-lab-r5 -t upload` | + credits          | `write` `credits`                                                                      |
+| R6 Edge lab        | `uv run pio run -e rfid-lab-r6 -t upload` | + edge             | `edge`                                                                                 |
+| R7 Card manager    | `uv run pio run -e rfid-lab-r7 -t upload` | door · cards · log | a bench door managed from the React app in [`door-app`](door-app/README.md) over Wi-Fi |
 
 Each [`src/rfid-lab-rN/main.cpp`](src/rfid-lab-r1/main.cpp) is a short list: that lab's views (with what a double-click does on each) and its commands, so `help` shows exactly what the lesson teaches. The shared code is in [`lib/rfid-lab-kit`](lib/rfid-lab-kit/src): the reader task, the six screen views, the edge experiments, every command (`lab_commands.h`) and the lab shell (`lab.h`: screen, button, LED, serial). No RFID library: [`lib/rfid-kit`](lib/rfid-kit/src) is our own driver, written in layers so every byte stays visible. The reader runs in its own task on core 0 and owns the chip; `loop()` on core 1 only draws and parses commands.
 
@@ -307,6 +308,8 @@ flowchart LR
 | R4 Inside the card | `dump`, `read <block>`                                                                                    | sectors, trailers, access bits (stored twice), 3-pass authentication inside the chip, encrypted frames                                                                                                                 |
 | R5 Write & count   | `write <block> <text>`, `credits`, `credits init\|add\|use <n>`                                           | block writes with ACK/NAK, read-back checks, value blocks, INCREMENT/DECREMENT/TRANSFER, a backup block                                                                                                                |
 | R6 Edge lab        | `edge spi`, `edge gain`, `edge timeout`, `edge timing`, `edge irq`, `edge crc`, `edge stress [n]`         | each setting pushed until it breaks: SPI clock vs the 10 MHz spec, gain vs distance, the card's ~86 µs reply time, per-step timing, IRQ vs polling, offloading the CRC, read reliability                               |
+
+**R7 · Card manager** (`src/rfid-lab-r7`, app in [`door-app`](door-app/README.md)): the board keeps a list of up to 20 cards in NVS (name, role, blocked, end date, hours, uses left) and decides every tap itself; the card only brings its UID. A JSON API and a WebSocket on port 80 (the same web libraries as W2) let the React app add cards (tap within 20 s), edit and block them, write a name label, wipe the lab data blocks, open the door remotely and switch on lockdown, with a live access log. Every change needs the admin token (shared with W2, now in `lib/wifi-kit/src/api_token.h`); the app's Vite proxy adds it from `.env`, so the browser never holds it. Rule order in `access_rules.h`, checked on the Mac by `test/host/door_rules_test.cpp`.
 
 **Guard rails:** the firmware only uses the factory key on your own cards; it never writes block 0 or a sector trailer (a trailer with broken access bits locks its sector for good), and it checks a block's access bits before writing. The key never goes into the trace.
 

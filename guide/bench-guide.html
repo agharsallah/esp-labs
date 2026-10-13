@@ -508,6 +508,24 @@ ol.cmds dd { margin: 0; min-width: 0; }
 ol.scr-list { margin: 8px 0 0; padding-left: 26px; display: grid; gap: 4px; font-size: 14px; }
 ol.scr-list li { padding: 2px 6px; border-radius: 6px; }
 ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft); outline: none; }
+.rules-ui { display: grid; gap: 12px; }
+.rules-form { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 14px; }
+.rules-form label { display: inline-flex; align-items: center; gap: 6px; }
+.rules-form select { font: 13px var(--font-mono); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; background: var(--surface); color: var(--ink); }
+.rules-form output { font: 600 12px var(--font-mono); min-width: 3.5em; }
+ol.rules-list { margin: 0; padding-left: 24px; display: grid; gap: 4px; font-size: 14px; }
+ol.rules-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
+ol.rules-list li b { font: 600 12px var(--font-mono); }
+ol.rules-list li.pass b { color: var(--ok); }
+ol.rules-list li.stop { border-color: var(--danger); box-shadow: inset 4px 0 0 var(--danger); }
+ol.rules-list li.stop b { color: var(--danger); }
+ol.rules-list li.skip { opacity: .45; }
+ol.rules-list li.open { border-color: var(--ok); box-shadow: inset 4px 0 0 var(--ok); }
+ol.rules-list li.open b { color: var(--ok); }
+.rules-verdict { margin: 0; font-size: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rules-verdict .now { font: 600 12px var(--font-mono); padding: 2px 9px; border-radius: 999px; }
+.rules-verdict .now.good { color: var(--surface); background: var(--ok); }
+.rules-verdict .now.critical { color: var(--surface); background: var(--danger); }
 .spi-ctl select { font: 12.5px var(--font-mono); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: var(--surface); color: var(--ink); }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
@@ -1074,6 +1092,48 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
           ],
           note: "Double-click on the edge view runs the next experiment. edge spi resets the chip afterwards, in case a fast, garbled write changed a setting. Pull the IRQ wire and run edge irq: the firmware notices and falls back to polling.",
         },
+        {
+          ...common, id: "R7", title: "Card manager", sim: "door", cmd: "uv run pio run -e rfid-lab-r7 -t upload",
+          heading: "Manage your cards from a React app",
+          goal: "Its own firmware (rfid-lab-r7) turns the bench into a door you manage from a small React app (test-esp/door-app) over your Wi-Fi. The board keeps the card list in its flash and decides every tap itself; the card only brings its UID. From the app you add cards, name them, give them a role, block them, limit them to hours, an end date or a number of uses, write a name label onto them, wipe the data the labs wrote, open the door remotely, switch on lockdown, and watch every tap live. The door is simulated: the screen and the LED.",
+          goalLine: "Run your two tags as a small access system: one resident, one guest, and see each rule decide a tap.",
+          goalCheck: [
+            "The app shows <b>live</b> and both tags are in the list: the white card as a resident, the key tag as a guest.",
+            "Tapping the white card shows OPEN on the screen and in the app; after <b>Block</b> the same tap shows DENIED · blocked.",
+            "The guest tag's uses go down with each tap; at 0 it is refused with “no uses left”.",
+            "Every tap and every change appears in the access log, on the board's log view and in the app.",
+          ],
+          learn: ["REST API + WebSocket", "server-side decisions", "rule order", "fail closed", "NVS storage", "admin token via a dev proxy", "React + zod"],
+          panels: [
+            { title: "Which rule decides?", fn: "doorRules", intro: "The board checks the rules in this order, and the first one that says no wins. Set up a card, the clock and lockdown, and see which rule decides. It is the same order as src/rfid-lab-r7/access_rules.h (tested on the Mac)." },
+            { title: "Follow one tap, one block, one new card", fn: "doorSeq", intro: "What crosses the wires and the Wi-Fi: the app never talks to the reader directly, and the card never decides anything." },
+          ],
+          commands: [
+            { c: "uv run pio run -e rfid-lab-r7 -t upload", where: "mac", card: "any", does: "Flashes the door firmware. The first build copies the web libraries W2 already uses (ESPAsyncWebServer, AsyncTCP, ArduinoJson) into test-esp/.pio.", see: "The screen shows <b>DOOR door</b>, LOCKED, “0 cards in the list” and <code>http://bench.local</code> at the bottom once Wi-Fi joins.", fix: "“no Wi-Fi saved: run W1 once”: R7 uses the network W1/W2 saved. Flash W1, <code>join</code>, then flash R7 again." },
+            { c: "token", card: "any", does: "Prints the admin token (shared with W2). Every change in the app needs it.", see: "<code>Admin token: 3f…</code> and where to put it.", fix: "Keep it out of chats and git. <code>token new</code> replaces it." },
+            { c: "cd test-esp/door-app && cp .env.example .env", where: "mac", card: "any", does: "Creates the app's settings file: <code>BENCH_URL=http://bench.local</code> (or the IP from <code>status</code>) and <code>BENCH_TOKEN=</code> the token.", see: "A .env file next to package.json. It is git-ignored.", fix: "" },
+            { c: "pnpm install, then pnpm dev", where: "mac", card: "any", does: "Installs the app (React 19, Vite 8, zod: the same versions as the dashboard) and starts it. Vite forwards /api and /ws to the board and adds the token on the way, so the browser never holds it.", see: "Open <code>http://localhost:5174</code>: the door panel says <b>live</b>, the chip says B2h · FM17522 (your clone), the clock shows the time.", fix: "“connecting…” forever: is the board on Wi-Fi (screen footer)? Does <code>http://bench.local/api</code> open in the browser? FRITZ!Box: allow Wi-Fi devices to talk to each other (W2)." },
+            { c: "Add card: “White card”, resident", where: "app", card: "on", does: "The board waits 20 s for a card it hasn't seen; the screen shows ADD A CARD and the LED blinks blue. Then lay the white card on the reader.", see: "A toast “White card added”, the card in the list with <b>opens now</b>, an “enrolled” line in the log.", fix: "“already in the list”: that card is enrolled; tap another or delete it first." },
+            { c: "Add card: “Key tag”, guest", where: "app", card: "on", does: "The same for the key tag. Guests start with 5 uses.", see: "Key tag · guest · <b>5 uses left</b>.", fix: "" },
+            { c: "tap each card", where: "hands", card: "move", does: "The board decides from its list: OPEN 5 s (green LED, padlock opens) or DENIED 2 s (red LED, with the reason).", see: "The app's door panel and log update within a second; the guest's uses go 5 → 4 → 3.", fix: "Nothing happens: is the chip OK in the door panel? (B2h, not 00/FF)" },
+            { c: "Block, then Unblock", where: "app", card: "any", does: "The quickest rule: a blocked card is refused before anything else is checked.", see: "<b>blocked</b> on the card; its next tap shows DENIED · blocked.", fix: "" },
+            { c: "Edit → presets", where: "app", card: "any", does: "Office hours (08-18), Night shift (22-06, across midnight), Weekend guest (10 uses until Sunday 20:00), One visit (1 use, 24 h), Lost card (blocked). Save sends only what changed.", see: "The card's rule line and its “opens now” chip change at once.", fix: "“no clock yet”: dated or timed cards are refused until the board has internet time (fail closed)." },
+            { c: "Lockdown on", where: "app", card: "any", does: "Only maintenance cards open. The LED glows amber while idle.", see: "LOCKDOWN on the screen, every resident and guest tap DENIED · lockdown.", fix: "" },
+            { c: "Edit → Write name label", where: "app", card: "on", does: "Writes the name into block 4 and the role into block 5 of that card (factory key, sector 1 only), then reads them back.", see: "“label written”. Read the card on the reader: block 4 shows its name.", fix: "The door still ignores the label: it decides from its own list. Write any name there and nothing changes." },
+            { c: "Edit → Wipe card data", where: "app", card: "on", does: "Second click to confirm. Blocks 4-6 and 8-10 back to zeros where the access bits allow (the label, R5's credits). Keys, trailers and block 0 are never touched.", see: "“6 of 6 data blocks cleared”.", fix: "" },
+            { c: "Edit → Remove from the list", where: "app", card: "any", does: "Second click to confirm. The board forgets the card; the card itself is not touched.", see: "Its next tap: DENIED · unknown card.", fix: "" },
+          ],
+          steps: [
+            "Same wiring as R1. Flash <code>rfid-lab-r7</code>. The board needs the Wi-Fi network W1/W2 saved.",
+            "In the monitor: <code>token</code>. Copy it into <code>test-esp/door-app/.env</code> as <code>BENCH_TOKEN=</code>.",
+            "<code>pnpm install</code> and <code>pnpm dev</code> in test-esp/door-app, open <code>http://localhost:5174</code>. <b>Checkpoint:</b> live, chip B2h, a clock.",
+            "Add the white card as a resident and the key tag as a guest. <b>Checkpoint:</b> both in the list, “opens now”.",
+            "Tap both a few times: OPEN, the guest's uses going down, every tap in the log.",
+            "Block the white card and tap it (DENIED · blocked), unblock it. Try the presets and lockdown, and watch the “Which rule decides?” panel agree.",
+            "Write a label onto a card, read it back, wipe it. Then remove the key tag from the list and tap it: unknown card.",
+          ],
+          note: "Why the board decides and not the card: a card's UID and the data on a MIFARE Classic can be read by anyone with a reader, so they are fine as a name tag, not as proof. Real access systems keep the decision on a server and use cards with modern cryptography (e.g. MIFARE DESFire); this lab teaches the server side of that. Reading the API is open on your Wi-Fi; every change needs the token. The card list lives in the board's NVS and survives re-flashing; it is separate from the R1-R6 labs.",
+        },
       ];
     })(),
   ];
@@ -1090,7 +1150,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
   if (hash === "w1") current = "W1";
   if (hash === "w2") current = "W2";
   if (hash === "w3") current = "W3";
-  if (/^r[1-6]$/.test(hash)) current = hash.toUpperCase();
+  if (/^r[1-7]$/.test(hash)) current = hash.toUpperCase();
   const hashTrack = { intro: "00", display: "03", wifi: "W1", rfid: "R1" }[hash];
   if (hashTrack) current = hashTrack;
 
@@ -1303,7 +1363,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       });
     });
     const sim = document.getElementById("sim");
-    const stopMain = ({ usb: simUsb, hello: simHello, led: simLed, display: simDisplay, showcase: simShowcase, wifi: simWifi, phone: simPhone, weather: simWeather, rfid: simRfid })[l.sim](sim, l) || (() => {});
+    const stopMain = ({ usb: simUsb, hello: simHello, led: simLed, display: simDisplay, showcase: simShowcase, wifi: simWifi, phone: simPhone, weather: simWeather, rfid: simRfid, door: simDoor })[l.sim](sim, l) || (() => {});
     const stopDiagram = l.diagram ? wiringDiagram(document.getElementById("diagram")) : () => {};
     const stopButton = l.buttonDiagram ? buttonDiagram(document.getElementById("btn-diagram")) : () => {};
     const stopFull = l.fullWiring ? fullWiring(document.getElementById("full-wiring")) : () => {};
@@ -1320,7 +1380,7 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
 
   // "Commands, in order": what to type, where the card should be, what it does, what you should see.
   const CARD_STATE = { off: "card away", any: "card: doesn't matter", on: "card on the reader", both: "card + tag together", still: "card on, held still", move: "card on, then move it" };
-  const WHERE = { mac: "Mac terminal", button: "push button / BOOT", hands: "with your hands" };
+  const WHERE = { mac: "Mac terminal", button: "push button / BOOT", hands: "with your hands", app: "in the app" };
   function commandsPanel(l) {
     return `<div class="panel"><h3>Commands, in order</h3>
       <p class="panel-intro">Type these in the serial monitor (<code>uv run pio device monitor</code>) unless the grey tag says otherwise. The coloured tag says where the card should be while it runs.</p>
@@ -4317,7 +4377,205 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
     return () => { stopped = true; cancelAnimationFrame(raf); clearTimeout(clickTimer); rgbDot.setAttribute("fill", "var(--silk-dim)"); rgbDot.setAttribute("r", 7); };
   }
 
-  const RFID_PANELS = { spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge, screens: rfidScreens };
+  // ---------- R7: the door's rules, mirrored from src/rfid-lab-r7/access_rules.h ----------
+  const DOOR_RULES = [
+    { key: "unknown", name: "In the list?", says: "unknown card", check: (c) => c.listed },
+    { key: "blocked", name: "Blocked?", says: "blocked", check: (c) => !c.blocked },
+    { key: "lockdown", name: "Lockdown (maintenance still opens)", says: "lockdown", check: (c, k) => !k.lockdown || c.role === "maintenance" },
+    { key: "clock", name: "Needs a clock, and has one?", says: "no clock yet", check: (c, k) => !(c.until !== "none" || c.from !== c.to) || k.synced },
+    { key: "expired", name: "Before its end date?", says: "expired", check: (c) => c.until !== "past" },
+    { key: "hours", name: "Inside its hours?", says: "outside hours", check: (c, k) => c.from === c.to || (c.from < c.to ? k.hour >= c.from && k.hour < c.to : k.hour >= c.from || k.hour < c.to) },
+    { key: "uses", name: "Uses left?", says: "no uses left", check: (c) => c.uses !== 0 },
+  ];
+  function doorDecide(card, clock) {
+    for (const r of DOOR_RULES) if (!r.check(card, clock)) return r;
+    return null; // granted
+  }
+
+  function doorRulesPanel(root) {
+    const st = { listed: true, role: "resident", blocked: false, until: "none", from: 0, to: 0, uses: -1, lockdown: false, synced: true, hour: new Date().getHours() };
+    const hours = (sel) => Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === sel ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`).join("");
+    root.innerHTML = `<div class="rules-ui">
+      <div class="rules-form">
+        <label class="check"><input type="checkbox" data-k="listed" checked> in the list</label>
+        <label>role <select data-k="role"><option>resident</option><option>guest</option><option>maintenance</option></select></label>
+        <label class="check"><input type="checkbox" data-k="blocked"> blocked</label>
+        <label>end date <select data-k="until"><option value="none">none</option><option value="future">next week</option><option value="past">yesterday</option></select></label>
+        <label>hours from <select data-k="from">${hours(0)}</select></label>
+        <label>to <select data-k="to">${hours(0)}</select></label>
+        <label>uses <select data-k="uses"><option value="-1">unlimited</option><option value="3">3 left</option><option value="0">0 left</option></select></label>
+        <label class="check"><input type="checkbox" data-k="lockdown"> lockdown</label>
+        <label class="check"><input type="checkbox" data-k="synced" checked> board has internet time</label>
+        <label>time now <input type="range" min="0" max="23" value="${st.hour}" data-k="hour"><output data-o="hour"></output></label>
+      </div>
+      <ol class="rules-list"></ol>
+      <p class="rules-verdict" aria-live="polite"></p>
+    </div>`;
+    const list = root.querySelector(".rules-list"), verdict = root.querySelector(".rules-verdict"), hourOut = root.querySelector('[data-o="hour"]');
+    function draw() {
+      const decided = doorDecide(st, st);
+      let reached = true;
+      list.innerHTML = DOOR_RULES.map((r) => {
+        const ok = r.check(st, st);
+        const cls = !reached ? "skip" : ok ? "pass" : "stop";
+        if (reached && !ok) reached = false;
+        return `<li class="${cls}"><span>${r.name}</span><b>${cls === "skip" ? "not checked" : ok ? "yes" : `no → ${r.says}`}</b></li>`;
+      }).join("") + `<li class="${decided ? "skip" : "open"}"><span>All passed</span><b>${decided ? "–" : "OPEN (a guest's uses go down by one)"}</b></li>`;
+      verdict.innerHTML = decided ? `<span class="now critical">DENIED · ${decided.says}</span> the first rule that says no wins; the rest aren't checked.` : `<span class="now good">OPEN</span> every rule passed.`;
+      hourOut.textContent = `${String(st.hour).padStart(2, "0")}:00`;
+    }
+    root.querySelectorAll("[data-k]").forEach((el) => el.addEventListener("input", () => {
+      const k = el.dataset.k;
+      st[k] = el.type === "checkbox" ? el.checked : ["from", "to", "uses", "hour"].includes(k) ? Number(el.value) : el.value;
+      draw();
+    }));
+    draw();
+    return () => {};
+  }
+
+  function doorSeqPanel(root) {
+    const lanes = [["React app", "your browser"], ["Vite server", "on your Mac"], ["web server", "board, core 1"], ["reader task", "board, core 0"], ["card", "your tag"]];
+    const u = hxs(RF.card.uid).replace(/ /g, "");
+    const FLOWS = {
+      tap: {
+        label: "A tap", lanes, wait: [-1, -1],
+        steps: [
+          { f: 4, t: 3, msg: `UID ${u}`, ms: 3, net: true, title: "The card says who it is", text: "Wake-up, anticollision and select, as in R2: all the card ever contributes is its UID.", code: `WUPA → ATQA 04 00 → ANTICOLL → ${hxs(RF.card.uid)} → SELECT → SAK 08` },
+          { f: 3, t: 3, msg: "decide from the list", ms: 1, title: "The board decides, from its own list", text: "registry.tap() looks the UID up and checks the rules in order (blocked, lockdown, clock, end date, hours, uses). Nothing on the card is read or trusted.", code: "White card · resident · not blocked · any time → granted\ntaps 12 → 13, lastSeen = now, list saved to NVS" },
+          { f: 3, t: 3, msg: "OPEN 5 s", ms: 5, title: "The door opens", text: "The screen's padlock swings open, the LED turns green, and a 5-second countdown starts. Denied taps show DENIED with the reason for 2 s, LED red." },
+          { f: 3, t: 2, msg: "event JSON", ms: 1, title: "An event for the log", text: "The reader task puts a JSON message in its outbox; loop() on the other core sends it to every WebSocket client.", code: '{"type":"event","data":{"seq":42,"name":"White card","what":"tap","decision":"granted"}}' },
+          { f: 2, t: 0, msg: "WebSocket push", ms: 30, net: true, title: "The app hears it at once", text: "Through Vite's proxy to the browser: a new line in the access log, the door panel turns green. A status message follows every second." },
+        ],
+      },
+      block: {
+        label: "Block from the app", lanes, wait: [0, 3],
+        steps: [
+          { f: 0, t: 1, msg: "PUT /api/card?uid=… {blocked}", ms: 2, net: true, title: "You press Block", text: "The app sends only what changed. It has no token: the browser never holds it.", code: `PUT /api/card?uid=${u}\n{"blocked": true}` },
+          { f: 1, t: 2, msg: "+ Authorization", ms: 20, net: true, title: "The dev server adds the token", text: "Vite's proxy, on your Mac, adds the header from door-app/.env and forwards the request over your Wi-Fi.", code: "Authorization: Bearer 3f…(32 hex)" },
+          { f: 2, t: 2, msg: "check, update, save", ms: 15, title: "The board checks everything first", text: "Token compared in constant time, every field validated, then registry.update() changes the card under its mutex and saves the list to NVS.", code: "token ✓  blocked: bool ✓\nWhite card: blocked = true · saved (1.2 KB)" },
+          { f: 2, t: 0, msg: "200 + the card", ms: 20, net: true, title: "The answer, with what a tap would do now", text: "The card comes back with its new state, and a WebSocket 'cards' message updates every open app.", code: '{"ok":true,"card":{"name":"White card","blocked":true,"now":"blocked",…}}' },
+          { f: 4, t: 3, msg: "next tap", ms: 3, net: true, title: "The next tap", text: "Same card, same UID: nothing on the card changed." },
+          { f: 3, t: 3, msg: "blocked → DENIED", ms: 1, title: "Blocked wins first", text: "The very first rule after 'in the list?' is 'blocked?', so it doesn't matter what else the card is allowed: DENIED · blocked, LED red." },
+        ],
+      },
+      enroll: {
+        label: "Add a card", lanes, wait: [2, 4],
+        steps: [
+          { f: 0, t: 2, msg: "POST /api/enroll", ms: 25, net: true, title: "Name and role", text: "Through the proxy, with the token. The web server only queues a job for the reader task (one owner per chip) and answers at once.", code: '{"name":"Key tag","role":"guest"}  →  202 {"job":7}' },
+          { f: 2, t: 3, msg: "job 7 in the mailbox", ms: 1, title: "A job, not a wait", text: "The HTTP request is already answered; the result comes later over the WebSocket. Network handlers must never block." },
+          { f: 3, t: 3, msg: "wait 20 s, blue LED", ms: 2000, live: true, title: "The board waits for a card it hasn't seen", text: "The screen shows ADD A CARD and the LED blinks blue. A card already in the list is refused with its name." },
+          { f: 4, t: 3, msg: `UID ${hxs(RF.tag.uid).replace(/ /g, "")}`, ms: 3, net: true, title: "You lay the key tag down", text: "Not in the list: it becomes the new card. Guests start with 5 uses." },
+          { f: 3, t: 0, msg: "job 7 ok + cards", ms: 30, net: true, title: "The result reaches the app", text: "A 'job' message with id 7 resolves the app's waiting promise (a toast), and a 'cards' message updates the list.", code: '{"type":"job","data":{"id":7,"ok":true,"message":"card added"}}' },
+        ],
+      },
+    };
+    return sequenceDiagram(root, FLOWS, {
+      legend: `<span class="li"><span class="lg lg-msg"></span> HTTP, WebSocket or radio (orange: this step)</span><span class="li"><span class="lg lg-wait"></span> the app waiting for the board</span>`,
+      waitLane: 0,
+      live: (_f, secs) => `reader task  waiting for a new card … ${secs} s of 20\nweb server   still answering the app (status every second)`,
+    });
+  }
+
+  // ---------- Sim R7: the door screen + serial monitor (example data) ----------
+  function simDoor(parent) {
+    const W = 320, H = 170, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const C = rfidPalette();
+    const cards = {
+      white: { name: "White card", uid: hxs(RF.card.uid).replace(/ /g, ""), listed: true, role: "resident", blocked: false, until: "none", from: 0, to: 0, uses: -1 },
+      tag: { name: "Key tag", uid: hxs(RF.tag.uid).replace(/ /g, ""), listed: true, role: "guest", blocked: false, until: "none", from: 0, to: 0, uses: 2 },
+      stranger: { name: "", uid: "04A1B2C3", listed: false, role: "resident", blocked: false, until: "none", from: 0, to: 0, uses: -1 },
+    };
+    const st = { mode: "locked", until: 0, name: "", why: "", lockdown: false, view: 0, log: [] };
+    const row = document.createElement("div"); row.className = "quick";
+    row.innerHTML = `<button type="button" class="btn" data-t="white">tap: White card (resident)</button><button type="button" class="btn" data-t="tag">tap: Key tag (guest)</button><button type="button" class="btn" data-t="stranger">tap: a card not in the list</button>`;
+    const row2 = document.createElement("div"); row2.className = "quick";
+    row2.innerHTML = `<button type="button" class="btn" data-a="block" aria-pressed="false">app: block White card</button><button type="button" class="btn" data-a="lockdown" aria-pressed="false">app: lockdown</button><button type="button" class="btn" data-a="open">app: open for 5 s</button><button type="button" class="btn" data-a="view">button: next view</button>`;
+    const frame = document.createElement("div"); frame.className = "screen-frame";
+    frame.innerHTML = `<canvas width="${W}" height="${H}" aria-label="Simulated door screen"></canvas>`;
+    const cap = document.createElement("p"); cap.className = "sim-cap";
+    cap.textContent = "Example data. In the lab, the app does the 'app:' actions and your hands do the taps.";
+    parent.append(row, row2, frame, cap);
+    const term = terminal(parent, "$ uv run pio device monitor", false);
+    const g = frame.querySelector("canvas").getContext("2d");
+    const log = (t, cls = "i") => term.line(t, cls);
+    const time = () => new Date().toTimeString().slice(0, 5);
+    function decide(c) {
+      const r = doorDecide(c, { lockdown: st.lockdown, synced: true, hour: new Date().getHours() });
+      return r ? r.says : "granted";
+    }
+    function tap(key) {
+      const c = cards[key], d = decide(c);
+      if (d === "granted" && c.uses > 0) c.uses--;
+      st.mode = d === "granted" ? "open" : "denied";
+      st.until = performance.now() + (d === "granted" ? 5000 : 2000);
+      st.name = c.name || c.uid; st.why = d;
+      st.log.push({ t: time(), who: c.name || c.uid, d });
+      log(`[I][door.h] event(): tap ${c.name || c.uid} ${d}${key === "tag" && d === "granted" ? ` (uses left ${c.uses})` : ""}`, d === "granted" ? "i" : "w");
+    }
+    function drawLock(cx, cy, open, col) {
+      g.strokeStyle = col; g.lineWidth = 5; g.beginPath();
+      g.arc(cx + open * 12, cy - 18 - open * 8, 11, Math.PI, 0); g.stroke();
+      g.fillStyle = col; g.fillRect(cx + 8 + open * 12, cy - 18 - open * 8, 5, 8 + open * 8);
+      if (!open) g.fillRect(cx - 13, cy - 18, 5, 8);
+      g.fillRect(cx - 20, cy - 10, 40, 32); g.fillStyle = C.paper; g.beginPath(); g.arc(cx, cy + 2, 4, 0, 7); g.fill(); g.fillRect(cx - 1, cy + 4, 3, 9);
+      g.lineWidth = 1;
+    }
+    const T = (x, y, s, col, font = "8px 'IBM Plex Mono', monospace") => { g.font = font; g.fillStyle = col; g.fillText(s, x, y); };
+    let raf;
+    function draw(now) {
+      if (st.mode !== "locked" && now > st.until) st.mode = "locked";
+      g.fillStyle = C.paper; g.fillRect(0, 0, W, H);
+      T(8, 18, "DOOR", C.ink, "bold 12px Archivo, sans-serif"); T(48, 18, ["door", "cards", "log"][st.view], C.muted, "11px Archivo, sans-serif");
+      if (st.lockdown) { g.fillStyle = C.amber; g.fillRect(150, 6, 76, 16); T(158, 17, "LOCKDOWN", C.paper); }
+      g.fillStyle = C.dim; g.fillRect(0, 28, W, 1);
+      if (st.view === 0) {
+        const blink = st.mode === "denied" && !reduce && Math.floor(now / 120) % 2;
+        const col = st.mode === "open" ? C.teal : st.mode === "denied" ? (blink ? C.dim : C.coral) : C.muted;
+        drawLock(62, 104, st.mode === "open" ? 1 : 0, col);
+        T(120, 80, st.mode === "open" ? "OPEN" : st.mode === "denied" ? "DENIED" : "LOCKED", col, "bold 26px Archivo, sans-serif");
+        if (st.mode === "open") { T(122, 100, `welcome, ${st.name}`, C.ink, "11px Archivo, sans-serif"); g.strokeStyle = C.dim; g.strokeRect(122.5, 112.5, 180, 6); g.fillStyle = C.teal; g.fillRect(123, 113, (178 * Math.max(0, st.until - now)) / 5000, 5); }
+        else if (st.mode === "denied") { T(122, 100, st.why, C.ink, "11px Archivo, sans-serif"); T(122, 114, st.name, C.muted); }
+        else T(122, 100, `${Object.values(cards).filter((c) => c.listed).length} cards in the list`, C.muted);
+      } else if (st.view === 1) {
+        Object.values(cards).filter((c) => c.listed).forEach((c, i) => {
+          const d = decide(c), col = d === "granted" ? C.teal : d === "blocked" ? C.coral : C.amber;
+          g.fillStyle = col; g.beginPath(); g.arc(12, 39 + i * 13, 3, 0, 7); g.fill();
+          T(22, 42 + i * 13, c.name, C.ink); T(160, 42 + i * 13, c.role, C.muted); T(240, 42 + i * 13, d, col);
+        });
+      } else {
+        st.log.slice(-9).forEach((e, i) => { T(6, 42 + i * 13, e.t, C.muted); T(44, 42 + i * 13, e.who, C.ink); T(180, 42 + i * 13, e.d, e.d === "granted" ? C.teal : C.coral); });
+        if (!st.log.length) T(8, 46, "No events yet: tap a card.", C.muted);
+      }
+      g.fillStyle = C.paper; g.fillRect(0, H - 11, W, 11);
+      T(6, H - 3, "http://bench.local", C.muted); T(W - 40, H - 3, "1 app", C.teal);
+      rgbDot.setAttribute("fill", st.mode === "open" ? "var(--ok)" : st.mode === "denied" ? "var(--danger)" : st.lockdown ? "var(--warn)" : "var(--silk-dim)");
+      raf = requestAnimationFrame(draw);
+    }
+    row.querySelectorAll("[data-t]").forEach((b) => b.addEventListener("click", () => tap(b.dataset.t)));
+    row2.querySelector('[data-a="block"]').addEventListener("click", (e) => {
+      cards.white.blocked = !cards.white.blocked;
+      e.currentTarget.setAttribute("aria-pressed", String(cards.white.blocked));
+      log(`[I][door_api.h] PUT /api/card?uid=${cards.white.uid} {"blocked":${cards.white.blocked}} -> 200`, "");
+    });
+    row2.querySelector('[data-a="lockdown"]').addEventListener("click", (e) => {
+      st.lockdown = !st.lockdown;
+      e.currentTarget.setAttribute("aria-pressed", String(st.lockdown));
+      log(`[I][door_api.h] PUT /api/lockdown {"on":${st.lockdown}} -> 200`, "");
+    });
+    row2.querySelector('[data-a="open"]').addEventListener("click", () => {
+      st.mode = "open"; st.until = performance.now() + 5000; st.name = "the app";
+      st.log.push({ t: time(), who: "the app", d: "granted" });
+      log("[I][door.h] event(): opened from the app the app", "i");
+    });
+    row2.querySelector('[data-a="view"]').addEventListener("click", () => { st.view = (st.view + 1) % 3; });
+    log("[I][main.cpp] setup(): rfid-lab-r7: reader task on core 0. Type token for the app's .env, help for commands.");
+    log("[I][registry.h] begin(): card list: 2 cards, lockdown off", "");
+    log("[I][main.cpp] loop(): App: http://bench.local or http://192.168.178.57  (set BENCH_URL in door-app/.env)", "");
+    raf = requestAnimationFrame(draw);
+    return () => { cancelAnimationFrame(raf); rgbDot.setAttribute("fill", "var(--silk-dim)"); };
+  }
+
+  const RFID_PANELS = { doorRules: doorRulesPanel, doorSeq: doorSeqPanel, spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge, screens: rfidScreens };
 
   const LOG = [
     { n: 1, types: ["install"], title: "Install PlatformIO into the project", where: "Mac · test-esp/.venv",
@@ -4511,6 +4769,11 @@ ol.scr-list li.hl, ol.scr-list li:focus-visible { background: var(--copper-soft)
       why: "Your request: each lab its own code and command, like W1/W2. Each src/rfid-lab-rN/main.cpp lists its views and serial commands; the shared code moved to lib/rfid-lab-kit.",
       out: "rfid-lab-r1 … r6  SUCCESS, Flash 437–440 KB, no warnings",
       result: "R1 was all working on your board (rfid-lab). Next: uv run pio run -e rfid-lab-r2 -t upload. Nothing was sent to the board." },
+    { n: 40, types: ["build"], title: "R7 Card manager: firmware, React app, guide lesson", where: "Mac · no board",
+      cmd: "c++ … test/host/door_rules_test.cpp (door rules)\nuv run pio run -e wifi-lab-w2 -e wifi-lab-w2-remote (after moving api_token.h)\ndoor-app: tsc · vitest · vite + mock board, headless Chromium",
+      why: "Your request: manage your cards from a simple React app: add, label, wipe, block, open a door, scenarios. The board keeps the list and decides every tap; the app talks to its JSON API and WebSocket; the token stays in the app's .env.",
+      out: "all door rule checks passed\nwifi-lab-w2 SUCCESS · wifi-lab-w2-remote SUCCESS\ndoor-app: typecheck clean · 6 tests passed · renders at 1280 and 390 px",
+      result: "Waiting for your go: the first rfid-lab-r7 build (copies W2's three web libraries into .pio) and pnpm install in test-esp/door-app. Nothing was sent to the board." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";
