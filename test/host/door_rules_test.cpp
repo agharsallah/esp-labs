@@ -44,6 +44,26 @@ int main() {
   CHECK(decide(&c, day, false) == Decision::NoUsesLeft);
   c.usesLeft = 3;
   CHECK(decide(&c, day, false) == Decision::Granted);
+  c.usesLeft = -1;
+
+  // The admin room: only admin cards, whatever else the card may do; admins also pass lockdown.
+  const Lock room = Lock::AdminRoom;
+  for (Role other : {Role::Resident, Role::Guest, Role::Maintenance}) {
+    c.role = other;
+    CHECK(decide(&c, day, false, room) == Decision::AdminsOnly);
+  }
+  CHECK(decide(&c, day, true) == Decision::Granted);  // maintenance: front door in lockdown
+  c.role = Role::Admin;
+  CHECK(decide(&c, day, false, room) == Decision::Granted);
+  CHECK(decide(&c, day, false) == Decision::Granted);  // admins open the front door too
+  CHECK(decide(&c, day, true, room) == Decision::Granted);
+  c.fromHour = 8, c.toHour = 18;  // an admin card still keeps its own hours
+  CHECK(decide(&c, Clock{true, day.now, 20}, false, room) == Decision::OutsideHours);
+  c.fromHour = c.toHour = 0;
+  c.blocked = true;  // and blocking still wins
+  CHECK(decide(&c, day, false, room) == Decision::Blocked);
+  c.blocked = false;
+  CHECK(decide(nullptr, day, false, room) == Decision::Unknown);
 
   uint8_t uid[10], len = 0;
   CHECK(uidFromHex("9C4F2A1B", uid, len) && len == 4 && uid[0] == 0x9C && uid[3] == 0x1B);
@@ -52,7 +72,11 @@ int main() {
   uidToHex(uid, 4, hex, sizeof(hex));
   CHECK(strcmp(hex, "9C4F2A1B") == 0);
   Role r;
-  CHECK(roleFromName("guest", r) && r == Role::Guest && !roleFromName("admin", r));
+  CHECK(roleFromName("guest", r) && r == Role::Guest && roleFromName("admin", r) && r == Role::Admin);
+  CHECK(!roleFromName("root", r));
+  Lock l;
+  CHECK(lockFromId("admin", l) && l == Lock::AdminRoom && lockFromId("front", l) && l == Lock::Front);
+  CHECK(!lockFromId("back", l));
 
   std::printf(failures ? "%d check(s) failed\n" : "all door rule checks passed\n", failures);
   return failures ? 1 : 0;

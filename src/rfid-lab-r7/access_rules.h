@@ -1,17 +1,22 @@
-// R7's access rules: who may open the bench door, decided by the board from its own card list.
+// R7's access rules: who may open which lock, decided by the board from its own card list.
 // Pure C++ (no Arduino), so test/host/door_rules_test.cpp checks every rule on the Mac.
 //
 // The card only contributes its UID: everything else (name, role, blocked, dates, hours, uses)
-// lives in the board's list, which only the app with the admin token can change. The order of
-// the checks is part of the lesson:
-//   1. unknown card            -> Unknown
-//   2. blocked                 -> Blocked        (blocking always wins)
-//   3. lockdown, not staff     -> Lockdown       (maintenance cards still open)
-//   4. needs a clock, none yet -> NoClock        (fail closed: no time, no time-limited access)
-//   5. past its end date       -> Expired
-//   6. outside its hours       -> OutsideHours   (hours may wrap past midnight, e.g. 22-6)
-//   7. a guest with 0 uses     -> NoUsesLeft
-//   8. otherwise               -> Granted        (a guest's uses go down by one)
+// lives in the board's list, which only the app with the admin token can change.
+//
+// Two locks: the front door (every role) and the admin room (admin cards only). The one reader
+// is mounted at one of them at a time; the app or serial `at front|admin` moves it.
+//
+// The order of the checks is part of the lesson:
+//   1. unknown card              -> Unknown
+//   2. blocked                   -> Blocked       (blocking always wins)
+//   3. admin room, not an admin  -> AdminsOnly    (the role decides, not the rules below)
+//   4. lockdown, not staff       -> Lockdown      (maintenance and admin cards still open)
+//   5. needs a clock, none yet   -> NoClock       (fail closed: no time, no time-limited access)
+//   6. past its end date         -> Expired
+//   7. outside its hours         -> OutsideHours  (hours may wrap past midnight, e.g. 22-6)
+//   8. a guest with 0 uses       -> NoUsesLeft
+//   9. otherwise                 -> Granted       (a guest's uses go down by one)
 #pragma once
 
 #include <stdint.h>
@@ -22,8 +27,10 @@
 
 namespace door {
 
-enum class Role : uint8_t { Resident, Guest, Maintenance };
-enum class Decision : uint8_t { Granted, Unknown, Blocked, Lockdown, NoClock, Expired, OutsideHours, NoUsesLeft };
+enum class Role : uint8_t { Resident, Guest, Maintenance, Admin };  // stored as a byte: only append
+enum class Decision : uint8_t { Granted, Unknown, Blocked, AdminsOnly, Lockdown, NoClock, Expired, OutsideHours, NoUsesLeft };
+enum class Lock : uint8_t { Front, AdminRoom };
+constexpr int kLocks = 2;
 
 struct Card {
   uint8_t uid[10] = {};
@@ -52,10 +59,11 @@ inline bool inHours(const Card &c, uint8_t hour) {
   return hour >= c.fromHour || hour < c.toHour;  // wraps past midnight
 }
 
-inline Decision decide(const Card *c, const Clock &clk, bool lockdown) {
+inline Decision decide(const Card *c, const Clock &clk, bool lockdown, Lock lock = Lock::Front) {
   if (!c) return Decision::Unknown;
   if (c->blocked) return Decision::Blocked;
-  if (lockdown && c->role != Role::Maintenance) return Decision::Lockdown;
+  if (lock == Lock::AdminRoom && c->role != Role::Admin) return Decision::AdminsOnly;
+  if (lockdown && c->role != Role::Maintenance && c->role != Role::Admin) return Decision::Lockdown;
   if (needsClock(*c) && !clk.synced) return Decision::NoClock;
   if (c->validUntil && clk.now >= c->validUntil) return Decision::Expired;
   if (!inHours(*c, clk.hour)) return Decision::OutsideHours;
@@ -68,6 +76,7 @@ inline const char *decisionName(Decision d) {
     case Decision::Granted: return "granted";
     case Decision::Unknown: return "unknown card";
     case Decision::Blocked: return "blocked";
+    case Decision::AdminsOnly: return "admins only";
     case Decision::Lockdown: return "lockdown";
     case Decision::NoClock: return "no clock yet";
     case Decision::Expired: return "expired";
@@ -82,13 +91,24 @@ inline const char *roleName(Role r) {
     case Role::Resident: return "resident";
     case Role::Guest: return "guest";
     case Role::Maintenance: return "maintenance";
+    case Role::Admin: return "admin";
   }
   return "?";
 }
 
 inline bool roleFromName(const char *s, Role &out) {
-  for (Role r : {Role::Resident, Role::Guest, Role::Maintenance})
+  for (Role r : {Role::Resident, Role::Guest, Role::Maintenance, Role::Admin})
     if (strcmp(s, roleName(r)) == 0) return out = r, true;
+  return false;
+}
+
+// "front" / "admin" in the API and on serial; "Front door" / "Admin room" for people.
+inline const char *lockId(Lock l) { return l == Lock::AdminRoom ? "admin" : "front"; }
+inline const char *lockTitle(Lock l) { return l == Lock::AdminRoom ? "Admin room" : "Front door"; }
+
+inline bool lockFromId(const char *s, Lock &out) {
+  for (Lock l : {Lock::Front, Lock::AdminRoom})
+    if (strcmp(s, lockId(l)) == 0) return out = l, true;
   return false;
 }
 

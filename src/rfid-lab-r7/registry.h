@@ -29,6 +29,7 @@ class Registry {
     p.begin("door", true);
     const uint8_t format = p.getUChar("format", 0);
     lockdown_ = p.getBool("lockdown", false);
+    readerAt_ = p.getUChar("at", 0) == uint8_t(door::Lock::AdminRoom) ? door::Lock::AdminRoom : door::Lock::Front;
     if (format == kFormat) {
       count_ = std::min<int>(p.getUChar("count", 0), kMax);
       if (count_ && p.getBytes("cards", cards_, sizeof(door::Card) * count_) != sizeof(door::Card) * count_) count_ = 0;
@@ -36,7 +37,8 @@ class Registry {
       log_w("card list saved by an older firmware (format %u): starting with an empty list", format);
     }
     p.end();
-    log_i("card list: %d card%s, lockdown %s", count_, count_ == 1 ? "" : "s", lockdown_ ? "ON" : "off");
+    log_i("card list: %d card%s, lockdown %s, reader at the %s", count_, count_ == 1 ? "" : "s", lockdown_ ? "ON" : "off",
+          door::lockTitle(readerAt_));
   }
 
   int count() {
@@ -58,6 +60,21 @@ class Registry {
     Preferences p;
     p.begin("door", false);
     p.putBool("lockdown", on);
+    p.end();
+    version_++;
+  }
+
+  // Which lock the one reader serves. Saved, so it stays put after a restart.
+  door::Lock readerAt() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return readerAt_;
+  }
+  void setReaderAt(door::Lock at) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    readerAt_ = at;
+    Preferences p;
+    p.begin("door", false);
+    p.putUChar("at", uint8_t(at));
     p.end();
     version_++;
   }
@@ -107,11 +124,11 @@ class Registry {
 
   // A tap: decide with the list as it is right now, then count it. `out` is the card after the
   // tap (uses already reduced); `known` says whether it was in the list at all.
-  door::Decision tap(const uint8_t *uid, uint8_t len, const door::Clock &clk, door::Card &out, bool &known) {
+  door::Decision tap(const uint8_t *uid, uint8_t len, const door::Clock &clk, door::Lock at, door::Card &out, bool &known) {
     std::lock_guard<std::mutex> lock(mutex_);
     const int i = find(uid, len);
     known = i >= 0;
-    const door::Decision d = door::decide(known ? &cards_[i] : nullptr, clk, lockdown_);
+    const door::Decision d = door::decide(known ? &cards_[i] : nullptr, clk, lockdown_, at);
     if (!known) return d;
     door::Card &c = cards_[i];
     c.taps++;
@@ -144,5 +161,6 @@ class Registry {
   door::Card cards_[kMax];
   int count_ = 0;
   bool lockdown_ = false;
+  door::Lock readerAt_ = door::Lock::Front;
   uint32_t version_ = 1;
 };

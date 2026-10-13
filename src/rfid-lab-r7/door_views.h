@@ -22,7 +22,7 @@ namespace dv {
 
 constexpr int kW = 320, kH = 170;
 constexpr uint16_t kOpen = rgb(60, 210, 120), kDenied = rgb(255, 96, 84), kEnroll = rgb(90, 160, 255),
-                   kCopy = rgb(190, 130, 255);
+                   kCopy = rgb(190, 130, 255), kAdmin = rgb(236, 186, 80);
 
 inline void text(FrameBuffer &fb, int x, int y, uint16_t c, const char *s, const GFXfont *f = nullptr) {
   fb.setFont(f);
@@ -78,12 +78,14 @@ inline void padlock(FrameBuffer &fb, int cx, int cy, float open, uint16_t c) {
   fb.fillRect(cx - 1, cy + 4, 3, 9, pal::night);
 }
 
-inline void door(FrameBuffer &fb, const DoorState &s, int cards, float t) {
+// The lock the reader is mounted at, big; the other lock on one line underneath.
+inline void door(FrameBuffer &fb, const DoorState &ds, door::Lock at, int cards, float t) {
+  const DoorState::LockState &s = ds.locks[int(at)];
   const uint32_t now = millis();
-  if (s.wait != DoorState::Wait::None) {
-    const bool copy = s.wait == DoorState::Wait::CopyTarget;
+  if (ds.wait != DoorState::Wait::None) {
+    const bool copy = ds.wait == DoorState::Wait::CopyTarget;
     const uint16_t c = copy ? kCopy : kEnroll;
-    const int left = int(max<int32_t>(0, int32_t(s.waitUntil - now)) / 1000);
+    const int left = int(max<int32_t>(0, int32_t(ds.waitUntil - now)) / 1000);
     for (int i = 0; i < 3; i++) {
       const float k = fmodf(t * 0.8f + i / 3.0f, 1.0f);
       fb.drawCircle(64, 96, 14 + int(k * 40), mix(c, pal::night, uint8_t(k * 255)));
@@ -91,21 +93,21 @@ inline void door(FrameBuffer &fb, const DoorState &s, int cards, float t) {
     if (copy) fb.drawRoundRect(36, 74, 36, 26, 3, pal::muted);  // the source, behind
     fb.fillRoundRect(46, 82, 36, 26, 3, pal::ink);             // the card to lay down
     char line[48];
-    if (s.wait == DoorState::Wait::Enroll) {
+    if (ds.wait == DoorState::Wait::Enroll) {
       text(fb, 128, 64, c, "ADD A CARD", &FreeSansBold9pt7b);
-      snprintf(line, sizeof(line), "Tap the new card for \"%s\"", s.waitName);
+      snprintf(line, sizeof(line), "Tap the new card for \"%s\"", ds.waitName);
       text(fb, 128, 78, pal::ink, line);
-    } else if (s.wait == DoorState::Wait::Replace) {
+    } else if (ds.wait == DoorState::Wait::Replace) {
       text(fb, 128, 64, c, "REPLACE A CARD", &FreeSansBold9pt7b);
-      snprintf(line, sizeof(line), "Tap the new card for \"%s\"", s.waitName);
+      snprintf(line, sizeof(line), "Tap the new card for \"%s\"", ds.waitName);
       text(fb, 128, 78, pal::ink, line);
-      snprintf(line, sizeof(line), "%s will be blocked", s.waitUid);
+      snprintf(line, sizeof(line), "%s will be blocked", ds.waitUid);
       text(fb, 128, 108, pal::muted, line);
     } else {
       text(fb, 128, 64, c, "COPY: 2ND CARD", &FreeSansBold9pt7b);
       text(fb, 128, 78, pal::ink, "Lift the first card, lay");
       text(fb, 128, 90, pal::ink, "the card to copy onto");
-      snprintf(line, sizeof(line), "from %s", s.waitName);
+      snprintf(line, sizeof(line), "from %s", ds.waitName);
       text(fb, 128, 108, pal::muted, line);
     }
     snprintf(line, sizeof(line), "%d s left", left);
@@ -119,6 +121,7 @@ inline void door(FrameBuffer &fb, const DoorState &s, int cards, float t) {
   if (s.mode == DoorState::Mode::Denied) c = kDenied, big = "DENIED";
   if (s.mode == DoorState::Mode::Denied && int((now / 120) % 2)) c = mix(kDenied, pal::night, 90);  // blink
   padlock(fb, 62, 104, open, c);
+  text(fb, 122, 42, at == door::Lock::AdminRoom ? kAdmin : pal::muted, at == door::Lock::AdminRoom ? "ADMIN ROOM" : "FRONT DOOR");
   text(fb, 120, 80, c, big, &FreeSansBold18pt7b);
   char line[48];
   if (s.mode == DoorState::Mode::Open) {
@@ -139,13 +142,19 @@ inline void door(FrameBuffer &fb, const DoorState &s, int cards, float t) {
       text(fb, 122, 114, pal::muted, line);
     }
   }
+  const door::Lock other = at == door::Lock::AdminRoom ? door::Lock::Front : door::Lock::AdminRoom;
+  const DoorState::LockState &o = ds.locks[int(other)];
+  const bool oOpen = o.mode == DoorState::Mode::Open;
+  snprintf(line, sizeof(line), "%s: %s", door::lockTitle(other), oOpen ? "open" : "locked");
+  text(fb, 122, 134, oOpen ? kOpen : pal::dim, line);
 }
 
 inline uint16_t nowColor(door::Decision d) {
   return d == door::Decision::Granted ? kOpen : d == door::Decision::Blocked || d == door::Decision::Unknown ? kDenied : pal::amber;
 }
 
-inline void cards(FrameBuffer &fb, const std::vector<door::Card> &list, const door::Clock &clk, bool lockdown) {
+// Each card with what a tap would do at the lock the reader is mounted at.
+inline void cards(FrameBuffer &fb, const std::vector<door::Card> &list, const door::Clock &clk, bool lockdown, door::Lock at) {
   if (list.empty()) {
     text(fb, 8, 44, pal::ink, "No cards yet.");
     text(fb, 8, 58, pal::muted, "Add one from the app (Add card),");
@@ -155,7 +164,7 @@ inline void cards(FrameBuffer &fb, const std::vector<door::Card> &list, const do
   const int rows = min<int>(list.size(), 9);
   for (int i = 0; i < rows; i++) {
     const door::Card &c = list[i];
-    const door::Decision d = door::decide(&c, clk, lockdown);
+    const door::Decision d = door::decide(&c, clk, lockdown, at);
     const int y = 36 + i * 13;
     fb.fillCircle(12, y + 3, 3, nowColor(d));
     text(fb, 22, y, pal::ink, c.name);

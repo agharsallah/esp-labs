@@ -2,7 +2,9 @@
 // A bench door you manage from a React app (test-esp/door-app): add cards, name them, block
 // them, give them an end date, hours or a number of uses, replace a lost one, write a label onto
 // them, wipe their data blocks, save a card's data and write it back or copy it onto another
-// card, watch the access log live. The door is simulated: the screen and the LED.
+// card, watch the access log live. Two simulated locks (the screen and the LED): the front door,
+// open to every role, and the admin room, admin cards only. The one reader is mounted at one of
+// them at a time; the app or `at front|admin` moves it.
 //
 // The board keeps the card list (NVS) and decides every tap itself; the card only brings its
 // UID. The app talks to the board's JSON API and WebSocket over your Wi-Fi (the network saved
@@ -10,10 +12,11 @@
 //
 // Wiring: the screen from lesson 03 and the RC522 as in R1. Push button on GPIO 5 optional.
 // Views: door · cards · log   (button: click = next view)
-// On-board LED: green = door open · red = denied · blue blinking = waiting for a new card ·
+// On-board LED (the lock the reader is at): green = open · red = denied · blue blinking = waiting for a new card ·
 //               violet blinking = copy waiting for its second card · dim amber = lockdown ·
 //               off = locked and quiet
-// Serial: help · status · token · token new · cards · enroll <name> · open · lockdown on|off ·
+// Serial: help · status · token · token new · cards · enroll <name> · open [front|admin] ·
+//         at front|admin · lockdown on|off ·
 //         saved · save [name] · restore <id> · copy · cancel · reset · tz <TZ>
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -75,12 +78,13 @@ const char *resetReason() {
 
 void printHelp() {
   Serial.println("\nRFID lab R7 Card manager  (rfid-lab-r7)");
-  Serial.println("  status            Wi-Fi, address, reader chip, door, card count");
+  Serial.println("  status            Wi-Fi, address, reader chip, locks, card count");
   Serial.println("  token             the admin token for test-esp/door-app/.env (token new: replace it)");
   Serial.println("  cards             the card list");
   Serial.println("  enroll <name>     add a card as a resident: tap it within 20 s");
-  Serial.println("  open              open the door for 5 s");
-  Serial.println("  lockdown on|off   only maintenance cards open while on");
+  Serial.println("  open [front|admin] open a lock for 5 s (the front door when left out)");
+  Serial.println("  at front|admin    mount the reader at the front door or the admin room");
+  Serial.println("  lockdown on|off   only maintenance and admin cards open while on");
   Serial.println("  saved             saved card data (blocks 4-6, 8-10)");
   Serial.println("  save [name]       save the data of the card on the reader");
   Serial.println("  restore <id>      write saved data onto the card on the reader");
@@ -96,6 +100,15 @@ void printStatus() {
   Serial.printf("Wi-Fi: %s %s | http://%s.local (%s) | app clients %u\n", joined ? "joined" : "not joined",
                 connection.ssid().c_str(), Connection::kHostname, joined ? WiFi.localIP().toString().c_str() : "-",
                 unsigned(api.clients()));
+  const auto lockLine = [](door::Lock l) {
+    const DoorState::LockState &ls = state.door.locks[int(l)];
+    Serial.printf("%s: %s%s | ", door::lockTitle(l),
+                  ls.mode == DoorState::Mode::Open ? "open" : ls.mode == DoorState::Mode::Denied ? "denied" : "locked",
+                  registry.readerAt() == l ? " (reader here)" : "");
+  };
+  lockLine(door::Lock::Front);
+  lockLine(door::Lock::AdminRoom);
+  Serial.println();
   Serial.printf("Reader chip 0x%02X (%s) | %d cards | lockdown %s | clock %s\n", state.door.chipVersion,
                 rc522::versionName(state.door.chipVersion), registry.count(), registry.lockdown() ? "ON" : "off",
                 connection.timeSynced() ? "synced" : "not yet (cards with dates or hours are refused until it is)");
@@ -113,8 +126,10 @@ void printCards() {
   for (const door::Card &c : list) {
     char uid[21];
     door::uidToHex(c.uid, c.uidLen, uid, sizeof(uid));
-    Serial.printf("  %-14s %-20s %-11s %s%s  taps %lu\n", uid, c.name, door::roleName(c.role), c.blocked ? "BLOCKED " : "",
-                  door::decisionName(door::decide(&c, clk, registry.lockdown())), static_cast<unsigned long>(c.taps));
+    Serial.printf("  %-14s %-20s %-11s front: %-13s admin room: %-13s taps %lu\n", uid, c.name, door::roleName(c.role),
+                  door::decisionName(door::decide(&c, clk, registry.lockdown(), door::Lock::Front)),
+                  door::decisionName(door::decide(&c, clk, registry.lockdown(), door::Lock::AdminRoom)),
+                  static_cast<unsigned long>(c.taps));
   }
 }
 
@@ -129,9 +144,10 @@ void printSaved() {
   }
 }
 
-void submit(Door::Job job, const char *name = "", uint32_t snapshot = 0) {
+void submit(Door::Job job, const char *name = "", uint32_t snapshot = 0, door::Lock lock = door::Lock::Front) {
   Door::Request r;
   r.job = job;
+  r.lock = lock;
   strlcpy(r.name, name, sizeof(r.name));
   r.snapshot = snapshot;
   if (!doorTask.submit(r)) log_w("the reader is busy, try again");
@@ -147,6 +163,17 @@ void handleCommand(const String &raw) {
   if (lower == "status") return printStatus();
   if (lower == "cards") return printCards();
   if (lower == "open") return submit(Door::Job::Open);
+  if (lower.startsWith("open ") || lower.startsWith("at ")) {
+    door::Lock l;
+    if (!door::lockFromId(lower.substring(lower.indexOf(' ') + 1).c_str(), l)) {
+      log_w("which lock? front or admin");
+      return;
+    }
+    if (lower.startsWith("open ")) return submit(Door::Job::Open, "", 0, l);
+    registry.setReaderAt(l);
+    log_i("the reader is now at the %s", door::lockTitle(l));
+    return;
+  }
   if (lower == "reset") return submit(Door::Job::ChipReset);
   if (lower == "saved") return printSaved();
   if (lower == "copy") return submit(Door::Job::Copy);
@@ -178,7 +205,7 @@ void handleCommand(const String &raw) {
   }
   if (lower == "lockdown on" || lower == "lockdown off") {
     registry.setLockdown(lower == "lockdown on");
-    log_i("lockdown %s", registry.lockdown() ? "ON: only maintenance cards open" : "off");
+    log_i("lockdown %s", registry.lockdown() ? "ON: only maintenance and admin cards open" : "off");
     return;
   }
   if (lower.startsWith("enroll ")) {
@@ -234,13 +261,20 @@ void publishStatus() {
   JsonObject clock = d["clock"].to<JsonObject>();
   clock["synced"] = clk.synced;
   clock["now"] = clk.now;
-  JsonObject dj = d["door"].to<JsonObject>();
   const DoorState &s = state.door;
-  dj["mode"] = s.mode == DoorState::Mode::Open ? "open" : s.mode == DoorState::Mode::Denied ? "denied" : "locked";
-  dj["msLeft"] = s.mode == DoorState::Mode::Locked ? 0 : max<int32_t>(0, int32_t(s.modeUntil - millis()));
-  dj["name"] = doorjson::copied(s.lastName);
-  dj["uid"] = doorjson::copied(s.lastUid);
-  dj["why"] = doorjson::copied(s.lastWhy);
+  JsonArray locks = d["locks"].to<JsonArray>();
+  for (door::Lock l : {door::Lock::Front, door::Lock::AdminRoom}) {
+    const DoorState::LockState &ls = s.locks[int(l)];
+    JsonObject lj = locks.add<JsonObject>();
+    lj["id"] = door::lockId(l);
+    lj["title"] = door::lockTitle(l);
+    lj["mode"] = ls.mode == DoorState::Mode::Open ? "open" : ls.mode == DoorState::Mode::Denied ? "denied" : "locked";
+    lj["msLeft"] = ls.mode == DoorState::Mode::Locked ? 0 : max<int32_t>(0, int32_t(ls.modeUntil - millis()));
+    lj["name"] = doorjson::copied(ls.lastName);
+    lj["uid"] = doorjson::copied(ls.lastUid);
+    lj["why"] = doorjson::copied(ls.lastWhy);
+  }
+  d["readerAt"] = door::lockId(registry.readerAt());
   if (s.present) d["present"] = doorjson::copied(s.presentUid);
   else d["present"] = nullptr;
   if (s.wait != DoorState::Wait::None) {
@@ -274,12 +308,13 @@ void publishStatus() {
 void showLed() {
   static uint32_t shown = 0xFFFFFFFF;
   const DoorState &s = state.door;
+  const DoorState::LockState &here = s.locks[int(registry.readerAt())];
   uint8_t r = 0, g = 0, b = 0;
   const bool blink = (millis() / 300) % 2;
   if (s.wait == DoorState::Wait::CopyTarget) r = blink ? 70 : 12, b = blink ? 120 : 20;
   else if (s.wait != DoorState::Wait::None) b = blink ? 120 : 20;
-  else if (s.mode == DoorState::Mode::Open) g = 160, b = 40;
-  else if (s.mode == DoorState::Mode::Denied) r = 150;
+  else if (here.mode == DoorState::Mode::Open) g = 160, b = 40;
+  else if (here.mode == DoorState::Mode::Denied) r = 150;
   else if (state.door.version && (s.chipVersion == 0x00 || s.chipVersion == 0xFF)) r = 90;
   else if (registry.lockdown()) r = 40, g = 18;
   const uint32_t colour = (uint32_t(r) << 16) | (uint32_t(g) << 8) | b;
@@ -349,8 +384,8 @@ void loop() {
   door::Clock clk;
   doorjson::clockNow(clk);
   switch (state.view) {
-    case 0: dv::door(fb, state.door, int(state.cards.size()), t); break;
-    case 1: dv::cards(fb, state.cards, clk, registry.lockdown()); break;
+    case 0: dv::door(fb, state.door, registry.readerAt(), int(state.cards.size()), t); break;
+    case 1: dv::cards(fb, state.cards, clk, registry.lockdown(), registry.readerAt()); break;
     default: dv::history(fb, state.events); break;
   }
   dv::header(fb, kViewNames[state.view], state.view, kViews, state.door, registry.lockdown());

@@ -5,10 +5,12 @@
 // (header "Authorization: Bearer <token>", serial command `token`). The app's dev server adds it
 // from test-esp/door-app/.env, so the token never reaches the browser.
 //   GET    /api                  this list
-//   GET    /api/status           door, reader chip, Wi-Fi, clock, lockdown, enrollment
-//   GET    /api/cards            the card list, each with what a tap would do right now
+//   GET    /api/status           both locks, where the reader is, reader chip, Wi-Fi, clock,
+//                                lockdown, enrollment
+//   GET    /api/cards            the card list, each with what a tap would do right now at
+//                                each lock: "now": {"front": "granted", "admin": "admins only"}
 //   GET    /api/events?since=N   the access log after event N (the last 50 are kept)
-//   POST   /api/enroll           {"name": "Anna", "role": "resident|guest|maintenance"}  -> 202 job
+//   POST   /api/enroll           {"name": "Anna", "role": "resident|guest|maintenance|admin"}  -> 202 job
 //   POST   /api/replace?uid=HEX  a new card takes over this card's name and rules; the old one
 //                                is blocked (lost or broken card)                         -> 202 job
 //   POST   /api/cancel           stop waiting for a card (enroll, replace, copy)
@@ -25,8 +27,9 @@
 //   DELETE /api/snapshot?id=N    forget saved data
 //   POST   /api/copy             read the card on the reader, then write it onto the next
 //                                different card laid down within 20 s                    -> 202 job
-//   POST   /api/open             open the door for 5 s from the app
-//   PUT    /api/lockdown         {"on": true}: only maintenance cards open
+//   POST   /api/open?lock=front  open a lock for 5 s from the app (front or admin)
+//   PUT    /api/reader-at        {"lock": "front" | "admin"}: which lock the reader is mounted at
+//   PUT    /api/lockdown         {"on": true}: only maintenance and admin cards open
 //   WS     /ws                   pushes {"type": "status" | "cards" | "snapshots" | "event" | "job", ...}
 // A 202 answers {"job": id}; the result arrives later as a "job" message with that id.
 #pragma once
@@ -77,7 +80,7 @@ class DoorApi {
       for (const DoorEvent &e : door_.events(since)) {
         JsonObject o = a.add<JsonObject>();
         o["seq"] = e.seq, o["at"] = e.at, o["uid"] = doorjson::copied(e.uid), o["name"] = doorjson::copied(e.name), o["what"] = doorjson::copied(e.what),
-        o["decision"] = doorjson::copied(e.decision);
+        o["decision"] = doorjson::copied(e.decision), o["lock"] = doorjson::copied(e.lock);
       }
       send(req, 200, d);
     });
@@ -88,7 +91,7 @@ class DoorApi {
       const char *name = body["name"] | "";
       if (!validName(name)) return error(req, 400, "name: 1-23 plain characters (A-Z, digits, space, - . ')");
       strlcpy(r.name, name, sizeof(r.name));
-      if (!door::roleFromName(body["role"] | "resident", r.role)) return error(req, 400, "role: resident, guest or maintenance");
+      if (!door::roleFromName(body["role"] | "resident", r.role)) return error(req, 400, "role: resident, guest, maintenance or admin");
       queued(req, door_.submit(r));
     });
     post("/api/cancel", [this](AsyncWebServerRequest *req) { simpleJob(req, Door::Job::Cancel); });
@@ -134,12 +137,24 @@ class DoorApi {
     });
     post("/api/copy", [this](AsyncWebServerRequest *req) { simpleJob(req, Door::Job::Copy); });
 
-    post("/api/open", [this](AsyncWebServerRequest *req) { simpleJob(req, Door::Job::Open); });
+    post("/api/open", [this](AsyncWebServerRequest *req) {
+      Door::Request r;
+      r.job = Door::Job::Open;
+      if (!admin(req) || !lockParam(req, r.lock)) return;
+      queued(req, door_.submit(r));
+    });
     post("/api/chip-reset", [this](AsyncWebServerRequest *req) { simpleJob(req, Door::Job::ChipReset); });
     json("/api/lockdown", HTTP_PUT, [this](AsyncWebServerRequest *req, JsonObjectConst body) {
       if (!body["on"].is<bool>()) return error(req, 400, "send {\"on\": true} or {\"on\": false}");
       reg_.setLockdown(body["on"].as<bool>());
       req->send(200, "application/json", body["on"].as<bool>() ? "{\"lockdown\":true}" : "{\"lockdown\":false}");
+    });
+    json("/api/reader-at", HTTP_PUT, [this](AsyncWebServerRequest *req, JsonObjectConst body) {
+      door::Lock at;
+      if (!door::lockFromId(body["lock"] | "", at)) return error(req, 400, "send {\"lock\": \"front\"} or {\"lock\": \"admin\"}");
+      reg_.setReaderAt(at);
+      log_i("the reader is now at the %s", door::lockTitle(at));
+      req->send(200, "application/json", at == door::Lock::AdminRoom ? "{\"readerAt\":\"admin\"}" : "{\"readerAt\":\"front\"}");
     });
 
     server_.onNotFound([](AsyncWebServerRequest *req) { error(req, 404, "no such endpoint, see /api"); });
@@ -192,6 +207,15 @@ class DoorApi {
     server_.addHandler(h);
   }
 
+  // ?lock=front|admin, front when left out.
+  static bool lockParam(AsyncWebServerRequest *req, door::Lock &out) {
+    out = door::Lock::Front;
+    if (!req->hasParam("lock")) return true;
+    if (door::lockFromId(req->getParam("lock")->value().c_str(), out)) return true;
+    error(req, 400, "lock: front or admin");
+    return false;
+  }
+
   void simpleJob(AsyncWebServerRequest *req, Door::Job job) {
     if (!admin(req)) return;
     Door::Request r;
@@ -207,7 +231,7 @@ class DoorApi {
     if (name && !validName(name)) return error(req, 400, "name: 1-23 plain characters (A-Z, digits, space, - . ')");
     door::Role role{};
     const bool hasRole = !b["role"].isNull();
-    if (hasRole && !door::roleFromName(b["role"] | "", role)) return error(req, 400, "role: resident, guest or maintenance");
+    if (hasRole && !door::roleFromName(b["role"] | "", role)) return error(req, 400, "role: resident, guest, maintenance or admin");
     if (!b["blocked"].isNull() && !b["blocked"].is<bool>()) return error(req, 400, "blocked: true or false");
     const long until = b["validUntil"] | -1L, from = b["fromHour"] | -1L, to = b["toHour"] | -1L, uses = b["usesLeft"] | -2L;
     if (!b["validUntil"].isNull() && until < 0) return error(req, 400, "validUntil: unix seconds, 0 = no end date");
@@ -345,7 +369,7 @@ class DoorApi {
       "\"DELETE /api/card?uid=HEX\",\"POST /api/label?uid=HEX\",\"POST /api/wipe?uid=HEX\",\"POST /api/inspect\","
       "\"GET /api/snapshots\",\"POST /api/save {name}\",\"POST /api/import {name,blocks}\",\"POST /api/restore?id=N\","
       "\"DELETE /api/snapshot?id=N\",\"POST /api/copy\","
-      "\"POST /api/open\",\"POST /api/chip-reset\",\"PUT /api/lockdown {on}\",\"WS /ws\"],"
+      "\"POST /api/open?lock=front|admin\",\"PUT /api/reader-at {lock}\",\"POST /api/chip-reset\",\"PUT /api/lockdown {on}\",\"WS /ws\"],"
       "\"admin\":\"every change: Authorization: Bearer <token>\"}";
 
   Registry &reg_;

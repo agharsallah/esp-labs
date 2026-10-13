@@ -1,6 +1,7 @@
 // R7's reader task: the only code that touches the RC522 (core 0). It
 //   - polls for cards and checks each tap against the card list (registry.h + access_rules.h)
-//   - drives the simulated door: OPEN for 5 s when granted, DENIED for 2 s otherwise
+//   - drives two simulated locks (front door, admin room): the one the reader is mounted at
+//     goes OPEN for 5 s when granted, DENIED for 2 s otherwise
 //   - runs the app's card jobs, one at a time: enroll, replace, label, wipe, inspect, save,
 //     restore, copy, open, chip reset
 //   - waits for a card to be laid down when a job needs one (enroll, replace, copy's target)
@@ -45,7 +46,7 @@ inline void clockNow(door::Clock &c) {
   c.hour = uint8_t(lt.tm_hour);
 }
 
-// One card as the app sees it, including what would happen if it were tapped right now.
+// One card as the app sees it, including what a tap would do right now at each lock.
 inline void card(JsonObject o, const door::Card &c, const door::Clock &clk, bool lockdown) {
   char uid[21];
   door::uidToHex(c.uid, c.uidLen, uid, sizeof(uid));
@@ -60,7 +61,9 @@ inline void card(JsonObject o, const door::Card &c, const door::Clock &clk, bool
   o["added"] = c.added;
   o["lastSeen"] = c.lastSeen;
   o["taps"] = c.taps;
-  o["now"] = door::decisionName(door::decide(&c, clk, lockdown));
+  JsonObject now = o["now"].to<JsonObject>();  // per lock: {"front": "granted", "admin": "admins only"}
+  for (door::Lock l : {door::Lock::Front, door::Lock::AdminRoom})
+    now[door::lockId(l)] = door::decisionName(door::decide(&c, clk, lockdown, l));
 }
 
 // Saved card data: only the blocks that were readable.
@@ -91,17 +94,21 @@ struct DoorEvent {
   char name[24] = "";
   char what[24] = "";      // "tap", "enrolled", "label written", "card data saved", "data copied here", ...
   char decision[16] = "";  // for taps: granted, blocked, ...
+  char lock[8] = "";       // taps and remote opens: "front" or "admin"
 };
 
 struct DoorState {
   enum class Mode : uint8_t { Locked, Open, Denied };
+  struct LockState {
+    Mode mode = Mode::Locked;
+    uint32_t modeUntil = 0;  // millis()
+    char lastName[24] = "", lastUid[21] = "", lastWhy[16] = "";
+  };
   // Waiting for a card to be laid down: a new one (enroll), a replacement, or copy's target.
   enum class Wait : uint8_t { None, Enroll, Replace, CopyTarget };
   uint32_t version = 0;
   uint8_t chipVersion = 0;
-  Mode mode = Mode::Locked;
-  uint32_t modeUntil = 0;  // millis()
-  char lastName[24] = "", lastUid[21] = "", lastWhy[16] = "";
+  LockState locks[door::kLocks];  // indexed by door::Lock
   bool present = false;
   char presentUid[21] = "";
   Wait wait = Wait::None;
@@ -127,7 +134,8 @@ class Door {
     uint8_t uidLen = 0;
     char name[24] = "";
     door::Role role = door::Role::Resident;
-    uint32_t snapshot = 0;  // restore: which saved data
+    door::Lock lock = door::Lock::Front;  // open: which lock
+    uint32_t snapshot = 0;                // restore: which saved data
   };
 
   static constexpr uint32_t kOpenMs = 5000, kDeniedMs = 2000, kWaitMs = 20000;
@@ -245,7 +253,7 @@ class Door {
     return true;
   }
 
-  void event(const char *uid, const char *name, const char *what, const char *decision = "") {
+  void event(const char *uid, const char *name, const char *what, const char *decision = "", const char *lock = "") {
     DoorEvent e;
     door::Clock clk;
     doorjson::clockNow(clk);
@@ -254,16 +262,17 @@ class Door {
     strlcpy(e.name, name, sizeof(e.name));
     strlcpy(e.what, what, sizeof(e.what));
     strlcpy(e.decision, decision, sizeof(e.decision));
+    strlcpy(e.lock, lock, sizeof(e.lock));
     {
       std::lock_guard<std::mutex> lock(mutex_);
       e.seq = ++eventSeq_;
       if (events_.size() >= 50) events_.erase(events_.begin());
       events_.push_back(e);
     }
-    log_i("%s %s %s %s", what, name[0] ? name : uid, decision, e.at ? "" : "(no clock yet)");
+    log_i("%s %s %s %s %s", what, lock, name[0] ? name : uid, decision, e.at ? "" : "(no clock yet)");
     JsonDocument d;
     d["seq"] = e.seq, d["at"] = e.at, d["uid"] = doorjson::copied(e.uid), d["name"] = doorjson::copied(e.name), d["what"] = doorjson::copied(e.what),
-        d["decision"] = doorjson::copied(e.decision);
+        d["decision"] = doorjson::copied(e.decision), d["lock"] = doorjson::copied(e.lock);
     send("event", d);
   }
 
@@ -276,25 +285,31 @@ class Door {
     send("job", d);
   }
 
-  void setDoor(DoorState::Mode mode, uint32_t ms, const char *name, const char *uid, const char *why) {
+  void setDoor(door::Lock at, DoorState::Mode mode, uint32_t ms, const char *name, const char *uid, const char *why) {
     publish([&](DoorState &s) {
-      s.mode = mode;
-      s.modeUntil = millis() + ms;
-      strlcpy(s.lastName, name, sizeof(s.lastName));
-      strlcpy(s.lastUid, uid, sizeof(s.lastUid));
-      strlcpy(s.lastWhy, why, sizeof(s.lastWhy));
+      DoorState::LockState &l = s.locks[int(at)];
+      l.mode = mode;
+      l.modeUntil = millis() + ms;
+      strlcpy(l.lastName, name, sizeof(l.lastName));
+      strlcpy(l.lastUid, uid, sizeof(l.lastUid));
+      strlcpy(l.lastWhy, why, sizeof(l.lastWhy));
     });
   }
 
-  // Door back to locked after its time; waiting for a card gives up after 20 s.
+  // Each lock back to locked after its time; waiting for a card gives up after 20 s.
   void tickDoor() {
     const uint32_t now = millis();
     bool relock = false;
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      relock = state_.mode != DoorState::Mode::Locked && int32_t(now - state_.modeUntil) >= 0;
+      for (const DoorState::LockState &l : state_.locks)
+        relock |= l.mode != DoorState::Mode::Locked && int32_t(now - l.modeUntil) >= 0;
     }
-    if (relock) publish([](DoorState &s) { s.mode = DoorState::Mode::Locked; });
+    if (relock)
+      publish([now](DoorState &s) {
+        for (DoorState::LockState &l : s.locks)
+          if (l.mode != DoorState::Mode::Locked && int32_t(now - l.modeUntil) >= 0) l.mode = DoorState::Mode::Locked;
+      });
     if (wait_ != DoorState::Wait::None && int32_t(now - waitUntil_) >= 0) {
       const bool copy = wait_ == DoorState::Wait::CopyTarget;
       stopWait();
@@ -351,11 +366,12 @@ class Door {
     doorjson::clockNow(clk);
     door::Card c;
     bool known = false;
-    const door::Decision d = reg_.tap(u.bytes, u.size, clk, c, known);
+    const door::Lock at = reg_.readerAt();
+    const door::Decision d = reg_.tap(u.bytes, u.size, clk, at, c, known);
     const char *why = door::decisionName(d);
-    if (d == door::Decision::Granted) setDoor(DoorState::Mode::Open, kOpenMs, c.name, hex, why);
-    else setDoor(DoorState::Mode::Denied, kDeniedMs, known ? c.name : "", hex, why);
-    event(hex, known ? c.name : "", "tap", why);
+    if (d == door::Decision::Granted) setDoor(at, DoorState::Mode::Open, kOpenMs, c.name, hex, why);
+    else setDoor(at, DoorState::Mode::Denied, kDeniedMs, known ? c.name : "", hex, why);
+    event(hex, known ? c.name : "", "tap", why, door::lockId(at));
   }
 
   void enroll(const iso14443a::Uid &u, const char *hex) {
@@ -488,10 +504,13 @@ class Door {
         }
         return finish(r.id, true, "cancelled");
       }
-      case Job::Open:
-        setDoor(DoorState::Mode::Open, kOpenMs, "the app", "", "remote open");
-        event("", "the app", "opened from the app");
-        return finish(r.id, true, "door open for 5 s");
+      case Job::Open: {
+        setDoor(r.lock, DoorState::Mode::Open, kOpenMs, "the app", "", "remote open");
+        event("", "the app", "opened from the app", "", door::lockId(r.lock));
+        char msg[40];
+        snprintf(msg, sizeof(msg), "%s open for 5 s", door::lockTitle(r.lock));
+        return finish(r.id, true, msg);
+      }
       case Job::ChipReset: {
         chip_.hardReset();
         const uint8_t v = chip_.read(rc522::VersionReg);
