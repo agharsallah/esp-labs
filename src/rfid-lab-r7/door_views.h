@@ -1,5 +1,6 @@
 // R7's three screens (320 x 170):
-//   door   LOCKED / OPEN (with who and a countdown) / DENIED (with why), enrollment, lockdown
+//   door   LOCKED / OPEN (with who and a countdown) / DENIED (with why), lockdown, and
+//          "lay a card down" while enrolling, replacing a card or copying one
 //   cards  the card list: name, role, and what a tap would do right now
 //   log    the last access events
 #pragma once
@@ -20,7 +21,8 @@
 namespace dv {
 
 constexpr int kW = 320, kH = 170;
-constexpr uint16_t kOpen = rgb(60, 210, 120), kDenied = rgb(255, 96, 84), kEnroll = rgb(90, 160, 255);
+constexpr uint16_t kOpen = rgb(60, 210, 120), kDenied = rgb(255, 96, 84), kEnroll = rgb(90, 160, 255),
+                   kCopy = rgb(190, 130, 255);
 
 inline void text(FrameBuffer &fb, int x, int y, uint16_t c, const char *s, const GFXfont *f = nullptr) {
   fb.setFont(f);
@@ -78,19 +80,36 @@ inline void padlock(FrameBuffer &fb, int cx, int cy, float open, uint16_t c) {
 
 inline void door(FrameBuffer &fb, const DoorState &s, int cards, float t) {
   const uint32_t now = millis();
-  if (s.enrolling) {
-    const int left = int(max<int32_t>(0, int32_t(s.enrollUntil - now)) / 1000);
+  if (s.wait != DoorState::Wait::None) {
+    const bool copy = s.wait == DoorState::Wait::CopyTarget;
+    const uint16_t c = copy ? kCopy : kEnroll;
+    const int left = int(max<int32_t>(0, int32_t(s.waitUntil - now)) / 1000);
     for (int i = 0; i < 3; i++) {
       const float k = fmodf(t * 0.8f + i / 3.0f, 1.0f);
-      fb.drawCircle(64, 96, 14 + int(k * 40), mix(kEnroll, pal::night, uint8_t(k * 255)));
+      fb.drawCircle(64, 96, 14 + int(k * 40), mix(c, pal::night, uint8_t(k * 255)));
     }
-    fb.fillRoundRect(46, 82, 36, 26, 3, pal::ink);  // a card
-    text(fb, 128, 64, kEnroll, "ADD A CARD", &FreeSansBold9pt7b);
+    if (copy) fb.drawRoundRect(36, 74, 36, 26, 3, pal::muted);  // the source, behind
+    fb.fillRoundRect(46, 82, 36, 26, 3, pal::ink);             // the card to lay down
     char line[48];
-    snprintf(line, sizeof(line), "Tap the new card for \"%s\"", s.enrollName);
-    text(fb, 128, 78, pal::ink, line);
+    if (s.wait == DoorState::Wait::Enroll) {
+      text(fb, 128, 64, c, "ADD A CARD", &FreeSansBold9pt7b);
+      snprintf(line, sizeof(line), "Tap the new card for \"%s\"", s.waitName);
+      text(fb, 128, 78, pal::ink, line);
+    } else if (s.wait == DoorState::Wait::Replace) {
+      text(fb, 128, 64, c, "REPLACE A CARD", &FreeSansBold9pt7b);
+      snprintf(line, sizeof(line), "Tap the new card for \"%s\"", s.waitName);
+      text(fb, 128, 78, pal::ink, line);
+      snprintf(line, sizeof(line), "%s will be blocked", s.waitUid);
+      text(fb, 128, 108, pal::muted, line);
+    } else {
+      text(fb, 128, 64, c, "COPY: 2ND CARD", &FreeSansBold9pt7b);
+      text(fb, 128, 78, pal::ink, "Lift the first card, lay");
+      text(fb, 128, 90, pal::ink, "the card to copy onto");
+      snprintf(line, sizeof(line), "from %s", s.waitName);
+      text(fb, 128, 108, pal::muted, line);
+    }
     snprintf(line, sizeof(line), "%d s left", left);
-    text(fb, 128, 94, pal::muted, line);
+    text(fb, 128, copy ? 120 : 94, pal::muted, line);
     return;
   }
   uint16_t c = pal::muted;

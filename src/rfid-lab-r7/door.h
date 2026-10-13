@@ -1,12 +1,15 @@
 // R7's reader task: the only code that touches the RC522 (core 0). It
 //   - polls for cards and checks each tap against the card list (registry.h + access_rules.h)
 //   - drives the simulated door: OPEN for 5 s when granted, DENIED for 2 s otherwise
-//   - runs the app's card jobs, one at a time: enroll, label, wipe, inspect, open, chip reset
+//   - runs the app's card jobs, one at a time: enroll, replace, label, wipe, inspect, save,
+//     restore, copy, open, chip reset
+//   - waits for a card to be laid down when a job needs one (enroll, replace, copy's target)
 // Results and events become JSON messages in an outbox; loop() sends them over the WebSocket.
 //
 // Guard rails, as in R4/R5: only the factory key, only the data blocks of sectors 1 and 2
 // (4, 5, 6, 8, 9, 10), never block 0 or a sector trailer, and only where the access bits let
-// key A write. "Wipe" means: those data blocks back to zeros. Keys and trailers are never touched.
+// key A write. "Wipe" means: those data blocks back to zeros. "Copy" and "restore" write saved
+// data into the same blocks. Keys, trailers and the UID are never touched.
 #pragma once
 
 #include <ArduinoJson.h>
@@ -23,6 +26,7 @@
 #include "mifare_classic.h"
 #include "pins.h"
 #include "registry.h"
+#include "snapshots.h"
 
 namespace doorjson {
 
@@ -53,6 +57,25 @@ inline void card(JsonObject o, const door::Card &c, const door::Clock &clk, bool
   o["now"] = door::decisionName(door::decide(&c, clk, lockdown));
 }
 
+// Saved card data: only the blocks that were readable.
+inline void snapshot(JsonObject o, const snap::Snapshot &s) {
+  char uid[21];
+  door::uidToHex(s.uid, s.uidLen, uid, sizeof(uid));
+  o["id"] = s.id;
+  o["name"] = s.name;
+  o["uid"] = uid;  // "" when imported from a file
+  o["at"] = s.at;
+  JsonArray blocks = o["blocks"].to<JsonArray>();
+  for (int i = 0; i < snap::kBlocks; i++) {
+    if (!(s.have & (1 << i))) continue;
+    char hex[33];
+    for (int k = 0; k < 16; k++) snprintf(hex + k * 2, 3, "%02X", s.data[i][k]);
+    JsonObject b = blocks.add<JsonObject>();
+    b["block"] = snap::kBlock[i];
+    b["hex"] = hex;
+  }
+}
+
 }  // namespace doorjson
 
 struct DoorEvent {
@@ -60,12 +83,14 @@ struct DoorEvent {
   uint32_t at = 0;  // unix seconds (0 before the clock syncs)
   char uid[21] = "";
   char name[24] = "";
-  char what[24] = "";      // "tap", "enrolled", "label written", "card wiped", "opened from the app", ...
+  char what[24] = "";      // "tap", "enrolled", "label written", "card data saved", "data copied here", ...
   char decision[16] = "";  // for taps: granted, blocked, ...
 };
 
 struct DoorState {
   enum class Mode : uint8_t { Locked, Open, Denied };
+  // Waiting for a card to be laid down: a new one (enroll), a replacement, or copy's target.
+  enum class Wait : uint8_t { None, Enroll, Replace, CopyTarget };
   uint32_t version = 0;
   uint8_t chipVersion = 0;
   Mode mode = Mode::Locked;
@@ -73,15 +98,16 @@ struct DoorState {
   char lastName[24] = "", lastUid[21] = "", lastWhy[16] = "";
   bool present = false;
   char presentUid[21] = "";
-  bool enrolling = false;
-  uint32_t enrollUntil = 0;  // millis()
-  char enrollName[24] = "";
+  Wait wait = Wait::None;
+  uint32_t waitUntil = 0;  // millis()
+  char waitName[24] = "";  // enroll, replace: the card's name; copy: where the data comes from
+  char waitUid[21] = "";   // replace: the card being replaced; copy: the source card
   const char *busy = nullptr;
 };
 
 class Door {
  public:
-  enum class Job : uint8_t { Enroll, CancelEnroll, Label, Wipe, Inspect, Open, ChipReset };
+  enum class Job : uint8_t { Enroll, Replace, Cancel, Label, Wipe, Inspect, Save, Restore, Copy, Open, ChipReset };
   struct Request {
     Job job = Job::Open;
     uint32_t id = 0;
@@ -89,11 +115,12 @@ class Door {
     uint8_t uidLen = 0;
     char name[24] = "";
     door::Role role = door::Role::Resident;
+    uint32_t snapshot = 0;  // restore: which saved data
   };
 
-  static constexpr uint32_t kOpenMs = 5000, kDeniedMs = 2000, kEnrollMs = 20000;
+  static constexpr uint32_t kOpenMs = 5000, kDeniedMs = 2000, kWaitMs = 20000;
 
-  explicit Door(Registry &reg) : reg_(reg) {}
+  Door(Registry &reg, snap::Store &snaps) : reg_(reg), snaps_(snaps) {}
 
   void begin() {
     mailbox_ = xQueueCreate(6, sizeof(Request));
@@ -215,22 +242,35 @@ class Door {
     });
   }
 
-  // Door back to locked after its time; enrollment gives up after 20 s.
+  // Door back to locked after its time; waiting for a card gives up after 20 s.
   void tickDoor() {
     const uint32_t now = millis();
-    bool relock = false, enrollTimeout = false;
-    uint32_t enrollJob = 0;
+    bool relock = false;
     {
       std::lock_guard<std::mutex> lock(mutex_);
       relock = state_.mode != DoorState::Mode::Locked && int32_t(now - state_.modeUntil) >= 0;
-      enrollTimeout = state_.enrolling && int32_t(now - state_.enrollUntil) >= 0;
-      enrollJob = enrollJob_;
     }
     if (relock) publish([](DoorState &s) { s.mode = DoorState::Mode::Locked; });
-    if (enrollTimeout) {
-      stopEnroll();
-      finish(enrollJob, false, "no new card within 20 s");
+    if (wait_ != DoorState::Wait::None && int32_t(now - waitUntil_) >= 0) {
+      const bool copy = wait_ == DoorState::Wait::CopyTarget;
+      stopWait();
+      finish(waitJob_, false, copy ? "no second card within 20 s: nothing was written" : "no new card within 20 s");
     }
+  }
+
+  void startWait(DoorState::Wait w, uint32_t job, const char *name, const char *uid) {
+    wait_ = w, waitJob_ = job, waitUntil_ = millis() + kWaitMs;
+    publish([&](DoorState &s) {
+      s.wait = w;
+      s.waitUntil = waitUntil_;
+      strlcpy(s.waitName, name, sizeof(s.waitName));
+      strlcpy(s.waitUid, uid, sizeof(s.waitUid));
+    });
+  }
+
+  void stopWait() {
+    wait_ = DoorState::Wait::None;
+    publish([](DoorState &s) { s.wait = DoorState::Wait::None, s.waitName[0] = 0, s.waitUid[0] = 0; });
   }
 
   // ---- Polling and taps ----------------------------------------------------------------------
@@ -255,18 +295,12 @@ class Door {
   }
 
   void onCard(const iso14443a::Uid &u, const char *hex) {
-    bool enrolling;
-    uint32_t job;
-    char name[24];
-    door::Role role;
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      enrolling = state_.enrolling;
-      job = enrollJob_;
-      strlcpy(name, state_.enrollName, sizeof(name));
-      role = enrollRole_;
+    switch (wait_) {
+      case DoorState::Wait::Enroll: return enroll(u, hex);
+      case DoorState::Wait::Replace: return replace(u, hex);
+      case DoorState::Wait::CopyTarget: return copyOnto(u, hex);
+      case DoorState::Wait::None: break;
     }
-    if (enrolling) return enroll(u, hex, job, name, role);
 
     door::Clock clk;
     doorjson::clockNow(clk);
@@ -279,8 +313,9 @@ class Door {
     event(hex, known ? c.name : "", "tap", why);
   }
 
-  void enroll(const iso14443a::Uid &u, const char *hex, uint32_t job, const char *name, door::Role role) {
-    stopEnroll();
+  void enroll(const iso14443a::Uid &u, const char *hex) {
+    const uint32_t job = waitJob_;
+    stopWait();
     door::Card existing;
     if (reg_.get(u.bytes, u.size, existing)) {
       char msg[80];
@@ -290,9 +325,9 @@ class Door {
     door::Card c;
     memcpy(c.uid, u.bytes, u.size);
     c.uidLen = u.size;
-    strlcpy(c.name, name, sizeof(c.name));
-    c.role = role;
-    c.usesLeft = role == door::Role::Guest ? 5 : -1;  // guests start with 5 uses; the app can change it
+    strlcpy(c.name, enrollName_, sizeof(c.name));
+    c.role = enrollRole_;
+    c.usesLeft = c.role == door::Role::Guest ? 5 : -1;  // guests start with 5 uses; the app can change it
     door::Clock clk;
     doorjson::clockNow(clk);
     c.added = clk.synced ? clk.now : 0;
@@ -305,8 +340,73 @@ class Door {
     finish(job, true, "card added", &d);
   }
 
-  void stopEnroll() {
-    publish([](DoorState &s) { s.enrolling = false, s.enrollName[0] = 0; });
+  // A lost or broken card: the new card takes over the old one's name, role and every rule; the
+  // old one stays in the list, blocked and renamed "<name> old", so a tap with it shows in the log.
+  void replace(const iso14443a::Uid &u, const char *hex) {
+    if (u.size == replaceLen_ && memcmp(u.bytes, replaceUid_, u.size) == 0) {
+      log_i("that's the card being replaced: lay the new one");
+      return;  // keep waiting
+    }
+    const uint32_t job = waitJob_;
+    stopWait();
+    door::Card existing, old;
+    if (reg_.get(u.bytes, u.size, existing)) {
+      char msg[80];
+      snprintf(msg, sizeof(msg), "this card is already in the list as \"%s\"", existing.name);
+      return finish(job, false, msg);
+    }
+    if (!reg_.get(replaceUid_, replaceLen_, old)) return finish(job, false, "the old card is no longer in the list");
+    door::Card c = old;
+    memset(c.uid, 0, sizeof(c.uid));
+    memcpy(c.uid, u.bytes, u.size);
+    c.uidLen = u.size;
+    c.blocked = false;
+    c.taps = 0, c.lastSeen = 0;
+    door::Clock clk;
+    doorjson::clockNow(clk);
+    c.added = clk.synced ? clk.now : 0;
+    if (reg_.add(c) != Registry::AddResult::Added) return finish(job, false, "the list is full (20 cards): remove one first");
+    char oldName[24], oldHex[21];
+    snprintf(oldName, sizeof(oldName), "%.19s old", old.name);
+    reg_.update(replaceUid_, replaceLen_, [&](door::Card &o) {
+      o.blocked = true;
+      strlcpy(o.name, oldName, sizeof(o.name));
+    });
+    door::uidToHex(old.uid, old.uidLen, oldHex, sizeof(oldHex));
+    event(oldHex, oldName, "blocked: replaced");
+    event(hex, c.name, "replacement added");
+    JsonDocument d;
+    doorjson::card(d.to<JsonObject>(), c, clk, reg_.lockdown());
+    finish(job, true, "new card added with the same rules; the old one is blocked", &d);
+  }
+
+  // Copy, second half: the saved data from the first card goes onto this one.
+  void copyOnto(const iso14443a::Uid &seen, const char *hex) {
+    if (seen.size == copySrc_.uidLen && memcmp(seen.bytes, copySrc_.uid, seen.size) == 0) {
+      log_i("that's the source card: lay the card to copy onto");
+      return;  // keep waiting
+    }
+    const uint32_t job = waitJob_;
+    stopWait();
+    iso14443a::Uid u;  // polling halted it: wake it again
+    if (iso14443a::wakeAndSelect(chip_, u) != rc522::Status::Ok || !u.sameAs(seen))
+      return finish(job, false, "the card moved away: keep it still and copy again");
+    JsonDocument d;
+    const int n = writeSnapshot(u, copySrc_, d);
+    iso14443a::halt(chip_);
+    door::Card c;
+    const bool listed = reg_.get(u.bytes, u.size, c);
+    char msg[112];
+    snprintf(msg, sizeof(msg), "%d of %d blocks copied from %s onto %s", n, copySrc_.count(), copySrc_.name, hex);
+    event(hex, listed ? c.name : "", "data copied here");
+    finish(job, n == copySrc_.count(), msg, &d);
+  }
+
+  // Refuse a second wait while one runs: one card at a time.
+  bool waitFree(const Request &r) {
+    if (wait_ == DoorState::Wait::None) return true;
+    finish(r.id, false, "the board is already waiting for a card: cancel that first");
+    return false;
   }
 
   // ---- Jobs from the app ----------------------------------------------------------------------
@@ -314,28 +414,33 @@ class Door {
   void perform(const Request &r) {
     switch (r.job) {
       case Job::Enroll: {
-        {
-          std::lock_guard<std::mutex> lock(mutex_);
-          enrollJob_ = r.id;
-          enrollRole_ = r.role;
-        }
-        publish([&](DoorState &s) {
-          s.enrolling = true;
-          s.enrollUntil = millis() + kEnrollMs;
-          strlcpy(s.enrollName, r.name, sizeof(s.enrollName));
-        });
+        if (!waitFree(r)) return;
+        enrollRole_ = r.role;
+        strlcpy(enrollName_, r.name, sizeof(enrollName_));
         present_ = false;  // a card already lying there counts as a new tap for enrollment
+        startWait(DoorState::Wait::Enroll, r.id, r.name, "");
         log_i("enroll \"%s\": tap the new card within 20 s", r.name);
         return;
       }
-      case Job::CancelEnroll: {
-        uint32_t job;
-        {
-          std::lock_guard<std::mutex> lock(mutex_);
-          job = enrollJob_;
+      case Job::Replace: {
+        if (!waitFree(r)) return;
+        door::Card old;
+        if (!reg_.get(r.uid, r.uidLen, old)) return finish(r.id, false, "no card with this uid in the list");
+        memcpy(replaceUid_, r.uid, r.uidLen);
+        replaceLen_ = r.uidLen;
+        char hex[21];
+        door::uidToHex(r.uid, r.uidLen, hex, sizeof(hex));
+        present_ = false;
+        startWait(DoorState::Wait::Replace, r.id, old.name, hex);
+        log_i("replace \"%s\": tap the new card within 20 s", old.name);
+        return;
+      }
+      case Job::Cancel: {
+        if (wait_ != DoorState::Wait::None) {
+          const uint32_t job = waitJob_;
+          stopWait();
+          finish(job, false, "cancelled");
         }
-        stopEnroll();
-        finish(job, false, "enrollment cancelled");
         return finish(r.id, true, "cancelled");
       }
       case Job::Open:
@@ -354,6 +459,9 @@ class Door {
       case Job::Label: return label(r);
       case Job::Wipe: return wipe(r);
       case Job::Inspect: return inspect(r);
+      case Job::Save: return save(r);
+      case Job::Restore: return restore(r);
+      case Job::Copy: return copyStart(r);
     }
   }
 
@@ -479,6 +587,110 @@ class Door {
     finish(r.id, true, "card read", &d);
   }
 
+  // ---- Saved card data: save, restore, copy -----------------------------------------------------
+
+  // The lab blocks that open with the factory key, into `s`. Returns how many were read.
+  int readSnapshot(iso14443a::Uid &u, snap::Snapshot &s) {
+    memcpy(s.uid, u.bytes, u.size);
+    s.uidLen = u.size;
+    door::Clock clk;
+    doorjson::clockNow(clk);
+    s.at = clk.synced ? clk.now : 0;
+    s.have = 0;
+    for (uint8_t first : {uint8_t(4), uint8_t(8)}) {
+      rfid::AccessBits ab;
+      if (!openSector(u, first, ab)) continue;
+      for (int b = 0; b < 3; b++) {
+        const int i = snap::slotOf(first + b);
+        if (mifare::readBlock(chip_, uint8_t(first + b), s.data[i]) == rc522::Status::Ok) s.have |= uint8_t(1 << i);
+      }
+    }
+    return s.count();
+  }
+
+  // The saved blocks onto the card `u`, each read back to check. Returns how many match now.
+  int writeSnapshot(iso14443a::Uid &u, const snap::Snapshot &s, JsonDocument &d) {
+    JsonArray written = d["written"].to<JsonArray>(), skipped = d["skipped"].to<JsonArray>();
+    int n = 0;
+    for (uint8_t first : {uint8_t(4), uint8_t(8)}) {
+      const int base = snap::slotOf(first);
+      if (!(s.have & (7 << base))) continue;  // nothing saved from this sector
+      rfid::AccessBits ab;
+      const bool open = openSector(u, first, ab);
+      for (int b = 0; b < 3; b++) {
+        const int i = base + b;
+        if (!(s.have & (1 << i))) continue;
+        const uint8_t block = uint8_t(first + b);
+        uint8_t back[16];
+        const bool ok = open && ab.keyAWrites(b) && mifare::writeBlock(chip_, block, s.data[i]) == rc522::Status::Ok &&
+                        mifare::readBlock(chip_, block, back) == rc522::Status::Ok && memcmp(back, s.data[i], 16) == 0;
+        (ok ? written : skipped).add(block);
+        n += ok;
+      }
+    }
+    return n;
+  }
+
+  // Whatever card is on the reader, listed or not: its lab blocks become a named snapshot.
+  void save(const Request &r) {
+    iso14443a::Uid u;
+    if (iso14443a::wakeAndSelect(chip_, u) != rc522::Status::Ok) return finish(r.id, false, "lay the card to save on the reader first");
+    snap::Snapshot s;
+    const int n = readSnapshot(u, s);
+    iso14443a::halt(chip_);
+    if (!n) return finish(r.id, false, "no lab block opens with the factory key: nothing to save");
+    char hex[21];
+    door::uidToHex(u.bytes, u.size, hex, sizeof(hex));
+    door::Card c;
+    const bool listed = reg_.get(u.bytes, u.size, c);
+    strlcpy(s.name, r.name[0] ? r.name : listed ? c.name : hex, sizeof(s.name));
+    if (!snaps_.add(s)) return finish(r.id, false, "8 snapshots saved already: delete one first");
+    event(hex, listed ? c.name : "", "card data saved");
+    JsonDocument d;
+    doorjson::snapshot(d.to<JsonObject>(), s);
+    char msg[80];
+    snprintf(msg, sizeof(msg), "%d of 6 blocks saved as \"%s\"", n, s.name);
+    finish(r.id, true, msg, &d);
+  }
+
+  // A snapshot onto the card on the reader: the card it came from (restore) or another (copy).
+  void restore(const Request &r) {
+    snap::Snapshot s;
+    if (!snaps_.get(r.snapshot, s)) return finish(r.id, false, "no saved data with this id");
+    iso14443a::Uid u;
+    if (iso14443a::wakeAndSelect(chip_, u) != rc522::Status::Ok) return finish(r.id, false, "lay the card to write on the reader first");
+    JsonDocument d;
+    const int n = writeSnapshot(u, s, d);
+    iso14443a::halt(chip_);
+    char hex[21], msg[128];
+    door::uidToHex(u.bytes, u.size, hex, sizeof(hex));
+    const bool same = s.uidLen == u.size && memcmp(s.uid, u.bytes, u.size) == 0;
+    snprintf(msg, sizeof(msg), "%d of %d blocks of \"%s\" written to %s%s", n, s.count(), s.name, hex,
+             same ? " (the card it came from)" : "");
+    door::Card c;
+    const bool listed = reg_.get(u.bytes, u.size, c);
+    event(hex, listed ? c.name : "", same ? "data restored" : "data copied here");
+    finish(r.id, n == s.count(), msg, &d);
+  }
+
+  // Copy, first half: read the source card now, then wait for a different card (copyOnto).
+  void copyStart(const Request &r) {
+    if (!waitFree(r)) return;
+    iso14443a::Uid u;
+    if (iso14443a::wakeAndSelect(chip_, u) != rc522::Status::Ok) return finish(r.id, false, "lay the card to copy from on the reader first");
+    copySrc_ = snap::Snapshot{};
+    const int n = readSnapshot(u, copySrc_);
+    iso14443a::halt(chip_);
+    if (!n) return finish(r.id, false, "no lab block opens with the factory key: nothing to copy");
+    char hex[21];
+    door::uidToHex(u.bytes, u.size, hex, sizeof(hex));
+    door::Card c;
+    strlcpy(copySrc_.name, reg_.get(u.bytes, u.size, c) ? c.name : hex, sizeof(copySrc_.name));
+    present_ = true, current_ = u;  // the source still lying there is not the target
+    startWait(DoorState::Wait::CopyTarget, r.id, copySrc_.name, hex);
+    log_i("copy: %d blocks read from %s; lay the card to copy onto within 20 s", n, hex);
+  }
+
   // ---- Is the chip still there? (as in the R1-R6 labs) -------------------------------------------
 
   void health() {
@@ -500,6 +712,7 @@ class Door {
   }
 
   Registry &reg_;
+  snap::Store &snaps_;
   rc522::Mfrc522 chip_;
   SPIClass *spi_ = nullptr;
   QueueHandle_t mailbox_ = nullptr;
@@ -508,8 +721,14 @@ class Door {
   DoorState state_;
   std::vector<DoorEvent> events_;
   std::vector<String> outbox_;
-  uint32_t eventSeq_ = 0, enrollJob_ = 0;
+  uint32_t eventSeq_ = 0;
+  // Waiting for a card, only touched by the task (the app sees it through state_).
+  DoorState::Wait wait_ = DoorState::Wait::None;
+  uint32_t waitJob_ = 0, waitUntil_ = 0;
+  char enrollName_[24] = "";
   door::Role enrollRole_ = door::Role::Resident;
+  uint8_t replaceUid_[10] = {}, replaceLen_ = 0;
+  snap::Snapshot copySrc_;
   // Poll state, only touched by the task.
   bool present_ = false, chipLost_ = false;
   int misses_ = 0;

@@ -1,7 +1,8 @@
 // RFID lab R7 Card manager.  uv run pio run -e rfid-lab-r7 -t upload
 // A bench door you manage from a React app (test-esp/door-app): add cards, name them, block
-// them, give them an end date, hours or a number of uses, write a label onto them, wipe their
-// data blocks, watch the access log live. The door is simulated: the screen and the LED.
+// them, give them an end date, hours or a number of uses, replace a lost one, write a label onto
+// them, wipe their data blocks, save a card's data and write it back or copy it onto another
+// card, watch the access log live. The door is simulated: the screen and the LED.
 //
 // The board keeps the card list (NVS) and decides every tap itself; the card only brings its
 // UID. The app talks to the board's JSON API and WebSocket over your Wi-Fi (the network saved
@@ -10,9 +11,10 @@
 // Wiring: the screen from lesson 03 and the RC522 as in R1. Push button on GPIO 5 optional.
 // Views: door · cards · log   (button: click = next view)
 // On-board LED: green = door open · red = denied · blue blinking = waiting for a new card ·
-//               dim amber = lockdown · off = locked and quiet
+//               violet blinking = copy waiting for its second card · dim amber = lockdown ·
+//               off = locked and quiet
 // Serial: help · status · token · token new · cards · enroll <name> · open · lockdown on|off ·
-//         reset · tz <TZ>
+//         saved · save [name] · restore <id> · copy · cancel · reset · tz <TZ>
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
@@ -27,6 +29,7 @@
 #include "door_views.h"
 #include "pins.h"
 #include "registry.h"
+#include "snapshots.h"
 
 namespace {
 
@@ -37,8 +40,9 @@ Display display;
 Connection connection;
 ApiToken token;
 Registry registry;
-Door door(registry);
-DoorApi api(registry, door, token);
+snap::Store snapshots;
+Door door(registry, snapshots);
+DoorApi api(registry, snapshots, door, token);
 Button external(PIN_BUTTON, "button");
 Button boot(PIN_BOOT_BTN, "BOOT");
 
@@ -59,6 +63,11 @@ void printHelp() {
   Serial.println("  enroll <name>     add a card as a resident: tap it within 20 s");
   Serial.println("  open              open the door for 5 s");
   Serial.println("  lockdown on|off   only maintenance cards open while on");
+  Serial.println("  saved             saved card data (blocks 4-6, 8-10)");
+  Serial.println("  save [name]       save the data of the card on the reader");
+  Serial.println("  restore <id>      write saved data onto the card on the reader");
+  Serial.println("  copy              copy the card on the reader onto the next card you lay down");
+  Serial.println("  cancel            stop waiting for a card (enroll, replace, copy)");
   Serial.println("  reset             hard reset of the reader chip");
   Serial.println("  tz <TZ>           time zone for the hours rules (POSIX string)");
   Serial.println("Button or BOOT: click = next view (door, cards, log)");
@@ -87,10 +96,22 @@ void printCards() {
   }
 }
 
-void submit(Door::Job job, const char *name = "") {
+void printSaved() {
+  const auto list = snapshots.list();
+  Serial.printf("%u of %d places used\n", unsigned(list.size()), snap::Store::kMax);
+  for (const snap::Snapshot &s : list) {
+    char uid[21];
+    door::uidToHex(s.uid, s.uidLen, uid, sizeof(uid));
+    Serial.printf("  id %-3lu %-20s from %-14s %d of 6 blocks\n", static_cast<unsigned long>(s.id), s.name,
+                  s.uidLen ? uid : "a file", s.count());
+  }
+}
+
+void submit(Door::Job job, const char *name = "", uint32_t snapshot = 0) {
   Door::Request r;
   r.job = job;
   strlcpy(r.name, name, sizeof(r.name));
+  r.snapshot = snapshot;
   if (!door.submit(r)) log_w("the reader is busy, try again");
 }
 
@@ -105,6 +126,25 @@ void handleCommand(const String &raw) {
   if (lower == "cards") return printCards();
   if (lower == "open") return submit(Door::Job::Open);
   if (lower == "reset") return submit(Door::Job::ChipReset);
+  if (lower == "saved") return printSaved();
+  if (lower == "copy") return submit(Door::Job::Copy);
+  if (lower == "cancel") return submit(Door::Job::Cancel);
+  if (lower == "save" || lower.startsWith("save ")) {
+    const String name = line.length() > 5 ? line.substring(5) : String();
+    if (name.length() > 23) {
+      log_w("save [name], up to 23 characters");
+      return;
+    }
+    return submit(Door::Job::Save, name.c_str());
+  }
+  if (lower.startsWith("restore ")) {
+    const long id = line.substring(8).toInt();
+    if (id <= 0) {
+      log_w("restore <id>  (saved lists the ids)");
+      return;
+    }
+    return submit(Door::Job::Restore, "", uint32_t(id));
+  }
   if (lower == "token") {
     Serial.printf("Admin token: %s\nPut it in test-esp/door-app/.env as BENCH_TOKEN=... (keep it out of chats and git)\n", token.value().c_str());
     return;
@@ -181,12 +221,14 @@ void publishStatus() {
   dj["why"] = s.lastWhy;
   if (s.present) d["present"] = s.presentUid;
   else d["present"] = nullptr;
-  if (s.enrolling) {
-    JsonObject e = d["enrolling"].to<JsonObject>();
-    e["name"] = s.enrollName;
-    e["msLeft"] = max<int32_t>(0, int32_t(s.enrollUntil - millis()));
+  if (s.wait != DoorState::Wait::None) {
+    JsonObject w = d["waiting"].to<JsonObject>();
+    w["for"] = s.wait == DoorState::Wait::Enroll ? "enroll" : s.wait == DoorState::Wait::Replace ? "replace" : "copy";
+    w["name"] = s.waitName;
+    w["uid"] = s.waitUid;
+    w["msLeft"] = max<int32_t>(0, int32_t(s.waitUntil - millis()));
   } else {
-    d["enrolling"] = nullptr;
+    d["waiting"] = nullptr;
   }
   d["lockdown"] = registry.lockdown();
   d["cards"] = registry.count();
@@ -201,7 +243,9 @@ void showLed() {
   static uint32_t shown = 0xFFFFFFFF;
   const DoorState &s = state.door;
   uint8_t r = 0, g = 0, b = 0;
-  if (s.enrolling) b = (millis() / 300) % 2 ? 120 : 20;
+  const bool blink = (millis() / 300) % 2;
+  if (s.wait == DoorState::Wait::CopyTarget) r = blink ? 70 : 12, b = blink ? 120 : 20;
+  else if (s.wait != DoorState::Wait::None) b = blink ? 120 : 20;
   else if (s.mode == DoorState::Mode::Open) g = 160, b = 40;
   else if (s.mode == DoorState::Mode::Denied) r = 150;
   else if (state.door.version && (s.chipVersion == 0x00 || s.chipVersion == 0xFF)) r = 90;
@@ -226,6 +270,7 @@ void setup() {
   boot.begin();
   token.begin();
   registry.begin();
+  snapshots.begin();
   connection.begin();
   door.begin();
   log_i("rfid-lab-r7: reader task on core 0. Type token for the app's .env, help for commands.");
