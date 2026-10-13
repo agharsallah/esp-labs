@@ -17,7 +17,7 @@ Every command that installs software, talks to the board, or flashes it, with wh
 | On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                          |
 | RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                       |
 | Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                           |
-| **Firmware on board now** | **`rfid-lab`** with the entry 37–38 fixes, flashed by you: R1 all working. Built, not flashed: `rfid-lab-r1` … `rfid-lab-r6`, `wifi-lab-w1`, `wifi-lab-w2`, `wifi-lab-w2-remote`, `wifi-lab-w3` |
+| **Firmware on board now** | **`rfid-lab`** with the entry 37–38 fixes, flashed by you: R1 all working. Built, not flashed: `rfid-lab-r1` … `rfid-lab-r7`, `wifi-lab-w1`, `wifi-lab-w2`, `wifi-lab-w2-remote`, `wifi-lab-w3` |
 | Flashes so far            | 12 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab by you)                                                                          |
 
 ### What is installed on the Mac
@@ -909,3 +909,27 @@ guide: no page errors, no sideways scroll
 ```
 
 **Still waiting for your go** (same as entry 40): `uv run pio run -e rfid-lab-r7` (first build, copies W2's three web libraries into `.pio/libdeps/rfid-lab-r7`), then `pnpm install` in `test-esp/door-app`. The R7 firmware, with these additions, has not been compiled yet. Nothing was sent to the board.
+
+### 42. First R7 build: a name clash, fixed · `install` + `build` run by you, fix and rebuild by Claude · no board
+
+You ran `uv run pio run -e rfid-lab-r7 -t upload`. PlatformIO installed the three web libraries (ESPAsyncWebServer 3.12.1, AsyncTCP 3.5.0, ArduinoJson 7.4.3), then the compile stopped before anything was uploaded:
+
+```text
+src/rfid-lab-r7/main.cpp:275:3: error: reference to 'door' is ambiguous
+  candidates are: 'Door {anonymous}::door'  and  'namespace door { }' (access_rules.h)
+[FAILED] Took 37.05 seconds
+```
+
+**Cause:** the door task object in `main.cpp` and the access-rules namespace were both named `door`. **Fix:** the object is now `doorTask`. The rebuild also showed one truncation warning on the cards view (`char more[24]` for "+ N more in the app"), widened to 32.
+
+```sh
+uv run pio run -e rfid-lab-r7        # build only, no upload; no downloads (libraries already installed)
+```
+
+```text
+RAM:   16.9% (used 55,532 bytes from 327,680 bytes)
+Flash: 18.1% (used 1,183,630 bytes from 6,553,600 bytes)
+[SUCCESS] Took 20.75 seconds · no warnings
+```
+
+**Next, by you:** `uv run pio run -e rfid-lab-r7 -t upload`, then `token` in the monitor, `door-app/.env`, `pnpm install` and `pnpm dev`. Nothing was sent to the board.

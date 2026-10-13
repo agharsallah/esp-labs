@@ -577,7 +577,7 @@ ol.rules-list li.open b { color: var(--ok); }
 
 
   <dl class="overview" aria-label="On the bench now">
-    <div class="now"><dt>On the board now</dt><dd>rfid-lab<small>R1 all working (by you) · reader chip FM17522 clone (B2h) · built, not flashed: rfid-lab-r1 … r6, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
+    <div class="now"><dt>On the board now</dt><dd>rfid-lab<small>R1 all working (by you) · reader chip FM17522 clone (B2h) · built, not flashed: rfid-lab-r1 … r7, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
     <div><dt>Connection</dt><dd>/dev/cu.usbserial-A5069RR4<small>FTDI FT232R · VID:PID 0403:6001</small></dd></div>
     <div><dt>Chip</dt><dd>ESP32-S3 rev v0.2<small>16 MB flash · 8 MB PSRAM · MAC 28:84:85:9E:3B:E4</small></dd></div>
     <div><dt>Verified</dt><dd class="flag">RGB · LED · screen · showcase<small>all seen working by you · display at 22 fps</small></dd></div>
@@ -4928,6 +4928,11 @@ ol.rules-list li.open b { color: var(--ok); }
       why: "Your request: operations like copying one card to another and saving a card's information. Snapshots of blocks 4-6 and 8-10 on the board (up to 8), write back, copy card → card, compare, download/import as JSON, copy rules, replace a lost card. Factory key and lab blocks only; block 0 and the trailers are never written, so a copy is a different card to the door.",
       out: "all door rule checks passed\ndoor-app: typecheck clean · 10 tests passed · renders at 1280 and 390 px, also mid-copy\nguide: no page errors, no sideways scroll",
       result: "Still waiting for your go: the first rfid-lab-r7 build and pnpm install in test-esp/door-app. R7 is not compiled yet. Nothing was sent to the board." },
+    { n: 42, types: ["install", "build", "failed"], title: "First R7 build: a name clash, fixed", where: "Mac · no board",
+      cmd: "uv run pio run -e rfid-lab-r7 -t upload   (you: installed the libraries, compile failed)\nuv run pio run -e rfid-lab-r7             (Claude, after the fix: build only)",
+      why: "You ran the R7 upload. PlatformIO installed ESPAsyncWebServer 3.12.1, AsyncTCP 3.5.0 and ArduinoJson 7.4.3, then main.cpp failed: the door task object and the access-rules namespace were both called door. Renamed the object to doorTask; widened one screen text buffer that gave a truncation warning.",
+      out: "error: reference to 'door' is ambiguous  [FAILED] 37 s  (nothing uploaded)\n--- after the fix ---\nRAM 16.9% (55,532 B)  Flash 18.1% (1,183,630 B)  SUCCESS, no warnings",
+      result: "R7 builds. Next, by you: uv run pio run -e rfid-lab-r7 -t upload, token, door-app/.env, pnpm install, pnpm dev. Nothing was sent to the board." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";

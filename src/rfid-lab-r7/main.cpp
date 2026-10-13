@@ -41,8 +41,8 @@ Connection connection;
 ApiToken token;
 Registry registry;
 snap::Store snapshots;
-Door door(registry, snapshots);
-DoorApi api(registry, snapshots, door, token);
+Door doorTask(registry, snapshots);
+DoorApi api(registry, snapshots, doorTask, token);
 Button external(PIN_BUTTON, "button");
 Button boot(PIN_BOOT_BTN, "BOOT");
 
@@ -112,7 +112,7 @@ void submit(Door::Job job, const char *name = "", uint32_t snapshot = 0) {
   r.job = job;
   strlcpy(r.name, name, sizeof(r.name));
   r.snapshot = snapshot;
-  if (!door.submit(r)) log_w("the reader is busy, try again");
+  if (!doorTask.submit(r)) log_w("the reader is busy, try again");
 }
 
 void handleCommand(const String &raw) {
@@ -272,7 +272,7 @@ void setup() {
   registry.begin();
   snapshots.begin();
   connection.begin();
-  door.begin();
+  doorTask.begin();
   log_i("rfid-lab-r7: reader task on core 0. Type token for the app's .env, help for commands.");
   printHelp();
 }
@@ -294,7 +294,7 @@ void loop() {
     state.apiStarted = true;
     log_i("App: http://%s.local or http://%s  (set BENCH_URL in door-app/.env)", Connection::kHostname, WiFi.localIP().toString().c_str());
   }
-  const bool changed = door.update(state.door);
+  const bool changed = doorTask.update(state.door);
   if (state.apiStarted) {
     api.loop();
     if (changed || now - state.lastStatus >= 1000) {
@@ -308,7 +308,7 @@ void loop() {
   }
   if (now - state.lastEvents >= 500) {
     state.lastEvents = now;
-    state.events = door.events(0);
+    state.events = doorTask.events(0);
   }
   showLed();
 

@@ -163,7 +163,7 @@ inline void cards(FrameBuffer &fb, const std::vector<door::Card> &list, const do
     text(fb, 240, y, nowColor(d), door::decisionName(d));
   }
   if (int(list.size()) > rows) {
-    char more[24];
+    char more[32];
     snprintf(more, sizeof(more), "+ %d more in the app", int(list.size()) - rows);
     text(fb, 22, 36 + rows * 13, pal::muted, more);
   }
