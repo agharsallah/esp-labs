@@ -577,7 +577,7 @@ ol.rules-list li.open b { color: var(--ok); }
 
 
   <dl class="overview" aria-label="On the bench now">
-    <div class="now"><dt>On the board now</dt><dd>rfid-lab-r7<small>R7 reads cards, also a little above the reader (by you) · reader chip FM17522 clone (B2h) · built, not flashed: R7 names fix (entry 44), rfid-lab-r1 … r6, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
+    <div class="now"><dt>On the board now</dt><dd>rfid-lab-r7<small>R7 reads cards, also a little above the reader (by you) · reader chip FM17522 clone (B2h) · built, not flashed: R7 names fix + admin room (entries 44-45), rfid-lab-r1 … r6, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
     <div><dt>Connection</dt><dd>/dev/cu.usbserial-A5069RR4<small>FTDI FT232R · VID:PID 0403:6001</small></dd></div>
     <div><dt>Chip</dt><dd>ESP32-S3 rev v0.2<small>16 MB flash · 8 MB PSRAM · MAC 28:84:85:9E:3B:E4</small></dd></div>
     <div><dt>Verified</dt><dd class="flag">RGB · LED · screen · showcase<small>all seen working by you · display at 22 fps</small></dd></div>
@@ -1124,7 +1124,7 @@ ol.rules-list li.open b { color: var(--ok); }
         {
           ...common, id: "R7", title: "Card manager", status: "on board, works", sim: "door", cmd: "uv run pio run -e rfid-lab-r7 -t upload",
           heading: "Manage your cards from a React app",
-          goal: "Its own firmware (rfid-lab-r7) turns the bench into a door you manage from a small React app (test-esp/door-app) over your Wi-Fi. The board keeps the card list in its flash and decides every tap itself; the card only brings its UID. From the app you add cards, name them, give them a role, block them, limit them to hours, an end date or a number of uses, copy one card's rules to another, replace a lost card, write a name label onto them, wipe the data the labs wrote, save a card's data and write it back or copy it onto another card, open the door remotely, switch on lockdown, and watch every tap live. The door is simulated: the screen and the LED.",
+          goal: "Its own firmware (rfid-lab-r7) turns the bench into a door you manage from a small React app (test-esp/door-app) over your Wi-Fi. The board keeps the card list in its flash and decides every tap itself; the card only brings its UID. From the app you add cards, name them, give them a role, block them, limit them to hours, an end date or a number of uses, copy one card's rules to another, replace a lost card, write a name label onto them, wipe the data the labs wrote, save a card's data and write it back or copy it onto another card, open the door remotely, switch on lockdown, and watch every tap live. Two simulated locks (the screen and the LED): the front door, for every role, and the admin room, for admin cards only; the one reader is mounted at one of them at a time.",
           goalLine: "Run your two tags as a small access system: one resident, one guest, and see each rule decide a tap.",
           goalCheck: [
             "The app shows <b>live</b> and both tags are in the list: the white card as a resident, the key tag as a guest.",
@@ -1149,7 +1149,11 @@ ol.rules-list li.open b { color: var(--ok); }
             { c: "tap each card", where: "hands", card: "move", does: "The board decides from its list: OPEN 5 s (green LED, padlock opens) or DENIED 2 s (red LED, with the reason).", see: "The app's door panel and log update within a second; the guest's uses go 5 → 4 → 3.", fix: "Nothing happens, or “card can't be read”: look at the app's <b>Reader chip</b> cell and the banner under it. “settings restored” means the RC522 reset itself when its 3.3 V dipped (often while Wi-Fi transmits): short wires to the 3.3V pin, header pins pressed in or soldered. “IRQ wire stays quiet” is harmless: the board polls instead. Serial: <code>status</code> prints the same." },
             { c: "Block, then Unblock", where: "app", card: "any", does: "The quickest rule: a blocked card is refused before anything else is checked.", see: "<b>blocked</b> on the card; its next tap shows DENIED · blocked.", fix: "" },
             { c: "Edit → presets", where: "app", card: "any", does: "Office hours (08-18), Night shift (22-06, across midnight), Weekend guest (10 uses until Sunday 20:00), One visit (1 use, 24 h), Lost card (blocked). Save sends only what changed.", see: "The card's rule line and its “opens now” chip change at once.", fix: "“no clock yet”: dated or timed cards are refused until the board has internet time (fail closed)." },
-            { c: "Lockdown on", where: "app", card: "any", does: "Only maintenance cards open. The LED glows amber while idle.", see: "LOCKDOWN on the screen, every resident and guest tap DENIED · lockdown.", fix: "" },
+            { c: "Add card: “Admin fob”, admin", where: "app", card: "on", does: "A fourth role: admin cards open the front door like a resident, and they are the only cards the admin room opens for. They also open during lockdown.", see: "The card's row shows <b>front door ✓</b> and <b>admin room ✓</b>; a resident's shows <b>admin room · admins only</b>.", fix: "" },
+            { c: "Locks → Admin room → Move reader here", where: "app", card: "any", does: "The bench has one reader, so it is mounted at one lock at a time (saved on the board). Serial: <code>at admin</code>, <code>at front</code>.", see: "The admin room tile gets the teal border and “reader here”; the screen says ADMIN ROOM above the padlock.", fix: "" },
+            { c: "tap the admin card, then a resident card", where: "hands", card: "move", does: "Same board, same list, different lock: the role check comes right after “blocked”, before any hours or dates.", see: "Admin card: the admin room OPEN 5 s. Resident card: DENIED · <b>admins only</b>, logged with “admin room”. Move the reader back: the resident opens the front door again.", fix: "Still OPEN for a resident? Check which tile says “reader here”." },
+            { c: "open admin  (or Open 5 s on a tile)", where: "serial", card: "any", does: "Opens one lock from the app or serial, whatever card is near; <code>open</code> alone is the front door.", see: "That tile goes green for 5 s; the log says “opened from the app” with the lock.", fix: "" },
+            { c: "Lockdown on", where: "app", card: "any", does: "Only maintenance and admin cards open. The LED glows amber while idle.", see: "LOCKDOWN on the screen, every resident and guest tap DENIED · lockdown.", fix: "" },
             { c: "Edit → Write name label", where: "app", card: "on", does: "Writes the name into block 4 and the role into block 5 of that card (factory key, sector 1 only), then reads them back.", see: "“label written”. Read the card on the reader: block 4 shows its name.", fix: "The door still ignores the label: it decides from its own list. Write any name there and nothing changes." },
             { c: "Edit → Wipe card data", where: "app", card: "on", does: "Second click to confirm. Blocks 4-6 and 8-10 back to zeros where the access bits allow (the label, R5's credits). Keys, trailers and block 0 are never touched.", see: "“6 of 6 data blocks cleared”.", fix: "" },
             { c: "Edit → Remove from the list", where: "app", card: "any", does: "Second click to confirm. The board forgets the card; the card itself is not touched.", see: "Its next tap: DENIED · unknown card.", fix: "" },
@@ -4421,7 +4425,8 @@ ol.rules-list li.open b { color: var(--ok); }
   const DOOR_RULES = [
     { key: "unknown", name: "In the list?", says: "unknown card", check: (c) => c.listed },
     { key: "blocked", name: "Blocked?", says: "blocked", check: (c) => !c.blocked },
-    { key: "lockdown", name: "Lockdown (maintenance still opens)", says: "lockdown", check: (c, k) => !k.lockdown || c.role === "maintenance" },
+    { key: "admin", name: "Admin room: an admin card?", says: "admins only", check: (c) => c.lock !== "admin" || c.role === "admin" },
+    { key: "lockdown", name: "Lockdown (maintenance and admin still open)", says: "lockdown", check: (c, k) => !k.lockdown || c.role === "maintenance" || c.role === "admin" },
     { key: "clock", name: "Needs a clock, and has one?", says: "no clock yet", check: (c, k) => !(c.until !== "none" || c.from !== c.to) || k.synced },
     { key: "expired", name: "Before its end date?", says: "expired", check: (c) => c.until !== "past" },
     { key: "hours", name: "Inside its hours?", says: "outside hours", check: (c, k) => c.from === c.to || (c.from < c.to ? k.hour >= c.from && k.hour < c.to : k.hour >= c.from || k.hour < c.to) },
@@ -4433,12 +4438,13 @@ ol.rules-list li.open b { color: var(--ok); }
   }
 
   function doorRulesPanel(root) {
-    const st = { listed: true, role: "resident", blocked: false, until: "none", from: 0, to: 0, uses: -1, lockdown: false, synced: true, hour: new Date().getHours() };
+    const st = { lock: "front", listed: true, role: "resident", blocked: false, until: "none", from: 0, to: 0, uses: -1, lockdown: false, synced: true, hour: new Date().getHours() };
     const hours = (sel) => Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === sel ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`).join("");
     root.innerHTML = `<div class="rules-ui">
       <div class="rules-form">
+        <label>tapped at <select data-k="lock"><option value="front">front door</option><option value="admin">admin room</option></select></label>
         <label class="check"><input type="checkbox" data-k="listed" checked> in the list</label>
-        <label>role <select data-k="role"><option>resident</option><option>guest</option><option>maintenance</option></select></label>
+        <label>role <select data-k="role"><option>resident</option><option>guest</option><option>maintenance</option><option>admin</option></select></label>
         <label class="check"><input type="checkbox" data-k="blocked"> blocked</label>
         <label>end date <select data-k="until"><option value="none">none</option><option value="future">next week</option><option value="past">yesterday</option></select></label>
         <label>hours from <select data-k="from">${hours(0)}</select></label>
@@ -4943,6 +4949,11 @@ ol.rules-list li.open b { color: var(--ok); }
       why: "R7 reads now, also with the card a little above the reader. Your Reader chip cell said “polling · settings restored 5× · lost 5×”: the IRQ wire stays quiet (so polling), and a 3.3 V dip reset the RC522 5 times, each time put right within 2 s. The supply still dips, so short 3.3V wires and pressed-in headers are worth it. New bug: a card's name, then a snapshot's, showed a piece of JSON. ArduinoJson 7.4 treats any const char[N] as a string literal and keeps only its pointer; the Card copy was gone by the time the JSON was sent, and the memory held the previous card's JSON. Fix: char-array fields go through doorjson::copied() (a const char *, which is copied). Nothing stored was damaged. App: grey placeholders until the list, saved data and log arrive; a turning ring with a “doing” label on every button that waits for the board.",
       out: "before: [{\"name\":\"########################…\"}]  after: [{\"name\":\"abdu\"},{\"name\":\"card\"}]\nrfid-lab-r7 SUCCESS, no warnings · RAM 17.0%  Flash 18.1%\ndoor-app: typecheck clean · 10 tests passed · no page errors, no sideways scroll",
       result: "Next, by you: uv run pio run -e rfid-lab-r7 -t upload, then reload the app. Cards and saved data stay (NVS). Nothing was sent to the board." },
+    { n: 45, types: ["build"], title: "R7: an admin room only admin cards open", where: "Mac · no board",
+      cmd: "c++ -std=c++17 -Wall -I src/rfid-lab-r7 test/host/door_rules_test.cpp   (Mac only)\nuv run pio run -e rfid-lab-r7   (build only)\ndoor-app: tsc · vitest · vite + mock board, headless Chromium",
+      why: "You asked for another lock that admins open and residents don't. New role: admin (stored as the next role byte, so your card list stays). Two locks: Front door (every role, as before) and Admin room. New rule right after “blocked”: at the admin room, anything but an admin card → DENIED · admins only. Admins also open during lockdown. The bench has one reader, so it is mounted at one lock at a time: Move reader here in the app, or serial at front|admin (saved on the board). Each lock has its own OPEN / DENIED / LOCKED and its own Open 5 s (POST /api/open?lock=admin). Cards show what a tap would do at each lock; the log says which lock. The guide's rule panel has the new rule; the bench simulator still shows one door.",
+      out: "all door rule checks passed\nrfid-lab-r7 SUCCESS, no warnings · RAM 17.0%  Flash 18.1%\ndoor-app: typecheck clean · 10 tests passed · no page errors, no sideways scroll (1280 / 390 px)",
+      result: "Next, by you: flash, reload the app, give one card the admin role (Edit → Role), Move reader here on the Admin room, tap it and a resident card. Nothing was sent to the board." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";

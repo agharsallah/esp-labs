@@ -6,19 +6,19 @@ Every command that installs software, talks to the board, or flashes it, with wh
 
 ## Overview
 
-| What                      | Value                                                                                                                                                                                                             |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                                                                      |
-| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                                                                   |
-| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                                                                        |
-| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                                                                        |
-| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                                                                 |
-| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                                                                       |
-| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                                            |
-| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                                         |
-| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                                             |
-| **Firmware on board now** | **`rfid-lab-r7`** with the entry 43 fixes, flashed by you: reads work, also with the card a little above the reader. Built, not flashed: entry 44 (names fix, loading states), `rfid-lab-r1` … `r6`, `wifi-lab-*` |
-| Flashes so far            | 14 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab, rfid-lab-r7 twice by you)                                                                         |
+| What                      | Value                                                                                                                                                                                                                              |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                                                                                       |
+| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                                                                                    |
+| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                                                                                         |
+| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                                                                                         |
+| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                                                                                  |
+| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                                                                                        |
+| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                                                             |
+| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                                                          |
+| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                                                              |
+| **Firmware on board now** | **`rfid-lab-r7`** with the entry 43 fixes, flashed by you: reads work, also with the card a little above the reader. Built, not flashed: entries 44-45 (names fix, loading states, admin room), `rfid-lab-r1` … `r6`, `wifi-lab-*` |
+| Flashes so far            | 14 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab, rfid-lab-r7 twice by you)                                                                                          |
 
 ### What is installed on the Mac
 
@@ -994,3 +994,42 @@ door-app: typecheck clean · 10 tests passed · no page errors, no sideways scro
 ```
 
 **Next, by you:** `uv run pio run -e rfid-lab-r7 -t upload`, then reload the app. Your cards and saved data stay (they live in NVS). Nothing was sent to the board.
+
+### 45. R7: an admin room only admin cards open · `build` (Mac) · no board
+
+You asked for another lock that admins can open and residents can't.
+
+| What        | How                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| New role    | `admin`, stored as the next role byte, so the saved card list keeps working                                                                            |
+| Two locks   | **Front door** (every role, as before) and **Admin room**                                                                                              |
+| New rule    | right after "blocked": at the admin room, anything but an admin card is DENIED · `admins only`. Admins also open during lockdown                       |
+| One reader  | mounted at one lock at a time: **Move reader here** in the app, `PUT /api/reader-at {"lock":"admin"}`, or serial `at front` / `at admin`; saved in NVS |
+| Each lock   | its own OPEN / DENIED / LOCKED and its own remote open: **Open 5 s**, `POST /api/open?lock=admin`, serial `open admin`                                 |
+| App         | two lock tiles, cards show what a tap does at each lock, the log names the lock, admin in the role pickers                                             |
+| Screen, LED | follow the lock the reader is at; the door view names it and shows the other lock's state                                                              |
+
+```mermaid
+flowchart LR
+  Tap["tap at the admin room"] --> Known{"in the list?"}
+  Known -- no --> U["DENIED · unknown card"]
+  Known -- yes --> B{"blocked?"}
+  B -- yes --> BL["DENIED · blocked"]
+  B -- no --> A{"admin card?"}
+  A -- no --> AO["DENIED · admins only"]
+  A -- yes --> R["the usual rules: clock, end date, hours, uses"] --> O["OPEN 5 s"]
+```
+
+```sh
+c++ -std=c++17 -Wall -I src/rfid-lab-r7 test/host/door_rules_test.cpp -o …/door_test && …/door_test   # Mac only
+uv run pio run -e rfid-lab-r7                                                                          # build only
+door-app: tsc -p . · vitest run · vite + mock board + headless Chromium (1280 / 390 px)
+```
+
+```text
+all door rule checks passed
+rfid-lab-r7 SUCCESS, no warnings · RAM 17.0% (55,860 B) · Flash 18.1% (1,188,638 B)
+door-app: typecheck clean · 10 tests passed · no page errors, no sideways scroll
+```
+
+**Next, by you:** `uv run pio run -e rfid-lab-r7 -t upload`, reload the app, set one card's role to admin (Edit → Role), press **Move reader here** on the Admin room, then tap that card and a resident card. Nothing was sent to the board.
