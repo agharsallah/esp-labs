@@ -526,6 +526,35 @@ ol.rules-list li.open b { color: var(--ok); }
 .rules-verdict .now { font: 600 12px var(--font-mono); padding: 2px 9px; border-radius: 999px; }
 .rules-verdict .now.good { color: var(--surface); background: var(--ok); }
 .rules-verdict .now.critical { color: var(--surface); background: var(--danger); }
+.cp-ui { display: grid; gap: 12px; }
+.cp-ctl { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; }
+.cp-ctl label { display: inline-flex; align-items: center; gap: 6px; }
+.cp-cards { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center; }
+.cp-arrow { font: 600 20px var(--font-mono); color: var(--w-cs); }
+.cp-card { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--bg); min-width: 0; display: grid; gap: 4px; }
+.cp-card h4 { margin: 0 0 4px; font: 600 13px var(--font-mono); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.cp-card h4 small { font-weight: 400; color: var(--muted); }
+.cp-row { display: grid; grid-template-columns: 26px repeat(4, minmax(0, 1fr)); gap: 3px; align-items: stretch; }
+.cp-row > span:first-child { font: 600 10px var(--font-mono); color: var(--muted); align-self: center; }
+.cp-cell { font: 10.5px/1.25 var(--font-mono); padding: 3px 4px; border-radius: 5px; border: 1px solid var(--line); background: var(--surface); overflow-wrap: anywhere; min-width: 0; transition: background .25s, box-shadow .25s; }
+.cp-cell b { display: block; font-size: 9.5px; color: var(--muted); font-weight: 600; }
+.cp-cell.uid { border-color: var(--copper); background: var(--copper-soft); }
+.cp-cell.trailer { border-style: dashed; color: var(--muted); }
+.cp-cell.lab { border-color: var(--w-cs); }
+.cp-cell.closed { border-color: var(--danger); color: var(--danger); }
+.cp-cell.go { box-shadow: 0 0 0 2px var(--w-cs); background: var(--copper-soft); }
+.cp-cell.ok { box-shadow: inset 0 -3px 0 var(--ok); }
+.cp-cell.skip { box-shadow: inset 0 -3px 0 var(--danger); }
+.cp-more { font: 11px var(--font-mono); color: var(--muted); padding-left: 29px; }
+.cp-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); }
+.cp-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--line); vertical-align: -2px; margin-right: 4px; }
+.cp-legend i.uid { border-color: var(--copper); background: var(--copper-soft); }
+.cp-legend i.lab { border-color: var(--w-cs); }
+.cp-legend i.trailer { border-style: dashed; }
+.cp-out { margin: 0; font-size: 14px; display: grid; gap: 4px; }
+.cp-out .now { font: 600 12px var(--font-mono); padding: 2px 9px; border-radius: 999px; color: var(--surface); background: var(--ok); margin-right: 6px; }
+.cp-out .now.warn { background: var(--warn); }
+@media (max-width: 640px) { .cp-cards { grid-template-columns: minmax(0, 1fr); } .cp-arrow { transform: rotate(90deg); justify-self: center; } }
 .spi-ctl select { font: 12.5px var(--font-mono); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: var(--surface); color: var(--ink); }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
@@ -1095,18 +1124,20 @@ ol.rules-list li.open b { color: var(--ok); }
         {
           ...common, id: "R7", title: "Card manager", sim: "door", cmd: "uv run pio run -e rfid-lab-r7 -t upload",
           heading: "Manage your cards from a React app",
-          goal: "Its own firmware (rfid-lab-r7) turns the bench into a door you manage from a small React app (test-esp/door-app) over your Wi-Fi. The board keeps the card list in its flash and decides every tap itself; the card only brings its UID. From the app you add cards, name them, give them a role, block them, limit them to hours, an end date or a number of uses, write a name label onto them, wipe the data the labs wrote, open the door remotely, switch on lockdown, and watch every tap live. The door is simulated: the screen and the LED.",
+          goal: "Its own firmware (rfid-lab-r7) turns the bench into a door you manage from a small React app (test-esp/door-app) over your Wi-Fi. The board keeps the card list in its flash and decides every tap itself; the card only brings its UID. From the app you add cards, name them, give them a role, block them, limit them to hours, an end date or a number of uses, copy one card's rules to another, replace a lost card, write a name label onto them, wipe the data the labs wrote, save a card's data and write it back or copy it onto another card, open the door remotely, switch on lockdown, and watch every tap live. The door is simulated: the screen and the LED.",
           goalLine: "Run your two tags as a small access system: one resident, one guest, and see each rule decide a tap.",
           goalCheck: [
             "The app shows <b>live</b> and both tags are in the list: the white card as a resident, the key tag as a guest.",
             "Tapping the white card shows OPEN on the screen and in the app; after <b>Block</b> the same tap shows DENIED · blocked.",
             "The guest tag's uses go down with each tap; at 0 it is refused with “no uses left”.",
             "Every tap and every change appears in the access log, on the board's log view and in the app.",
+            "The white card's data is saved, copied onto the key tag and compared: same data, and the key tag still opens as <b>Key tag</b>, because a copy never moves the UID.",
           ],
-          learn: ["REST API + WebSocket", "server-side decisions", "rule order", "fail closed", "NVS storage", "admin token via a dev proxy", "React + zod"],
+          learn: ["REST API + WebSocket", "server-side decisions", "rule order", "fail closed", "NVS storage", "admin token via a dev proxy", "React + zod", "backup, restore, verify", "a copy is not a clone"],
           panels: [
             { title: "Which rule decides?", fn: "doorRules", intro: "The board checks the rules in this order, and the first one that says no wins. Set up a card, the clock and lockdown, and see which rule decides. It is the same order as src/rfid-lab-r7/access_rules.h (tested on the Mac)." },
-            { title: "Follow one tap, one block, one new card", fn: "doorSeq", intro: "What crosses the wires and the Wi-Fi: the app never talks to the reader directly, and the card never decides anything." },
+            { title: "Follow one tap, one block, one new card, one copy", fn: "doorSeq", intro: "What crosses the wires and the Wi-Fi: the app never talks to the reader directly, and the card never decides anything." },
+            { title: "What a copy moves", fn: "doorCopy", intro: "Save the white card's data, copy it onto the key tag, and watch which blocks move. Block 0 (the UID) and the sector trailers (keys, access bits) never do, and a sector that doesn't open with the factory key is skipped, not forced." },
           ],
           commands: [
             { c: "uv run pio run -e rfid-lab-r7 -t upload", where: "mac", card: "any", does: "Flashes the door firmware. The first build copies the web libraries W2 already uses (ESPAsyncWebServer, AsyncTCP, ArduinoJson) into test-esp/.pio.", see: "The screen shows <b>DOOR door</b>, LOCKED, “0 cards in the list” and <code>http://bench.local</code> at the bottom once Wi-Fi joins.", fix: "“no Wi-Fi saved: run W1 once”: R7 uses the network W1/W2 saved. Flash W1, <code>join</code>, then flash R7 again." },
@@ -1122,6 +1153,13 @@ ol.rules-list li.open b { color: var(--ok); }
             { c: "Edit → Write name label", where: "app", card: "on", does: "Writes the name into block 4 and the role into block 5 of that card (factory key, sector 1 only), then reads them back.", see: "“label written”. Read the card on the reader: block 4 shows its name.", fix: "The door still ignores the label: it decides from its own list. Write any name there and nothing changes." },
             { c: "Edit → Wipe card data", where: "app", card: "on", does: "Second click to confirm. Blocks 4-6 and 8-10 back to zeros where the access bits allow (the label, R5's credits). Keys, trailers and block 0 are never touched.", see: "“6 of 6 data blocks cleared”.", fix: "" },
             { c: "Edit → Remove from the list", where: "app", card: "any", does: "Second click to confirm. The board forgets the card; the card itself is not touched.", see: "Its next tap: DENIED · unknown card.", fix: "" },
+            { c: "Edit → Copy rules from…", where: "app", card: "any", does: "Fills the form with another card's role, hours, end date and uses (not its name, not its block). Save sends what changed.", see: "Both cards now have the same rule line.", fix: "" },
+            { c: "Card data → Save the card on the reader", where: "app", card: "on", does: "Reads blocks 4-6 and 8-10 with the factory key and keeps them on the board as a named snapshot (up to 8, in NVS). Serial: <code>save White</code>, <code>saved</code>.", see: "“6 of 6 blocks saved as …” and a snapshot with its six cells: text, values (R5's credits), zeros.", fix: "“no lab block opens”: that card's sectors 1-2 use another key: nothing to save." },
+            { c: "Card data → Download, Import a saved file", where: "app", card: "any", does: "Downloads the snapshot as a JSON file on your Mac; Import puts such a file back on the board (lab blocks only, checked twice: by the app and by the board).", see: "A <code>card-data-….json</code> file; after import, a snapshot “from a file”.", fix: "" },
+            { c: "Card data → Copy this card onto another", where: "app", card: "move", does: "Reads the card on the reader, then the screen shows COPY: 2ND CARD and the LED blinks violet. Lift it and lay the other card within 20 s: each block is written and read back. Serial: <code>copy</code>, <code>cancel</code>.", see: "“6 of 6 blocks copied from White card onto 9C4F6A0D”, a “data copied here” line in the log.", fix: "Laying the same card again does nothing (it waits for a different one). Cancel writes nothing." },
+            { c: "Compare with the reader", where: "app", card: "on", does: "Reads the card on the reader and lines it up against a snapshot, block by block.", see: "<b>same</b> for each copied block. Now tap the key tag: it still opens as <b>Key tag</b>.", fix: "" },
+            { c: "Write onto the card on the reader", where: "app", card: "on", does: "Second click to confirm. A snapshot back onto the card it came from (restore), e.g. after R5 spent its credits, or onto another card. Serial: <code>restore 1</code>.", see: "“… written to 9C4F2A1B (the card it came from)”.", fix: "" },
+            { c: "Edit → Replace with a new card", where: "app", card: "move", does: "For a lost or broken card: the next new card you tap takes over its name, role and rules; the old one stays in the list, blocked, renamed “… old”.", see: "Two entries: the new card opens, the old one shows DENIED · blocked if it ever turns up.", fix: "" },
           ],
           steps: [
             "Same wiring as R1. Flash <code>rfid-lab-r7</code>. The board needs the Wi-Fi network W1/W2 saved.",
@@ -1131,8 +1169,10 @@ ol.rules-list li.open b { color: var(--ok); }
             "Tap both a few times: OPEN, the guest's uses going down, every tap in the log.",
             "Block the white card and tap it (DENIED · blocked), unblock it. Try the presets and lockdown, and watch the “Which rule decides?” panel agree.",
             "Write a label onto a card, read it back, wipe it. Then remove the key tag from the list and tap it: unknown card.",
+            "Save the white card's data, copy it onto the key tag, compare. <b>Checkpoint:</b> same data on both, yet each card still opens as itself.",
+            "Download the snapshot, wipe the white card, write the snapshot back, compare: restored.",
           ],
-          note: "Why the board decides and not the card: a card's UID and the data on a MIFARE Classic can be read by anyone with a reader, so they are fine as a name tag, not as proof. Real access systems keep the decision on a server and use cards with modern cryptography (e.g. MIFARE DESFire); this lab teaches the server side of that. Reading the API is open on your Wi-Fi; every change needs the token. The card list lives in the board's NVS and survives re-flashing; it is separate from the R1-R6 labs.",
+          note: "Why the board decides and not the card: a card's UID and the data on a MIFARE Classic can be read by anyone with a reader, so they are fine as a name tag, not as proof. Real access systems keep the decision on a server and use cards with modern cryptography (e.g. MIFARE DESFire); this lab teaches the server side of that. Reading the API is open on your Wi-Fi; every change needs the token. The card list lives in the board's NVS and survives re-flashing; it is separate from the R1-R6 labs. Copying moves data only: block 0 is written once at the factory, so the copy keeps its own UID and the door treats it as a different card. That is also why access never rests on the data: it would be copied along.",
         },
       ];
     })(),
@@ -4458,6 +4498,17 @@ ol.rules-list li.open b { color: var(--ok); }
           { f: 3, t: 3, msg: "blocked → DENIED", ms: 1, title: "Blocked wins first", text: "The very first rule after 'in the list?' is 'blocked?', so it doesn't matter what else the card is allowed: DENIED · blocked, LED red." },
         ],
       },
+      copy: {
+        label: "Copy a card", lanes, wait: [0, 5],
+        steps: [
+          { f: 0, t: 2, msg: "POST /api/copy", ms: 25, net: true, title: "Copy this card onto another", text: "The white card lies on the reader. Through the proxy, with the token; the web server queues a job and answers at once.", code: "POST /api/copy  →  202 {\"job\":9}" },
+          { f: 3, t: 4, msg: "AUTH sector 1 · READ 4 5 6", ms: 12, net: true, title: "Read the source, sector by sector", text: "Factory key A for sector 1, then READ blocks 4, 5 and 6 (16 bytes each, with CRC_A), the same for sector 2. The trailers aren't copied: keys and access bits stay where they are.", code: "AUTH A 4 (FF FF FF FF FF FF) ✓  READ 4 → “White card”  READ 5 → “R7 resident”  READ 6 → zeros\nAUTH A 8 ✓  READ 8 → value 10  READ 9 → value 10  READ 10 → zeros" },
+          { f: 3, t: 3, msg: "wait for a different card", ms: 2000, live: true, title: "The board waits for the second card", text: "The screen shows COPY: 2ND CARD and the LED blinks violet. The source still lying there doesn't count; lifting it and laying it again doesn't either." },
+          { f: 4, t: 3, msg: `UID ${hxs(RF.tag.uid).replace(/ /g, "")}`, ms: 3, net: true, title: "You lay the key tag down", text: "A different UID: this is the target." },
+          { f: 3, t: 4, msg: "WRITE 4 … 10, READ back", ms: 40, net: true, title: "Write each block, read it back", text: "WRITE is two steps (command → ACK, 16 bytes → ACK); then READ checks the card really holds it. Only blocks the target's access bits let key A write; a sector that doesn't open is skipped.", code: "WRITE 4 ✓ ✓  READ 4 = ✓   …   WRITE 10 ✓ ✓  READ 10 = ✓\nblock 0 (UID 9C 4F 6A 0D): not touched" },
+          { f: 3, t: 0, msg: "job 9 ok", ms: 30, net: true, title: "6 of 6 blocks copied", text: "The result reaches the app as a toast and the log gets a “data copied here” line. Tap the key tag now: it opens as Key tag, because the door looks up its UID, which didn't change.", code: '{"type":"job","data":{"id":9,"ok":true,"message":"6 of 6 blocks copied from White card onto 9C4F6A0D"}}' },
+        ],
+      },
       enroll: {
         label: "Add a card", lanes, wait: [2, 4],
         steps: [
@@ -4472,8 +4523,85 @@ ol.rules-list li.open b { color: var(--ok); }
     return sequenceDiagram(root, FLOWS, {
       legend: `<span class="li"><span class="lg lg-msg"></span> HTTP, WebSocket or radio (orange: this step)</span><span class="li"><span class="lg lg-wait"></span> the app waiting for the board</span>`,
       waitLane: 0,
-      live: (_f, secs) => `reader task  waiting for a new card … ${secs} s of 20\nweb server   still answering the app (status every second)`,
+      live: (_f, secs) => `reader task  waiting for a card … ${secs} s of 20\nweb server   still answering the app (status every second)`,
     });
+  }
+
+  // ---------- R7: what a copy moves (blocks 0-11 of two MIFARE Classic 1K cards) ----------
+  function doorCopyPanel(root) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const LAB = [4, 5, 6, 8, 9, 10];
+    const fresh = () => ({
+      white: { name: "White card", uid: hxs(RF.card.uid), data: { 4: "“White card”", 5: "“R7 resident”", 6: "zeros", 8: "value 10", 9: "value 10", 10: "zeros" } },
+      tag: { name: "Key tag", uid: hxs(RF.tag.uid), data: { 4: "“Key tag”", 5: "“R7 guest”", 6: "zeros", 8: "zeros", 9: "zeros", 10: "zeros" } },
+    });
+    let cards = fresh(), saved = null, closed = false, running = false;
+    root.innerHTML = `<div class="cp-ui">
+      <div class="cp-ctl">
+        <button type="button" class="btn" data-a="save">Save White card</button>
+        <button type="button" class="btn" data-a="copy">Copy White card → Key tag</button>
+        <button type="button" class="btn" data-a="reset">Start again</button>
+        <label><input type="checkbox" data-a="closed"> Key tag's sector 2 has another key</label>
+      </div>
+      <div class="cp-legend"><span><i class="uid"></i>block 0: UID + maker data, never written</span><span><i class="lab"></i>lab blocks: saved and copied</span><span><i class="trailer"></i>trailer: keys + access bits, never written</span><span><i></i>sector 0 data: outside the lab area</span></div>
+      <div class="cp-cards"><div class="cp-card" data-c="white"></div><span class="cp-arrow" aria-hidden="true">→</span><div class="cp-card" data-c="tag"></div></div>
+      <p class="cp-out" aria-live="polite"></p>
+    </div>`;
+    const out = root.querySelector(".cp-out");
+    const cellOf = (key, b) => root.querySelector(`[data-c="${key}"] [data-b="${b}"]`);
+    function draw() {
+      for (const key of ["white", "tag"]) {
+        const c = cards[key], el = root.querySelector(`[data-c="${key}"]`);
+        const rows = [0, 1, 2].map((sec) => {
+          const cells = [0, 1, 2, 3].map((i) => {
+            const b = sec * 4 + i;
+            let cls = "", txt = "";
+            if (b === 0) cls = "uid", txt = c.uid;
+            else if (i === 3) cls = "trailer", txt = "keys";
+            else if (sec === 0) txt = "–";
+            else if (key === "tag" && sec === 2 && closed) cls = "lab closed", txt = "doesn't open";
+            else cls = "lab", txt = c.data[b];
+            return `<span class="cp-cell ${cls}" data-b="${b}" title="block ${b}: ${txt}"><b>${b}</b>${txt}</span>`;
+          }).join("");
+          return `<div class="cp-row"><span>S${sec}</span>${cells}</div>`;
+        }).join("");
+        el.innerHTML = `<h4>${c.name} <small>UID ${c.uid}</small></h4>${rows}<div class="cp-more">sectors 3-15: not touched</div>`;
+      }
+    }
+    const sleep = (ms) => new Promise((r) => setTimeout(r, reduce ? 0 : ms));
+    async function copy() {
+      if (running) return;
+      running = true;
+      if (!saved) { saved = { ...cards.white.data }; out.innerHTML = "Read the white card first: 6 of 6 blocks."; }
+      let done = 0, skipped = 0;
+      for (const b of LAB) {
+        const src = cellOf("white", b);
+        src.classList.add("go");
+        await sleep(260);
+        const ok = !(closed && b >= 8);
+        if (ok) { cards.tag.data[b] = saved[b]; done++; } else skipped++;
+        draw();
+        cellOf("tag", b).classList.add(ok ? "ok" : "skip");
+        for (const x of LAB.filter((y) => LAB.indexOf(y) < LAB.indexOf(b))) {
+          const prev = cellOf("tag", x);
+          if (prev) prev.classList.add(closed && x >= 8 ? "skip" : "ok");
+        }
+        await sleep(140);
+      }
+      out.innerHTML = `<span><span class="now ${skipped ? "warn" : ""}">${done} of 6 copied</span>${skipped ? "Sector 2 didn't open with the factory key, so blocks 8-10 were skipped: the board never forces a sector." : "Every block written and read back."}</span>
+        <span>UID still <b>${cards.tag.uid}</b>: a tap with the key tag is looked up as <b>Key tag</b>, not as White card. The door decides by UID, and the UID didn't move.</span>`;
+      running = false;
+    }
+    root.querySelector('[data-a="save"]').addEventListener("click", () => {
+      saved = { ...cards.white.data };
+      LAB.forEach((b) => cellOf("white", b).classList.add("ok"));
+      out.innerHTML = `<span><span class="now">6 of 6 saved</span>Snapshot “White card” on the board (NVS). Blocks 0 and the trailers aren't part of it.</span>`;
+    });
+    root.querySelector('[data-a="copy"]').addEventListener("click", copy);
+    root.querySelector('[data-a="reset"]').addEventListener("click", () => { if (running) return; cards = fresh(); saved = null; draw(); out.textContent = ""; });
+    root.querySelector('[data-a="closed"]').addEventListener("change", (e) => { if (running) return; closed = e.target.checked; cards = fresh(); saved = null; draw(); out.textContent = ""; });
+    draw();
+    return () => {};
   }
 
   // ---------- Sim R7: the door screen + serial monitor (example data) ----------
@@ -4485,11 +4613,11 @@ ol.rules-list li.open b { color: var(--ok); }
       tag: { name: "Key tag", uid: hxs(RF.tag.uid).replace(/ /g, ""), listed: true, role: "guest", blocked: false, until: "none", from: 0, to: 0, uses: 2 },
       stranger: { name: "", uid: "04A1B2C3", listed: false, role: "resident", blocked: false, until: "none", from: 0, to: 0, uses: -1 },
     };
-    const st = { mode: "locked", until: 0, name: "", why: "", lockdown: false, view: 0, log: [] };
+    const st = { mode: "locked", until: 0, name: "", why: "", lockdown: false, view: 0, log: [], copyUntil: 0 };
     const row = document.createElement("div"); row.className = "quick";
     row.innerHTML = `<button type="button" class="btn" data-t="white">tap: White card (resident)</button><button type="button" class="btn" data-t="tag">tap: Key tag (guest)</button><button type="button" class="btn" data-t="stranger">tap: a card not in the list</button>`;
     const row2 = document.createElement("div"); row2.className = "quick";
-    row2.innerHTML = `<button type="button" class="btn" data-a="block" aria-pressed="false">app: block White card</button><button type="button" class="btn" data-a="lockdown" aria-pressed="false">app: lockdown</button><button type="button" class="btn" data-a="open">app: open for 5 s</button><button type="button" class="btn" data-a="view">button: next view</button>`;
+    row2.innerHTML = `<button type="button" class="btn" data-a="block" aria-pressed="false">app: block White card</button><button type="button" class="btn" data-a="lockdown" aria-pressed="false">app: lockdown</button><button type="button" class="btn" data-a="open">app: open for 5 s</button><button type="button" class="btn" data-a="copy">app: copy White card → Key tag</button><button type="button" class="btn" data-a="view">button: next view</button>`;
     const frame = document.createElement("div"); frame.className = "screen-frame";
     frame.innerHTML = `<canvas width="${W}" height="${H}" aria-label="Simulated door screen"></canvas>`;
     const cap = document.createElement("p"); cap.className = "sim-cap";
@@ -4528,7 +4656,16 @@ ol.rules-list li.open b { color: var(--ok); }
       T(8, 18, "DOOR", C.ink, "bold 12px Archivo, sans-serif"); T(48, 18, ["door", "cards", "log"][st.view], C.muted, "11px Archivo, sans-serif");
       if (st.lockdown) { g.fillStyle = C.amber; g.fillRect(150, 6, 76, 16); T(158, 17, "LOCKDOWN", C.paper); }
       g.fillStyle = C.dim; g.fillRect(0, 28, W, 1);
-      if (st.view === 0) {
+      if (st.view === 0 && now < st.copyUntil) {
+        for (let i = 0; i < 3; i++) {
+          const k = reduce ? 0.3 * i : ((now / 1250) + i / 3) % 1;
+          g.strokeStyle = C.dim; g.globalAlpha = 1 - k; g.beginPath(); g.arc(64, 96, 14 + k * 40, 0, 7); g.stroke(); g.globalAlpha = 1;
+        }
+        g.strokeStyle = C.muted; g.strokeRect(36.5, 74.5, 36, 26); g.fillStyle = C.ink; g.fillRect(46, 82, 36, 26);
+        T(128, 64, "COPY: 2ND CARD", C.amber, "bold 12px Archivo, sans-serif");
+        T(128, 84, "Lift the first card, lay", C.ink); T(128, 96, "the card to copy onto", C.ink);
+        T(128, 114, "from White card", C.muted); T(128, 126, `${Math.ceil((st.copyUntil - now) / 1000)} s left`, C.muted);
+      } else if (st.view === 0) {
         const blink = st.mode === "denied" && !reduce && Math.floor(now / 120) % 2;
         const col = st.mode === "open" ? C.teal : st.mode === "denied" ? (blink ? C.dim : C.coral) : C.muted;
         drawLock(62, 104, st.mode === "open" ? 1 : 0, col);
@@ -4543,7 +4680,7 @@ ol.rules-list li.open b { color: var(--ok); }
           T(22, 42 + i * 13, c.name, C.ink); T(160, 42 + i * 13, c.role, C.muted); T(240, 42 + i * 13, d, col);
         });
       } else {
-        st.log.slice(-9).forEach((e, i) => { T(6, 42 + i * 13, e.t, C.muted); T(44, 42 + i * 13, e.who, C.ink); T(180, 42 + i * 13, e.d, e.d === "granted" ? C.teal : C.coral); });
+        st.log.slice(-9).forEach((e, i) => { T(6, 42 + i * 13, e.t, C.muted); T(44, 42 + i * 13, e.who, C.ink); T(180, 42 + i * 13, e.d, e.d === "granted" ? C.teal : e.d === "data copied here" ? C.amber : C.coral); });
         if (!st.log.length) T(8, 46, "No events yet: tap a card.", C.muted);
       }
       g.fillStyle = C.paper; g.fillRect(0, H - 11, W, 11);
@@ -4567,6 +4704,18 @@ ol.rules-list li.open b { color: var(--ok); }
       st.log.push({ t: time(), who: "the app", d: "granted" });
       log("[I][door.h] event(): opened from the app the app", "i");
     });
+    row2.querySelector('[data-a="copy"]').addEventListener("click", () => {
+      if (performance.now() < st.copyUntil) return;
+      st.view = 0; st.copyUntil = performance.now() + 4000;
+      log("[I][door_api.h] POST /api/copy -> 202 {\"job\":9}", "");
+      log("[I][door.h] copyStart(): copy: 6 blocks read from 9C4F2A1B; lay the card to copy onto within 20 s", "");
+      setTimeout(() => {
+        st.copyUntil = 0;
+        st.log.push({ t: time(), who: cards.tag.name, d: "data copied here" });
+        log("[I][door.h] event(): data copied here Key tag", "i");
+        log("[I][door.h] finish(): job 9: 6 of 6 blocks copied from White card onto 9C4F6A0D", "i");
+      }, 4000);
+    });
     row2.querySelector('[data-a="view"]').addEventListener("click", () => { st.view = (st.view + 1) % 3; });
     log("[I][main.cpp] setup(): rfid-lab-r7: reader task on core 0. Type token for the app's .env, help for commands.");
     log("[I][registry.h] begin(): card list: 2 cards, lockdown off", "");
@@ -4575,7 +4724,7 @@ ol.rules-list li.open b { color: var(--ok); }
     return () => { cancelAnimationFrame(raf); rgbDot.setAttribute("fill", "var(--silk-dim)"); };
   }
 
-  const RFID_PANELS = { doorRules: doorRulesPanel, doorSeq: doorSeqPanel, spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge, screens: rfidScreens };
+  const RFID_PANELS = { doorRules: doorRulesPanel, doorSeq: doorSeqPanel, doorCopy: doorCopyPanel, spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge, screens: rfidScreens };
 
   const LOG = [
     { n: 1, types: ["install"], title: "Install PlatformIO into the project", where: "Mac · test-esp/.venv",
@@ -4774,6 +4923,11 @@ ol.rules-list li.open b { color: var(--ok); }
       why: "Your request: manage your cards from a simple React app: add, label, wipe, block, open a door, scenarios. The board keeps the list and decides every tap; the app talks to its JSON API and WebSocket; the token stays in the app's .env.",
       out: "all door rule checks passed\nwifi-lab-w2 SUCCESS · wifi-lab-w2-remote SUCCESS\ndoor-app: typecheck clean · 6 tests passed · renders at 1280 and 390 px",
       result: "Waiting for your go: the first rfid-lab-r7 build (copies W2's three web libraries into .pio) and pnpm install in test-esp/door-app. Nothing was sent to the board." },
+    { n: 41, types: ["build"], title: "R7: copy, save and replace cards", where: "Mac · no board",
+      cmd: "c++ … test/host/door_rules_test.cpp (door rules)\ndoor-app: tsc · vitest · vite + mock board, headless Chromium\nguide: headless Chromium #r7",
+      why: "Your request: operations like copying one card to another and saving a card's information. Snapshots of blocks 4-6 and 8-10 on the board (up to 8), write back, copy card → card, compare, download/import as JSON, copy rules, replace a lost card. Factory key and lab blocks only; block 0 and the trailers are never written, so a copy is a different card to the door.",
+      out: "all door rule checks passed\ndoor-app: typecheck clean · 10 tests passed · renders at 1280 and 390 px, also mid-copy\nguide: no page errors, no sideways scroll",
+      result: "Still waiting for your go: the first rfid-lab-r7 build and pnpm install in test-esp/door-app. R7 is not compiled yet. Nothing was sent to the board." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";

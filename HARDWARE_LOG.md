@@ -884,3 +884,28 @@ door-app: typecheck clean · 6 tests passed · no page errors, no sideways scrol
 2. `cd test-esp/door-app && pnpm install` (the same packages the dashboard has).
 
 Nothing was sent to the board.
+
+### 41. R7: copy, save and replace cards · `build` (Mac) · waiting for your go
+
+Your request: operations like copying one card to another and saving a card's information.
+
+- **Firmware `rfid-lab-r7`**: a snapshot store (`snapshots.h`, NVS namespace `snaps`, up to 8) and new reader jobs in `door.h`: save the card on the reader, write a snapshot back (restore or onto another card), copy card → card (read the first card, wait 20 s for a different one, write and read back each block), replace a lost card (a new card takes over its name and rules; the old one stays blocked as "… old"). One shared "waiting for a card" state for enroll, replace and copy; `POST /api/cancel` stops any of them. New endpoints: `GET /api/snapshots`, `POST /api/save`, `POST /api/import`, `POST /api/restore?id=`, `DELETE /api/snapshot?id=`, `POST /api/copy`, `POST /api/replace?uid=`. Serial: `saved`, `save [name]`, `restore <id>`, `copy`, `cancel`. Screen: REPLACE A CARD and COPY: 2ND CARD; LED blinks violet while a copy waits.
+- **Same guard rails**: factory key only, lab blocks 4-6 and 8-10 only, never block 0 (the UID) or a trailer, only where the access bits let key A write. A copy keeps its own UID, so the door sees a different card.
+- **App**: a Card data panel (save, copy with live steps, import, snapshots with a block strip, write back, compare, download, delete), Copy rules from… and Replace with a new card in the editor.
+- **Guide R7**: a "What a copy moves" panel, a copy flow in the step-through diagram, a copy button in the door preview, seven new command cards.
+
+Checks on the Mac (nothing installed; the app through the temporary link to the dashboard's packages, removed afterwards):
+
+```sh
+c++ -std=c++17 -Wall -I src/rfid-lab-r7 test/host/door_rules_test.cpp -o <scratch>/door_test && <scratch>/door_test
+door-app: tsc -p . · vitest run · vite + mock board + headless Chromium (1280 / 390 px, light / dark, mid-copy)
+guide: headless Chromium, #r7 (copy panel, copy flow, preview) at 1280 / 390 px
+```
+
+```text
+all door rule checks passed
+door-app: typecheck clean · 10 tests passed · no page errors, no sideways scroll
+guide: no page errors, no sideways scroll
+```
+
+**Still waiting for your go** (same as entry 40): `uv run pio run -e rfid-lab-r7` (first build, copies W2's three web libraries into `.pio/libdeps/rfid-lab-r7`), then `pnpm install` in `test-esp/door-app`. The R7 firmware, with these additions, has not been compiled yet. Nothing was sent to the board.
