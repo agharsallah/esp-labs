@@ -37,7 +37,8 @@ pnpm dev                   # http://localhost:5174
 | **Write name label** (card on the reader)        | name into block 4, role into block 5, read back; the door never trusts it                                                           |
 | **Wipe card data** (card on the reader, confirm) | data blocks 4-6 and 8-10 back to zeros where the access bits allow; never keys, trailers or block 0                                 |
 | **Remove from the list** (confirm)               | forgets the card; the card itself is untouched                                                                                      |
-| **Open for 5 s**, **Lockdown**                   | remote open; only maintenance cards open during lockdown                                                                            |
+| **Open 5 s** (per lock), **Lockdown**            | remote open of the front door or the admin room; only maintenance and admin cards open during lockdown                              |
+| **Move reader here**                             | the bench's one reader is mounted at one lock at a time: the front door (every role) or the admin room (admin cards only)           |
 | **Read the card on the reader**                  | UID, type, whether it is in the list, blocks 4-6 and 8-10                                                                           |
 | **Edit → Copy rules from…**                      | fills the form with another card's role, hours, end date and uses (not its name or block); Save sends what changed                  |
 | **Edit → Replace with a new card** (confirm)     | waits 20 s for a new card; it takes over the name, role and rules, the old card stays in the list blocked as "… old"                |
@@ -63,7 +64,7 @@ sequenceDiagram
   Board-->>App: job: "6 of 6 blocks copied"
 ```
 
-The rule order (`src/rfid-lab-r7/access_rules.h`, tested in `test/host/door_rules_test.cpp`): unknown → blocked → lockdown → no clock yet (fail closed) → expired → outside hours → no uses left → granted.
+The rule order (`src/rfid-lab-r7/access_rules.h`, tested in `test/host/door_rules_test.cpp`): unknown → blocked → admin room needs an admin card → lockdown → no clock yet (fail closed) → expired → outside hours → no uses left → granted.
 
 ## Checks
 

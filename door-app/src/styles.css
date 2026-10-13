@@ -18,6 +18,8 @@
   --info-soft: rgb(75 91 183 / 0.12);
   --copy: #7a3fc4;
   --copy-soft: rgb(122 63 196 / 0.12);
+  --admin: #8a5a00;
+  --admin-soft: rgb(176 120 0 / 0.14);
   --lock: #56645f;
   --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -42,6 +44,8 @@
     --info-soft: rgb(154 168 255 / 0.14);
     --copy: #c9a2ff;
     --copy-soft: rgb(201 162 255 / 0.14);
+    --admin: #ecba50;
+    --admin-soft: rgb(236 186 80 / 0.14);
     --lock: #9aaba4;
     color-scheme: dark;
   }
@@ -351,17 +355,83 @@ select {
   font-size: 14px;
 }
 
-/* Door: a lamp ring around a padlock */
+/* Locks: two tiles, each a lamp ring around a padlock; the reader sits at one of them */
+.locks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+.lock-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-width: 0;
+  transition: border-color 0.3s;
+}
+.lock-tile.here {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.lock-head {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.lock-head strong {
+  font-size: 14px;
+}
+.lock-head span {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.lock-tile[data-lock="admin"] .lock-head span {
+  color: var(--admin);
+}
 .lamp {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 8px;
   align-items: center;
-  margin: 4px 0 14px;
 }
 .lamp svg {
-  width: 120px;
-  height: 120px;
+  width: 52px;
+  height: 52px;
+}
+.lock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+}
+.lock-actions .btn {
+  padding: 6px 9px;
+}
+.reader-here {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 11.5px var(--font-mono);
+  color: var(--accent);
+}
+.reader-glyph {
+  width: 14px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  position: relative;
+}
+.reader-glyph::after {
+  content: "";
+  position: absolute;
+  inset: 1px 3px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
 }
 .ring {
   fill: none;
@@ -386,26 +456,26 @@ select {
 .hole {
   fill: var(--surface);
 }
-.door[data-mode="open"] .ring {
+.lock-tile[data-mode="open"] .ring {
   stroke: var(--good);
 }
-.door[data-mode="open"] .shackle {
+.lock-tile[data-mode="open"] .shackle {
   transform: translateY(-8px) rotate(28deg);
   stroke: var(--good);
 }
-.door[data-mode="open"] .body {
+.lock-tile[data-mode="open"] .body {
   fill: var(--good);
 }
-.door[data-mode="denied"] .ring {
+.lock-tile[data-mode="denied"] .ring {
   stroke: var(--critical);
   animation: blink 0.25s steps(2) 4;
 }
-.door[data-mode="denied"] .body,
-.door[data-mode="denied"] .shackle {
+.lock-tile[data-mode="denied"] .body,
+.lock-tile[data-mode="denied"] .shackle {
   fill: var(--critical);
   stroke: var(--critical);
 }
-.door[data-mode="denied"] .body {
+.lock-tile[data-mode="denied"] .body {
   animation: shake 0.4s;
 }
 @keyframes blink {
@@ -428,19 +498,21 @@ select {
   min-width: 0;
 }
 .lamp-text strong {
-  font-stretch: 125%;
+  font-stretch: 110%;
   font-weight: 800;
-  font-size: 26px;
+  font-size: 15px;
   letter-spacing: 0.02em;
 }
-.door[data-mode="open"] .lamp-text strong {
+.lock-tile[data-mode="open"] .lamp-text strong {
   color: var(--good);
 }
-.door[data-mode="denied"] .lamp-text strong {
+.lock-tile[data-mode="denied"] .lamp-text strong {
   color: var(--critical);
 }
 .lamp-text span {
   color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 .door-actions {
@@ -610,8 +682,17 @@ select {
   border: 1px solid var(--line);
   color: var(--muted);
 }
-.card-row .now {
+.card-row .opens {
   grid-area: now;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.role.admin {
+  color: var(--admin);
+  border-color: var(--admin);
+  background: var(--admin-soft);
 }
 .row-actions {
   grid-area: actions;
@@ -620,8 +701,21 @@ select {
 }
 @media (max-width: 640px) {
   .card-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "who now" "meta meta" "actions actions";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "who" "now" "meta" "actions";
+  }
+  .card-row .opens {
+    justify-content: flex-start;
+  }
+}
+/* Narrow phones: each lock tile stacks its padlock above the words */
+@media (max-width: 420px) {
+  .lamp {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lamp svg {
+    width: 40px;
+    height: 40px;
   }
 }
 .now {
@@ -803,6 +897,14 @@ select {
 .log-who {
   overflow-wrap: anywhere;
   min-width: 0;
+}
+.log-lock {
+  margin-left: 6px;
+  font: 600 10.5px var(--font-mono);
+  color: var(--muted);
+}
+.log-lock.admin {
+  color: var(--admin);
 }
 
 /* Card data */

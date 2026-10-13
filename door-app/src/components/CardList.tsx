@@ -41,8 +41,9 @@ export function CardList({ cards, loaded, present, waiting, runJob, notify }: Pr
               <span className={`role ${c.role}`}>{c.role}</span>
               {c.uid === present && <span className="here-tag">on the reader</span>}
             </div>
-            <span className={`now ${tone(c.now)}`} title="what a tap would do right now">
-              {c.now === "granted" ? "opens now" : c.now}
+            <span className="opens" title="what a tap would do right now, at each lock">
+              <Opens lock="front door" decision={c.now.front} />
+              <Opens lock="admin room" decision={c.now.admin} />
             </span>
             <p className="card-meta">
               <span className="mono">{c.uid}</span>
@@ -92,5 +93,15 @@ export function CardList({ cards, loaded, present, waiting, runJob, notify }: Pr
         </li>
       ))}
     </ul>
+  );
+}
+
+// "front door ✓" in green, or "admin room · admins only" in the decision's colour.
+function Opens({ lock, decision }: { lock: string; decision: string }) {
+  return (
+    <span className={`now ${tone(decision)}`}>
+      {lock}
+      {decision === "granted" ? " ✓" : ` · ${decision}`}
+    </span>
   );
 }

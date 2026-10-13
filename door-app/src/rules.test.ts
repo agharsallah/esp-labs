@@ -24,7 +24,7 @@ const card: Card = {
   added: 0,
   lastSeen: 0,
   taps: 0,
-  now: "granted",
+  now: { front: "granted", admin: "admins only" },
 };
 
 describe("rules text", () => {

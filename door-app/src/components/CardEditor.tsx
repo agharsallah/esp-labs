@@ -110,7 +110,7 @@ export function CardEditor({ card, others, waiting, present, runJob, notify, onC
         </label>
         <fieldset className="seg">
           <legend>Role</legend>
-          {(["resident", "guest", "maintenance"] as Role[]).map((r) => (
+          {(["resident", "guest", "maintenance", "admin"] as Role[]).map((r) => (
             <label key={r}>
               <input
                 type="radio"

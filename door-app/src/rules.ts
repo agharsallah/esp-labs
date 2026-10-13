@@ -147,6 +147,7 @@ const DECISION_TONE: Record<string, "good" | "warning" | "critical"> = {
   granted: "good",
   blocked: "critical",
   "unknown card": "critical",
+  "admins only": "critical",
   lockdown: "warning",
   "no clock yet": "warning",
   expired: "warning",

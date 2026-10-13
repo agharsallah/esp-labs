@@ -90,6 +90,7 @@ export function EnrollPanel({ status, connected, runJob, notify }: Props) {
           <option value="resident">resident</option>
           <option value="guest">guest (starts with 5 uses)</option>
           <option value="maintenance">maintenance (opens in lockdown)</option>
+          <option value="admin">admin (opens the admin room, and in lockdown)</option>
         </select>
       </label>
       <button

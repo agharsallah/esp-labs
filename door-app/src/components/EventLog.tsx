@@ -17,6 +17,11 @@ export function EventLog({ events, loaded }: { events: DoorEvent[]; loaded: bool
             </time>
             <span className="log-who">
               {e.name || <span className="mono">{e.uid || "–"}</span>}
+              {e.lock && (
+                <span className={`log-lock ${e.lock}`}>
+                  {e.lock === "admin" ? "admin room" : "front door"}
+                </span>
+              )}
             </span>
             <span className={`now ${tap ? tone(e.decision) : "info"}`}>
               {tap ? e.decision : e.what}

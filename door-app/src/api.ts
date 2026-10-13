@@ -2,8 +2,12 @@
 // the app ever disagree, the app says so instead of showing nonsense.
 import { z } from "zod";
 
-export const Role = z.enum(["resident", "guest", "maintenance"]);
+export const Role = z.enum(["resident", "guest", "maintenance", "admin"]);
 export type Role = z.infer<typeof Role>;
+
+// Two simulated locks; the one reader is mounted at one of them at a time.
+export const LockId = z.enum(["front", "admin"]);
+export type LockId = z.infer<typeof LockId>;
 
 export const Card = z.object({
   uid: z.string(),
@@ -17,7 +21,7 @@ export const Card = z.object({
   added: z.number(),
   lastSeen: z.number(),
   taps: z.number(),
-  now: z.string(), // what a tap would do right now: "granted", "blocked", ...
+  now: z.object({ front: z.string(), admin: z.string() }), // what a tap would do right now at each lock
 });
 export type Card = z.infer<typeof Card>;
 
@@ -25,13 +29,18 @@ export const Status = z.object({
   chip: z.object({ version: z.string(), name: z.string(), ok: z.boolean() }),
   wifi: z.object({ ssid: z.string(), ip: z.string(), rssi: z.number() }),
   clock: z.object({ synced: z.boolean(), now: z.number() }),
-  door: z.object({
-    mode: z.enum(["locked", "open", "denied"]),
-    msLeft: z.number(),
-    name: z.string(),
-    uid: z.string(),
-    why: z.string(),
-  }),
+  locks: z.array(
+    z.object({
+      id: LockId,
+      title: z.string(),
+      mode: z.enum(["locked", "open", "denied"]),
+      msLeft: z.number(),
+      name: z.string(),
+      uid: z.string(),
+      why: z.string(),
+    }),
+  ),
+  readerAt: LockId,
   present: z.string().nullable(),
   // Waiting for a card to be laid down: a new one, a replacement, or copy's second card.
   waiting: z
@@ -66,6 +75,7 @@ export const DoorEvent = z.object({
   name: z.string(),
   what: z.string(),
   decision: z.string(),
+  lock: z.string().optional(), // taps and remote opens: "front" or "admin"
 });
 export type DoorEvent = z.infer<typeof DoorEvent>;
 
@@ -181,6 +191,7 @@ export const api = {
   restore: async (id: number) => Job.parse(await call("POST", `/api/restore?id=${id}`)).job,
   removeSnapshot: async (id: number) => void (await call("DELETE", `/api/snapshot?id=${id}`)),
   copy: async () => Job.parse(await call("POST", "/api/copy")).job,
-  open: async () => Job.parse(await call("POST", "/api/open")).job,
+  open: async (lock: LockId) => Job.parse(await call("POST", `/api/open?lock=${lock}`)).job,
+  readerAt: async (lock: LockId) => void (await call("PUT", "/api/reader-at", { lock })),
   lockdown: async (on: boolean) => void (await call("PUT", "/api/lockdown", { on })),
 };
