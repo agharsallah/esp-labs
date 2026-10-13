@@ -382,6 +382,21 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
 :root { --scope-blue: #5aa0ff; --rfid: #0e7490; --rc522: #1f56a8; --rc522-edge: #163f7c; --card-white: #f3f5f7; --gold: #c9a227; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --rfid: #4cc9e0; --rc522: #2a63b8; --rc522-edge: #1b4686; --card-white: #e8ecef; --gold: #e0b93a; } }
 :root[data-theme="dark"] { --rfid: #4cc9e0; --rc522: #2a63b8; --rc522-edge: #1b4686; --card-white: #e8ecef; --gold: #e0b93a; }
+
+/* Bluetooth LE track */
+:root { --ble: #1d5fd1; --scope-violet: #b082ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ble: #7fb0ff; } }
+:root[data-theme="dark"] { --ble: #7fb0ff; }
+.cs-bnone { --cs: var(--line); color: var(--muted); } .cs-bscan { --cs: var(--ble); }
+.cs-bconn { --cs: var(--ble); --cs-fill: var(--ble); } .cs-bpair, .cs-bhost { --cs: var(--scope-violet); --cs-fill: var(--scope-violet); } .cs-bperiph { --cs: var(--copper); --cs-fill: var(--copper); }
+.ble-bytes { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 6px; }
+.ble-bytes .bf { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px; border: 1.5px solid var(--bf, var(--line)); border-radius: 7px; padding: 3px 6px; opacity: .55; transition: opacity .2s, transform .2s; }
+.ble-bytes .bf.on { opacity: 1; transform: translateY(-2px); box-shadow: 0 2px 0 var(--bf); }
+.ble-bytes .bf b { font: 600 10px var(--font-mono); color: var(--muted); margin-right: 4px; text-transform: uppercase; letter-spacing: .04em; }
+.ble-bytes .bf i { font: 600 12.5px var(--font-mono); font-style: normal; color: var(--ink); }
+.ble-bytes .bf-used { font: 11px var(--font-mono); color: var(--muted); align-self: center; }
+.ble-field { font-size: 14px; margin: 4px 0 0; min-height: 3em; }
+.ble-field code { font-family: var(--font-mono); font-size: 12.5px; }
 .f3d { display: flex; flex-direction: column; gap: 12px; }
 .f3d-stage { position: relative; background: radial-gradient(ellipse at 50% 35%, var(--surface), var(--bg)); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 10; max-width: 100%; touch-action: pan-y; cursor: grab; }
 .f3d-stage:active { cursor: grabbing; }
@@ -531,6 +546,12 @@ ol.rules-list li.open b { color: var(--ok); }
 .cp-ctl label { display: inline-flex; align-items: center; gap: 6px; }
 .cp-cards { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center; }
 .cp-arrow { font: 600 20px var(--font-mono); color: var(--w-cs); }
+.fc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.fc-card { display: grid; justify-items: center; gap: 2px; padding: 8px 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--scope-paper); color: var(--scope-ink); cursor: pointer; font: inherit; }
+.fc-card canvas { width: 100%; max-width: 120px; height: auto; }
+.fc-card small { color: var(--scope-muted); font-size: 11.5px; }
+.fc-card[aria-pressed="true"] { border-color: var(--copper); box-shadow: 0 0 0 2px var(--copper); }
+.fc-out { margin: 10px 0 0; font-size: 14px; }
 .cp-card { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--bg); min-width: 0; display: grid; gap: 4px; }
 .cp-card h4 { margin: 0 0 4px; font: 600 13px var(--font-mono); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
 .cp-card h4 small { font-weight: 400; color: var(--muted); }
@@ -577,7 +598,7 @@ ol.rules-list li.open b { color: var(--ok); }
 
 
   <dl class="overview" aria-label="On the bench now">
-    <div class="now"><dt>On the board now</dt><dd>rfid-lab-r7<small>R7 reads cards, also a little above the reader (by you) · reader chip FM17522 clone (B2h) · built, not flashed: R7 names fix + admin room (entries 44-45), rfid-lab-r1 … r6, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
+    <div class="now"><dt>On the board now</dt><dd>rfid-lab-r7<small>R7 reads cards, also a little above the reader (by you) · reader chip FM17522 clone (B2h) · built, not flashed: rfid-lab-r8 (entry 46), R7 names fix + admin room (entries 44-45), rfid-lab-r1 … r6, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
     <div><dt>Connection</dt><dd>/dev/cu.usbserial-A5069RR4<small>FTDI FT232R · VID:PID 0403:6001</small></dd></div>
     <div><dt>Chip</dt><dd>ESP32-S3 rev v0.2<small>16 MB flash · 8 MB PSRAM · MAC 28:84:85:9E:3B:E4</small></dd></div>
     <div><dt>Verified</dt><dd class="flag">RGB · LED · screen · showcase<small>all seen working by you · display at 22 fps</small></dd></div>
@@ -665,6 +686,773 @@ ol.rules-list li.open b { color: var(--ok); }
   const ALIAS = { "43": "TX 43", "44": "RX 44" };
   const AVOID = new Set(["0","3","45","46","19","20","35","36","37","43","44"]);
   const kindOf = (p) => p === "3V3" || p === "5V" ? "power" : p === "GND" ? "gnd" : p === "RST" ? "avoid" : AVOID.has(p) ? "avoid" : "safe";
+
+  // ===== BLE PARTS BEGIN (assembled from scratch parts) =====
+  // ---------- Bluetooth LE track (B1-B8): shared pieces ----------
+  // Each lab adds its lesson to BLE_LESSONS, its panels to BLE_PANELS and a canvas copy of its
+  // screen to BLE_SCREENS (views, boot lines, quick actions, draw). simBle and bleScreens below turn
+  // BLE_SCREENS into the preview and the "What the screen shows" panel; the status bar on top is
+  // drawn here like lib/ble-kit/src/ble_views.h does on the board.
+  const BLE_LESSONS = [], BLE_PANELS = {}, BLE_SCREENS = {};
+  const BLE_PINS = [
+    { pin: "3V3", idx: 0, role: "VCC", side: "L", kind: "power" },
+    { pin: "7", role: "BLK", side: "L" }, { pin: "8", role: "RES", side: "L" },
+    { pin: "9", role: "DC", side: "L" }, { pin: "10", role: "CS", side: "L" },
+    { pin: "11", role: "SDA", side: "L" }, { pin: "12", role: "SCL", side: "L" },
+    { pin: "GND", idx: 21, role: "GND", side: "L", kind: "gnd" },
+    { pin: "5", role: "BTN", side: "L", kind: "btn" },
+    { pin: "0", role: "BOOT", side: "R" },
+  ];
+  const bleCommon = { track: "ble", status: "built, not flashed", pins: BLE_PINS, boot: true, sim: "ble" };
+  function blePalette() { return { ...rfidPalette(), violet: css("--scope-violet") }; }
+
+  // The board's status bar and footer, from a sim state object:
+  // st.radio off|scanning|advertising|connecting|connected · st.encrypted · st.bonded · st.rssi · st.footer · st.passkey/st.compare
+  function bleChrome(g, C, lesson, S, view, st, t) {
+    const T = (x, y, s, col, font = "8px 'IBM Plex Mono', monospace", align = "left") => { g.font = font; g.fillStyle = col; g.textAlign = align; g.fillText(s, x, y); g.textAlign = "left"; };
+    g.fillStyle = C.paper; g.fillRect(0, 0, 320, 29); g.fillRect(0, 158, 320, 12);
+    T(8, 18, lesson.id, C.blue, "bold 12px Archivo, sans-serif");
+    T(30, 18, S.views[view], C.muted, "12px Archivo, sans-serif");
+    let x = 302;
+    const connected = st.radio === "connected";
+    if (connected && st.rssi) {
+      const bars = st.rssi >= -55 ? 4 : st.rssi >= -67 ? 3 : st.rssi >= -78 ? 2 : st.rssi >= -90 ? 1 : 0;
+      for (let i = 0; i < 4; i++) { const h = 3 + i * 3; g.fillStyle = i < bars ? C.teal : C.dim; g.fillRect(x + i * 4, 21 - h, 3, h); }
+    }
+    x -= 18;
+    if (connected && st.bonded) { g.strokeStyle = C.amber; g.lineWidth = 1; g.beginPath(); g.arc(x + 3, 14, 3, 0, 7); g.moveTo(x + 6, 14); g.lineTo(x + 13, 14); g.lineTo(x + 13, 18); g.stroke(); x -= 18; }
+    if (connected && st.encrypted) { g.strokeStyle = C.violet; g.beginPath(); g.arc(x + 7, 11, 3, Math.PI, 0); g.stroke(); g.fillStyle = C.violet; g.fillRect(x + 2, 12, 11, 8); x -= 16; }
+    const cx = x + 4, cy = 15;
+    g.lineWidth = 1;
+    if (st.radio === "scanning") {
+      g.strokeStyle = C.dim; g.beginPath(); g.arc(cx, cy, 7, 0, 7); g.stroke();
+      const a = t * 5; g.strokeStyle = C.teal; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * 7, cy + Math.sin(a) * 7); g.stroke();
+    } else if (st.radio === "advertising") {
+      g.fillStyle = C.blue; g.beginPath(); g.arc(cx, cy, 2, 0, 7); g.fill();
+      for (let i = 0; i < 2; i++) { const k = (t * 1.2 + i * 0.5) % 1; g.globalAlpha = 1 - k; g.strokeStyle = C.blue; g.beginPath(); g.arc(cx, cy, 3 + k * 6, 0, 7); g.stroke(); }
+      g.globalAlpha = 1;
+    } else if (connected) {
+      g.strokeStyle = C.blue; g.beginPath(); g.arc(cx - 3, cy, 4, 0, 7); g.stroke(); g.beginPath(); g.arc(cx + 3, cy, 4, 0, 7); g.stroke();
+    } else if (st.radio === "connecting") {
+      g.strokeStyle = Math.floor(t * 6) % 2 ? C.amber : C.dim; g.beginPath(); g.arc(cx, cy, 6, 0, 7); g.stroke();
+    } else { g.strokeStyle = C.dim; g.beginPath(); g.arc(cx, cy, 5, 0, 7); g.stroke(); }
+    const n = S.views.length, first = x - 14 - (n - 1) * 9;
+    for (let i = 0; i < n; i++) { g.fillStyle = i === view ? C.ink : C.dim; g.beginPath(); g.arc(first + i * 9, 15, 3, 0, 7); g.fill(); }
+    g.fillStyle = C.dim; g.fillRect(0, 28, 320, 1);
+    if (st.passkey) {
+      g.fillStyle = C.paper; g.strokeStyle = Math.floor(t * 2) % 2 ? C.amber : C.violet; g.lineWidth = 1.5;
+      g.beginPath(); g.roundRect(16, 34, 288, 118, 10); g.fill(); g.stroke();
+      T(30, 50, st.compare ? "NUMERIC COMPARISON" : "PASSKEY ENTRY", C.amber);
+      T(30, 62, st.compare ? "Same number on the other screen?" : "Type this on the other device:", C.muted);
+      T(160, 112, String(st.passkey).padStart(6, "0"), C.ink, "bold 40px Archivo, sans-serif", "center");
+      T(30, 140, st.compare ? "click = yes, it matches   long press = no" : "the other side has 30 s", C.muted);
+    }
+    T(6, 166, st.passkey && st.compare ? "click = yes · long = no" : "click: next view", C.muted);
+    if (st.footer) T(314, 166, String(st.footer).slice(0, 34), st.footerCol ? C[st.footerCol] : C.teal, undefined, "right");
+  }
+
+  function bleCanvasLoop(cv, lesson, S, st, getView) {
+    const g = cv.getContext("2d"), C = blePalette(), reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let raf;
+    const frame = (now) => {
+      const t = reduce ? 1.2 : now / 1000, view = getView();
+      g.fillStyle = C.paper; g.fillRect(0, 0, 320, 170);
+      g.save(); g.beginPath(); g.rect(0, 29, 320, 129); g.clip();
+      try { S.draw(g, C, view, t, st); } catch (err) { g.fillStyle = C.coral; g.font = "10px monospace"; g.fillText(String(err).slice(0, 50), 8, 60); }
+      g.restore();
+      bleChrome(g, C, lesson, S, view, st, t);
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }
+
+  // ---------- Sim B1-B8: the lab's screen + serial monitor (example data) ----------
+  function simBle(parent, lesson) {
+    const S = BLE_SCREENS[lesson.id];
+    if (!S) { parent.textContent = "Preview coming with this lab."; return () => {}; }
+    const st = S.init();
+    st.view = st.view ?? 0;
+    const row = document.createElement("div"); row.className = "quick";
+    const actions = [{ label: "button: next view", run: () => { st.view = (st.view + 1) % S.views.length; } }, ...(S.actions || [])];
+    row.innerHTML = actions.map((a, i) => `<button type="button" class="btn" data-i="${i}">${a.label}</button>`).join("");
+    const frame = document.createElement("div"); frame.className = "screen-frame";
+    frame.innerHTML = `<canvas width="320" height="170" role="img" aria-label="Simulated ${lesson.id} screen: ${S.views.join(", ")} views"></canvas>`;
+    const cap = document.createElement("p"); cap.className = "sim-cap";
+    cap.textContent = "Example data, drawn like the board does. The buttons stand in for the push button, your phone and the serial monitor.";
+    parent.append(row, frame, cap);
+    const term = terminal(parent, "$ uv run pio device monitor", !!S.onCommand);
+    row.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => actions[+b.dataset.i].run(st, term)));
+    const timers = [];
+    (S.boot || []).forEach((l, i) => timers.push(setTimeout(() => term.line(l, i === 0 ? "i" : ""), 180 * i)));
+    if (S.onCommand && term.form) term.form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const line = term.input.value.trim(); term.input.value = "";
+      if (!line) return;
+      term.line(`> ${line}`);
+      const m = /^view (\d)$/.exec(line);
+      if (m && +m[1] >= 1 && +m[1] <= S.views.length) { st.view = +m[1] - 1; return term.line(`[I] view ${m[1]}: ${S.views[st.view]}`, "i"); }
+      if (S.onCommand(line, st, term) === false) term.line(`[W] unknown command '${line}' in ble-lab-${lesson.id.toLowerCase()} (type help)`, "w");
+    });
+    const stop = bleCanvasLoop(frame.querySelector("canvas"), lesson, S, st, () => st.view);
+    return () => { stop(); timers.forEach(clearTimeout); };
+  }
+
+  // "What the screen shows": every view of the lab, one at a time, with a sentence each.
+  function bleScreens(root, panel, lesson) {
+    const S = BLE_SCREENS[lesson.id];
+    if (!S) { root.textContent = "Coming with this lab."; return () => {}; }
+    const st = S.init();
+    let view = panel.view ?? 0;
+    root.innerHTML = `<div class="scene-dots scr-tabs" role="group" aria-label="Screen view">${S.views.map((v, i) => `<button type="button" data-v="${i}">${i + 1} · ${v}</button>`).join("")}</div>
+      <div class="screen-frame"><canvas width="320" height="170" role="img"></canvas></div><p class="sim-cap" data-o="cap"></p>`;
+    const cv = root.querySelector("canvas"), cap = root.querySelector('[data-o="cap"]');
+    const show = () => {
+      root.querySelectorAll("[data-v]").forEach((x) => x.setAttribute("aria-current", String(+x.dataset.v === view)));
+      cv.setAttribute("aria-label", `Example of the ${S.views[view]} view`);
+      cap.textContent = (S.captions && S.captions[view]) || "";
+    };
+    root.querySelectorAll("[data-v]").forEach((x) => x.addEventListener("click", () => { view = +x.dataset.v; show(); }));
+    show();
+    return bleCanvasLoop(cv, lesson, S, st, () => view);
+  }
+  BLE_PANELS.bleScreens = bleScreens;
+
+  // ---------- B1: the whole track at a glance (from listening to hosting) ----------
+  function bleJourney(root, panel, lesson) {
+    const STAGES = [
+      { id: "B1", t: "Listen", role: "scanner", what: "hears every device's advertising", arrow: "in" },
+      { id: "B2", t: "Be seen", role: "broadcaster", what: "shouts its own live data", arrow: "out" },
+      { id: "B3", t: "Connect & talk", role: "peripheral", what: "is read and written by your phone", arrow: "both" },
+      { id: "B4", t: "Pair & trust", role: "peripheral + keys", what: "adds encryption, passkeys and bonds", arrow: "both", lock: true },
+      { id: "B5", t: "Phone app", role: "peripheral", what: "talks to your own web app over Web Bluetooth", arrow: "both" },
+      { id: "B6", t: "Keyboard & media", role: "HID peripheral", what: "types and changes the volume", arrow: "out", lock: true },
+      { id: "B7", t: "Music", role: "MIDI peripheral", what: "plays notes in GarageBand", arrow: "both" },
+      { id: "B8", t: "Host", role: "central", what: "lets your keyboard type onto it", arrow: "in", lock: true },
+    ];
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    root.innerHTML = `<div class="wd"><svg viewBox="0 0 680 260" role="img" aria-label="The eight Bluetooth labs as a path: what the board does in each and which way data flows." style="width:100%;height:auto;display:block"></svg><p class="sim-cap" data-o="cap"></p></div>`;
+    const svg = root.querySelector("svg"), cap = root.querySelector('[data-o="cap"]');
+    let pick = STAGES.findIndex((s) => s.id === lesson.id); if (pick < 0) pick = 0;
+    const nodes = [];
+    STAGES.forEach((s, i) => {
+      const x = 50 + (i % 4) * 166, y = i < 4 ? 66 : 190;
+      const gr = svgEl("g", { tabindex: 0, role: "button", "aria-label": `${s.id} ${s.t}: ${s.what}`, style: "cursor:pointer" });
+      gr.append(svgEl("rect", { x: x - 36, y: y - 34, width: 146, height: 68, rx: 10, fill: "var(--surface)", stroke: "var(--line)", "stroke-width": 1.5 }));
+      gr.append(svgEl("text", { x: x - 26, y: y - 14, "font-family": "var(--font-mono)", "font-size": 12, fill: "var(--ble)", "font-weight": 700 }, s.id));
+      gr.append(svgEl("text", { x: x + 2, y: y - 14, "font-size": 13, fill: "var(--ink)", "font-weight": 600 }, s.t));
+      gr.append(svgEl("text", { x: x - 26, y: y + 4, "font-size": 11, fill: "var(--muted)" }, s.role));
+      if (s.lock) gr.append(svgEl("text", { x: x + 92, y: y + 4, "font-size": 12, fill: "var(--muted)" }, "🔒"));
+      const dot = svgEl("circle", { cx: x, cy: y + 20, r: 4, fill: "var(--ble)" });
+      gr.append(dot);
+      gr.addEventListener("click", () => { pick = i; draw(); });
+      gr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick = i; draw(); } });
+      svg.append(gr);
+      nodes.push({ gr, x, y, dot, s });
+    });
+    // The path between the labs.
+    svg.prepend(svgEl("path", { d: "M 160 66 H 180 M 326 66 H 346 M 492 66 H 512 M 658 66 Q 672 66 672 128 Q 672 190 658 190 M 160 190 H 180 M 326 190 H 346 M 492 190 H 512", fill: "none", stroke: "var(--line)", "stroke-width": 2, "stroke-dasharray": "4 5" }));
+    function draw() {
+      nodes.forEach((n, i) => n.gr.querySelector("rect").setAttribute("stroke", i === pick ? "var(--ble)" : "var(--line)"));
+      const s = STAGES[pick];
+      cap.textContent = `${s.id} ${s.t}: the board is the ${s.role} and ${s.what}. Data flows ${s.arrow === "in" ? "into the board" : s.arrow === "out" ? "out of the board" : "both ways"}.`;
+    }
+    draw();
+    let raf;
+    const anim = (now) => {
+      const k = (now / 1400) % 1;
+      nodes.forEach((n) => {
+        const dir = n.s.arrow === "in" ? 1 - k : k;
+        n.dot.setAttribute("cx", n.x - 26 + dir * 126);
+        n.dot.setAttribute("opacity", n.s.arrow === "both" ? (Math.floor(now / 1400) % 2 ? 1 : 0.6) : 1);
+        if (n.s.arrow === "both" && Math.floor(now / 1400) % 2) n.dot.setAttribute("cx", n.x - 26 + (1 - k) * 126);
+      });
+      raf = requestAnimationFrame(anim);
+    };
+    if (!reduce) raf = requestAnimationFrame(anim);
+    return () => cancelAnimationFrame(raf);
+  }
+  BLE_PANELS.bleJourney = bleJourney;
+
+  // ---------- B1 Listen ----------
+  BLE_LESSONS.push({
+    ...bleCommon, id: "B1", title: "Listen", cmd: "uv run pio run -e ble-lab-b1 -t upload",
+    heading: "Hear every Bluetooth device around you",
+    goal: "Phones, watches, earbuds, speakers, keyboards and beacons announce themselves all day: short <b>advertising</b> packets on three radio channels, many times a second, whether anyone listens or not. B1 turns the board into a listener. It draws them on a radar, guesses what each one is, and takes a packet apart byte by byte. The radio uses NimBLE, a lightweight Bluetooth stack; the firmware is its own (<code>ble-lab-b1</code>), with shared code in <code>lib/ble-kit</code>.",
+    goalLine: "Find your own phone among the devices around you, read its packets byte by byte, and measure how often it advertises.",
+    goalCheck: [
+      "The <b>radar</b> view shows blips and the monitor's <code>list</code> prints a table of devices with a kind (phone, audio, keyboard…).",
+      "You picked your own phone (bring it close: it becomes the strongest) and <code>bytes</code> shows its AD structures: Flags, then manufacturer data (Apple, Samsung, Google…).",
+      "<code>watch</code> prints one line per packet of your phone, and you can read its advertising interval from the <code>+… ms</code> gaps.",
+      "Switching <code>mode passive</code> makes the scan responses (and some names) disappear; <code>mode active</code> brings them back.",
+    ],
+    learn: ["advertising", "channels 37 · 38 · 39", "AD structures", "active vs passive scan", "RSSI → distance", "private addresses", "scan duty cycle"],
+    panels: [
+      { title: "The Bluetooth track, from listening to hosting", fn: "bleJourney", intro: "Eight labs, each its own firmware. The board starts as a pure listener and ends up hosting your keyboard. Pick a lab to see the board's role and which way the data flows; the lock marks the labs where pairing and encryption matter." },
+      { title: "Three channels, many shouts", fn: "bleRadio", intro: "Bluetooth LE splits the 2.4 GHz band into 40 channels of 2 MHz. Advertising uses only three of them, 37, 38 and 39, placed in the gaps between the usual Wi-Fi channels 1, 6 and 11. Every advertising event sends the same packet on all three, one after the other. The scanner listens on one channel at a time: a packet counts only if it lands inside a listening window on its channel. Move the window slider and watch how many packets the board catches; switch to active to see the scan request and response." },
+      { title: "One advertising packet, byte by byte", fn: "bleAnatomy", intro: "What a radio actually sends, from the first bit to the checksum. Pick a device, then step through the fields with ◀ ▶. The AD structures in the middle are exactly what the <b>inspect</b> view and the <code>bytes</code> command show." },
+      { title: "What the screen shows", fn: "bleScreens", intro: "Four views. A click on the push button (or BOOT) goes to the next one, a double-click runs the action written at the bottom left, a long press pauses or resumes the scan. The icon at the top right is the radio: a sweeping radar while it scans." },
+    ],
+    commands: [
+      { c: "uv run pio run -e ble-lab-b1 -t upload", where: "mac", card: "bnone", does: "Builds lab B1 and writes it to the board. The first build downloads NimBLE-Arduino 2.5.1 (the Bluetooth stack).", see: "<code>Hard resetting via RTS pin…</code>. The screen shows the radar with a sweeping line.", fix: "“Failed to connect”: hold BOOT, tap RST, release BOOT, run it again." },
+      { c: "uv run pio device monitor", where: "mac", card: "bnone", does: "Opens the serial monitor (the board restarts).", see: "<code>ble-lab-b1: NimBLE 2.5.1 up, address …</code>, <code>+ active scan, 100/100 ms (100% listening)</code>, then the command list.", fix: "No <code>NimBLE … up</code> line: the stack didn't start; unplug and replug the board." },
+      { c: "list", card: "bscan", does: "Prints every device heard in the last 30 s, strongest first: RSSI, a distance guess, kind, address and its type, packets, name or maker.", see: "A table such as <code>1  -46  0.6  phone  5A:3C:…  private (RPA)  412  Apple</code>. Ten to fifty rows in a flat, fewer in a house.", fix: "Empty: is Bluetooth on around you? Phones often advertise only when their screen is on or an app wants them to." },
+      { c: "(hold your phone next to the board)", where: "hands", card: "bscan", does: "Your phone becomes the strongest device. Unlock it: iPhones advertise more often with the screen on.", see: "On the <b>radar</b>, one blip moves to the centre; on <b>list</b> it jumps to row 1 with about −40 dBm.", fix: "Android phones may stay silent: open nRF Connect and use its Advertiser tab, or switch on Nearby Share / Quick Share for a moment." },
+      { c: "pick 1, then bytes", card: "bscan", does: "Picks row 1 for the <b>inspect</b> view and prints its advertisement and scan response, structure by structure.", see: "<code>[02 01 | 1A] Flags</code>, <code>[0A FF | 4C 00 10 …] Manufacturer data</code> (Apple: Nearby info), maybe <code>[02 0A | 0C] TX power</code>.", fix: "<code>no scan response</code>: some devices don't send one; in passive mode nobody asks for it." },
+      { c: "watch", card: "bscan", does: "Prints one line per packet of the picked device, with the time since the previous one.", see: "<code>&lt; +  182 ms  -47 dBm  31 B</code> lines. Some gaps are missed packets (your phone sent it on a channel the board wasn't listening on); the shortest repeating gap is its interval.", fix: "<code>watch off</code> stops it. Too many lines: <code>near -60</code> first." },
+      { c: "mode passive, then mode active", card: "bscan", does: "Passive: the board only listens. Active: it also sends a scan request to every scannable device and gets a second packet back, the scan response.", see: "In passive mode the <b>inspect</b> view loses its <i>scan rsp</i> row and some names turn into makers. The air view shows the mode.", fix: "" },
+      { c: "timing 100 30", card: "bscan", does: "Listen 30 ms out of every 100 (30 % duty cycle) instead of all the time.", see: "Packets per second on the <b>air</b> view drop to about a third. Phones scan like this to save battery. <code>timing 100 100</code> goes back.", fix: "Window must be ≤ interval." },
+      { c: "calib (phone 1 m away)", card: "bscan", does: "Takes the picked device's average RSSI as the 1 m reference for the distance guesses.", see: "<code>+ 1 m = -58 dBm now: distances use it</code>. Walk away: the blip drifts outwards.", fix: "Distances jump by ±1 m: that's RSSI. Bodies, walls and the phone's orientation move it by 5–10 dB." },
+    ],
+    steps: [
+      "Keep the screen wired as in lesson 03 (push button optional). Flash <code>ble-lab-b1</code> and open the monitor. <b>Checkpoint 1:</b> <code>NimBLE 2.5.1 up</code> and the radar sweeping.",
+      "Type <code>list</code>. <b>Checkpoint 2:</b> a table of devices with kinds; look for <i>audio</i> (your JBL advertises for its app), <i>keyboard/mouse</i> and Apple or Microsoft makers.",
+      "Hold your unlocked phone next to the board, <code>pick 1</code>, click to <b>inspect</b>. <b>Checkpoint 3:</b> its bytes in coloured AD structures, the address type is <i>private (RPA)</i>.",
+      "Type <code>watch</code> for ten seconds, then <code>watch off</code>. <b>Checkpoint 4:</b> you can name your phone's advertising interval.",
+      "Try <code>mode passive</code> / <code>mode active</code> and <code>timing 100 30</code> / <code>timing 100 100</code> while looking at the <b>air</b> view.",
+      "Optional: <code>calib</code> with the phone 1 m away, then walk to the other side of the room and watch the radar.",
+    ],
+    note: "Everything here is what devices broadcast to anyone; the board never connects to them. Still, the list is your neighbours' gadgets: don't post their addresses (they stay out of the committed logs). Phones change their private address about every 15 minutes, so the same phone can show up twice. Distances are guesses from signal strength, good to a factor of two. The ESP32-S3 has Bluetooth LE only: Classic Bluetooth (most audio streaming, older keyboards) is invisible to it.",
+  });
+
+  // ---------- B1 panel: three advertising channels and a scanner's window ----------
+  function bleRadio(root) {
+    root.innerHTML = `<div class="wd">
+      <div class="spi-ctl"><label>listening window <input type="range" min="10" max="100" step="10" value="50" data-k="win" aria-label="Scan window in percent of the interval"></label>
+        <span class="mono" data-o="duty">50 %</span>
+        <select data-k="mode" aria-label="Scan mode"><option value="passive">passive scan</option><option value="active">active scan</option></select>
+        <button type="button" class="btn" data-a="play">❚❚ Pause</button></div>
+      <canvas width="680" height="330" role="img" aria-label="The 2.4 GHz band with the 40 Bluetooth channels and three Wi-Fi channels, and below it a timeline of advertising packets on channels 37, 38 and 39 and the scanner's listening windows." style="width:100%;height:auto;display:block"></canvas>
+      <p class="sim-cap" data-o="cap"></p></div>`;
+    const cv = root.querySelector("canvas"), g = cv.getContext("2d"), C = blePalette();
+    const win = root.querySelector('[data-k="win"]'), mode = root.querySelector('[data-k="mode"]'), duty = root.querySelector('[data-o="duty"]'), cap = root.querySelector('[data-o="cap"]');
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let playing = !reduce, raf, last = performance.now(), simMs = 0;
+    const ADV = [37, 38, 39], CH_COL = { 37: C.blue, 38: C.teal, 39: C.amber };
+    const freq = (ch) => ch === 37 ? 2402 : ch === 38 ? 2426 : ch === 39 ? 2480 : ch <= 10 ? 2404 + ch * 2 : 2406 + ch * 2;
+    const DEV = [
+      { name: "phone", every: 180, next: 5, y: 238 },
+      { name: "speaker", every: 100, next: 40, y: 262 },
+      { name: "keyboard", every: 320, next: 70, y: 286 },
+    ];
+    const SCAN_EVERY = 100;
+    let packets = [], heard = 0, missed = 0;
+    const T = (x, y, s, col, font = "11px 'IBM Plex Mono', monospace", align = "left") => { g.font = font; g.fillStyle = col; g.textAlign = align; g.fillText(s, x, y); g.textAlign = "left"; };
+    // The scanner listens on channel 37, then 38, then 39, one interval each, for `window` ms of it.
+    const listening = (t) => { const k = Math.floor(t / SCAN_EVERY); return { ch: ADV[k % 3], on: t - k * SCAN_EVERY < (SCAN_EVERY * win.value) / 100 }; };
+    function step(dt) {
+      simMs += dt;
+      DEV.forEach((d) => {
+        while (d.next <= simMs) {
+          // One event: the same packet on 37, 38, 39, 0.4 ms apart, then a random 0-10 ms delay.
+          let caught = false;
+          ADV.forEach((ch, i) => {
+            const at = d.next + i * 2.5;
+            const l = listening(at), ok = l.on && l.ch === ch;
+            packets.push({ d, ch, at, ok });
+            caught = caught || ok;
+          });
+          caught ? heard++ : missed++;
+          d.next += d.every + Math.random() * 10;
+        }
+      });
+      packets = packets.filter((p) => p.at > simMs - 620);
+    }
+    function draw() {
+      g.fillStyle = C.paper; g.fillRect(0, 0, 680, 330);
+      // Spectrum: 2400-2483.5 MHz.
+      const fx = (f) => 20 + ((f - 2400) / 83.5) * 640;
+      T(20, 18, "2.4 GHz band: 40 Bluetooth LE channels, 2 MHz each", C.muted);
+      [[1, 2412], [6, 2437], [11, 2462]].forEach(([n, f]) => {
+        g.fillStyle = C.dim; g.globalAlpha = 0.55;
+        g.beginPath(); g.moveTo(fx(f - 11), 110); g.quadraticCurveTo(fx(f), 30, fx(f + 11), 110); g.fill(); g.globalAlpha = 1;
+        T(fx(f), 58, `Wi-Fi ${n}`, C.muted, undefined, "center");
+      });
+      for (let ch = 0; ch < 40; ch++) {
+        const f = freq(ch), adv = ch >= 37, x = fx(f - 1);
+        const l = listening(simMs);
+        g.fillStyle = adv ? CH_COL[ch] : C.dim;
+        const h = adv ? (l.on && l.ch === ch ? 46 : 30) : 14;
+        g.fillRect(x + 1, 110 - h, fx(f + 1) - x - 2, h);
+        if (adv) T(fx(f), 124, String(ch), CH_COL[ch], "bold 11px 'IBM Plex Mono', monospace", "center");
+      }
+      T(fx(2402), 138, "2402 MHz", C.muted, "9px 'IBM Plex Mono', monospace", "left"); T(fx(2480), 138, "2480 MHz", C.muted, "9px 'IBM Plex Mono', monospace", "right");
+      // Timeline: the last 600 ms of (slowed-down) time.
+      const tx = (t) => 110 + ((t - (simMs - 600)) / 600) * 560;
+      T(20, 160, "listening", C.ink);
+      for (let t0 = Math.floor((simMs - 600) / SCAN_EVERY) * SCAN_EVERY; t0 < simMs; t0 += SCAN_EVERY) {
+        const l = listening(t0), w = (SCAN_EVERY * win.value) / 100;
+        const a = Math.max(tx(t0), 110), b = Math.min(tx(t0 + w), tx(simMs));
+        if (b > a) { g.fillStyle = CH_COL[l.ch]; g.globalAlpha = 0.28; g.fillRect(a, 146, b - a, 22); g.globalAlpha = 1; T(a + 3, 161, `ch ${l.ch}`, CH_COL[l.ch]); }
+      }
+      g.fillStyle = C.ink; g.fillRect(tx(simMs), 140, 1, 160);
+      DEV.forEach((d) => T(20, d.y + 4, d.name, C.ink));
+      packets.forEach((p) => {
+        if (p.at > simMs) return;
+        const x = tx(p.at), y = p.d.y - 8 + (p.ch - 37) * 6;
+        g.fillStyle = CH_COL[p.ch]; g.globalAlpha = p.ok ? 1 : 0.3; g.fillRect(x, y, 4, 5); g.globalAlpha = 1;
+        if (p.ok) {
+          g.strokeStyle = C.ink; g.beginPath(); g.arc(x + 2, y + 2, 6, 0, 7); g.stroke();
+          if (mode.value === "active") { g.strokeStyle = C.violet; g.beginPath(); g.moveTo(x + 2, y); g.lineTo(x + 2, 170); g.stroke(); T(x + 5, 182, "SCAN_REQ/RSP", C.violet, "9px 'IBM Plex Mono', monospace"); }
+        }
+      });
+      T(20, 318, `advertising events heard ${heard} · missed ${missed} · ${heard + missed ? Math.round((heard * 100) / (heard + missed)) : 0} % caught`, C.ink);
+      T(660, 318, "time slowed down 20x", C.muted, undefined, "right");
+    }
+    const update = () => {
+      duty.textContent = `${win.value} %`;
+      cap.textContent = `The board listens ${win.value} % of the time, one channel per 100 ms. Each device sends every packet three times, once per channel, so a listener on any one channel still hears it. ${mode.value === "active" ? "Active: every packet heard from a scannable device gets a scan request back, and the device answers with a second packet (more names, more data)." : "Passive: the board never transmits."}`;
+      heard = 0; missed = 0;
+    };
+    win.addEventListener("input", update); mode.addEventListener("change", update);
+    root.querySelector('[data-a="play"]').addEventListener("click", (e) => { playing = !playing; e.target.textContent = playing ? "❚❚ Pause" : "▶ Play"; });
+    update();
+    const frame = (now) => {
+      const dt = Math.min(now - last, 50); last = now;
+      if (playing) step(dt / 20);
+      draw();
+      raf = requestAnimationFrame(frame);
+    };
+    step(600); draw();
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }
+  BLE_PANELS.bleRadio = bleRadio;
+
+  // ---------- B1 panel: one advertising packet on air, field by field ----------
+  // BLE CRC-24 (polynomial 0x00065B, init 0x555555), bits fed LSB first, as the Link Layer does.
+  function bleCrc24(bytes) {
+    let crc = 0x555555;
+    bytes.forEach((b) => { for (let i = 0; i < 8; i++) { const fb = ((crc >> 23) & 1) ^ ((b >> i) & 1); crc = (crc << 1) & 0xffffff; if (fb) crc ^= 0x00065b; } });
+    return [crc & 0xff, (crc >> 8) & 0xff, (crc >> 16) & 0xff];
+  }
+  function bleAnatomy(root) {
+    const txt = (s) => [...s].map((c) => c.charCodeAt(0));
+    const SAMPLES = {
+      phone: { label: "an iPhone", pdu: 0x0, txAdd: 1, addr: [0x5a, 0x3c, 0x91, 0x2e, 0x7b, 0x44], ad: [[0x01, [0x1a]], [0xff, [0x4c, 0x00, 0x10, 0x05, 0x01, 0x18, 0x7a, 0x9e, 0x3f]], [0x0a, [0x0c]]] },
+      jbl: { label: "a JBL speaker", pdu: 0x0, txAdd: 0, addr: [0x2c, 0x4f, 0xc2, 0x10, 0x8a, 0x61], ad: [[0x01, [0x06]], [0xff, [0x57, 0x00, 0x1d, 0x22, 0x01, 0x05, 0x64, 0x00, 0x00, 0x18, 0x03, 0x02, 0x00, 0x01]], [0x09, txt("JBL Flip 6")]] },
+      keyboard: { label: "a BLE keyboard", pdu: 0x0, txAdd: 1, addr: [0xd4, 0x12, 0x8b, 0x77, 0x01, 0xe9], ad: [[0x01, [0x05]], [0x19, [0xc1, 0x03]], [0x03, [0x12, 0x18]], [0x09, txt("MX Keys")]] },
+      bench: { label: "your B2 beacon", pdu: 0x2, txAdd: 0, addr: [0x7c, 0xdf, 0xa1, 0x0b, 0x5e, 0x3c], ad: [[0x01, [0x06]], [0x09, txt("Bench B2")], [0xff, [0xff, 0xff, 0x01, 0x07, 0x00, 0x5e, 0x10, 0x2c, 0x01]]] },
+    };
+    const AD_WHAT = {
+      0x01: (d) => `Flags ${hx(d[0])}: ${d[0] & 2 ? "general discoverable" : d[0] & 1 ? "limited discoverable (only for a while, like pairing mode)" : "not discoverable"}${d[0] & 4 ? ", LE only (no Classic Bluetooth)" : ", Classic Bluetooth too"}.`,
+      0x09: (d) => `Complete name: “${String.fromCharCode(...d)}”. Plain ASCII, no terminating zero: the length byte says where it ends.`,
+      0x0a: (d) => `TX power ${(d[0] << 24) >> 24} dBm: how loud it shouts, so a listener can estimate distance.`,
+      0x19: (d) => `Appearance ${hxs([d[1], d[0]]).replace(" ", "")}h (little-endian ${hxs(d)}): 03C1 = keyboard. The category is the top 10 bits.`,
+      0x03: (d) => `Complete list of 16-bit services: ${hxs([d[1], d[0]]).replace(" ", "")}h = HID, the keyboard/mouse service. A host knows from the advert that this can type.`,
+      0xff: (d) => {
+        const id = d[0] | (d[1] << 8);
+        if (id === 0x004c) return `Manufacturer data, company 004Ch = Apple (written ${hxs(d.slice(0, 2))}: little-endian). Then type ${hx(d[2])} = Nearby info, ${d[3]} bytes of status (screen on, Wi-Fi on, an encrypted hint). This is how iPhones find each other.`;
+        if (id === 0x0057) return `Manufacturer data, company 0057h = Harman (JBL). The rest is JBL's own format for its app: model, colour, battery, PartyBoost state. Nobody but JBL documents it.`;
+        if (id === 0xffff) return `Manufacturer data, company FFFFh = the test ID, used by our B2 beacon: version 01, presses ${d[3] | (d[4] << 8)}, temperature ${((d[5] | (d[6] << 8)) / 100).toFixed(2)} °C, uptime ${d[7] | (d[8] << 8)} s. All little-endian.`;
+        return "Manufacturer data.";
+      },
+    };
+    root.innerHTML = `<div class="wd"><div class="spi-ctl"><select aria-label="Which device">${Object.entries(SAMPLES).map(([k, s]) => `<option value="${k}">${s.label}</option>`).join("")}</select>
+      <button type="button" class="btn" data-a="prev">◀</button><button type="button" class="btn" data-a="play">❚❚</button><button type="button" class="btn" data-a="next">▶</button></div>
+      <div class="ble-bytes" role="list" aria-label="Packet bytes"></div><p class="ble-field"></p></div>`;
+    const sel = root.querySelector("select"), bytesEl = root.querySelector(".ble-bytes"), fieldEl = root.querySelector(".ble-field");
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let fields = [], at = 0, playing = !reduce, timer;
+    function build() {
+      const s = SAMPLES[sel.value];
+      const adData = s.ad.flatMap(([type, d]) => [d.length + 1, type, ...d]);
+      const header = [s.pdu | (s.txAdd << 6), 6 + adData.length];
+      const addrLE = [...s.addr].reverse();
+      const pduBytes = [...header, ...addrLE, ...adData];
+      const PDU_NAMES = { 0: "ADV_IND (connectable, scannable)", 2: "ADV_NONCONN_IND (broadcast only)", 6: "ADV_SCAN_IND (scannable)" };
+      fields = [
+        { name: "preamble", bytes: [0xaa], col: "var(--muted)", what: "Preamble AAh: 10101010, so the receiver can lock onto the bit timing. Every advertising packet starts like this." },
+        { name: "access address", bytes: [0xd6, 0xbe, 0x89, 0x8e], col: "var(--muted)", what: "Access address 8E89BED6h (sent little-endian): the fixed value for all advertising. A connection later gets its own random one." },
+        { name: "header", bytes: header, col: "var(--w-cs)", what: `PDU header: type ${s.pdu} = ${PDU_NAMES[s.pdu]}, TxAdd ${s.txAdd} = ${s.txAdd ? "random address" : "public address"}, then the length: ${header[1]} bytes follow (6 address + ${adData.length} data).` },
+        { name: "AdvA", bytes: addrLE, col: "var(--ble)", what: `The advertiser's address ${s.addr.map(hx).join(":")}, sent backwards (little-endian). ${s.txAdd ? (s.addr[0] >> 6 === 1 ? "Top bits 01: a resolvable private address that changes every ~15 min." : "A random address.") : "A public address, burnt in at the factory."}` },
+        ...s.ad.map(([type, d], i) => ({ name: `AD ${i + 1}`, bytes: [d.length + 1, type, ...d], col: ["var(--ok)", "var(--warn)", "var(--copper)", "var(--w-sda)"][i % 4], what: `AD structure: length ${hx(d.length + 1)}, type ${hx(type)}. ${AD_WHAT[type] ? AD_WHAT[type](d) : ""}` })),
+        { name: "CRC", bytes: bleCrc24(pduBytes), col: "var(--muted)", what: `CRC-24 over header, address and data: the receiver recomputes it and throws the packet away if one bit flipped. (On air every bit after the access address is also “whitened”, scrambled with a pattern that depends on the channel, to avoid long runs of zeros.)` },
+      ];
+      at = 0; show();
+      const used = adData.length;
+      bytesEl.dataset.used = `${used}/31 data bytes used`;
+    }
+    function show() {
+      bytesEl.innerHTML = fields.map((f, i) => `<span role="listitem" class="bf${i === at ? " on" : ""}" style="--bf:${f.col}"><b>${f.name}</b>${f.bytes.map((b) => `<i>${hx(b)}</i>`).join("")}</span>`).join("") + `<span class="bf-used">${bytesEl.dataset.used || ""}</span>`;
+      fieldEl.textContent = `${at + 1}/${fields.length} · ${fields[at].what}`;
+    }
+    const go = (d) => { at = (at + d + fields.length) % fields.length; show(); };
+    root.querySelector('[data-a="prev"]').addEventListener("click", () => { playing = false; go(-1); });
+    root.querySelector('[data-a="next"]').addEventListener("click", () => { playing = false; go(1); });
+    root.querySelector('[data-a="play"]').addEventListener("click", (e) => { playing = !playing; e.target.textContent = playing ? "❚❚" : "▶"; });
+    sel.addEventListener("change", build);
+    build();
+    timer = setInterval(() => { if (playing) go(1); }, 2600);
+    return () => clearInterval(timer);
+  }
+  BLE_PANELS.bleAnatomy = bleAnatomy;
+
+  // ---------- B1 screens: radar · list · inspect · air ----------
+  BLE_SCREENS.B1 = {
+    views: ["radar", "list", "inspect", "air"],
+    captions: [
+      "Every device is a blip: the closer to the middle, the stronger its signal; the colour is its kind (blue phone, amber audio, teal keyboard, coral tag). On the right, the nearest six with a distance guess.",
+      "The strongest devices with their name or maker, address type (rpa = a phone hiding behind a private address), signal and how long ago it was heard. The picked one is highlighted.",
+      "The picked device's advertisement and scan response as 31 little cells, one per byte, coloured per AD structure, with each structure decoded underneath.",
+      "Packets per second over the last minute (bars) and devices in range (line), the scan mode and duty cycle, and the mix of address types.",
+    ],
+    boot: ["ble-lab-b1: NimBLE 2.5.1 up, address 7C:DF:A1:0B:5E:3C, TX power 9 dBm", "  + active scan, 100/100 ms (100% listening)", "", "Bluetooth lab B1 Listen  (ble-lab-b1)  ·  phones see \"Bench B1\"", "  scan [on|off]                listen, or pause (alone: toggle; long press too)", "  list                         print every device heard in the last 30 s", "  pick <n>                     inspect device n from the list"],
+    init() {
+      const dev = (label, kind, rssi, addr, at, extra = {}) => ({ label, kind, rssi, base: rssi, addr, at, packets: 0, ...extra });
+      return {
+        radio: "scanning", active: true, scanning: true, window: 100, pick: 0, footer: "+ active scan, 100/100 ms",
+        devices: [
+          dev("Bench B2", "bench", -41, "static", 0.4),
+          dev("Apple", "phone", -47, "rpa", 1.9),
+          dev("JBL Flip 6", "audio", -61, "pub", 3.3),
+          dev("MX Keys", "input", -69, "rpa", 4.6),
+          dev("Microsoft", "computer", -76, "nrpa", 5.4),
+          dev("Apple", "tag", -82, "rpa", 2.6),
+          dev("unknown", "unknown", -88, "nrpa", 0.9),
+        ],
+        pps: Array.from({ length: 60 }, (_, i) => 40 + Math.round(18 * Math.sin(i / 5) + 12 * Math.sin(i / 1.7))),
+      };
+    },
+    actions: [
+      { label: "phone: closer", run(st, term) { st.devices[1].base = Math.min(-36, st.devices[1].base + 8); term.line(`  - phone now about ${st.devices[1].base} dBm`); } },
+      { label: "phone: walk away", run(st, term) { st.devices[1].base = Math.max(-92, st.devices[1].base - 10); term.line(`  - phone now about ${st.devices[1].base} dBm`); } },
+      { label: "double-click: next", run(st, term) { st.pick = (st.pick + 1) % st.devices.length; term.line(`  - picked ${st.pick + 1}: ${st.devices[st.pick].label}`); } },
+      { label: "long press: scan", run(st, term) { st.scanning = !st.scanning; st.radio = st.scanning ? "scanning" : "off"; st.footer = st.scanning ? "+ active scan, 100/100 ms" : "- scan stopped"; term.line(`  ${st.scanning ? "+ active scan, 100/100 ms (100% listening)" : "- scan stopped"}`); } },
+    ],
+    onCommand(line, st, term) {
+      const [cmd, arg] = line.split(/\s+/);
+      if (cmd === "help") { this.boot.slice(3).forEach((l) => term.line(l)); return true; }
+      if (cmd === "list") {
+        term.line(`${st.devices.length} devices heard in the last 30 s (strongest first):`);
+        [...st.devices].sort((a, b) => b.rssi - a.rssi).forEach((d, i) => term.line(`${String(i + 1).padStart(3)}  ${String(Math.round(d.rssi)).padStart(4)}  ${Math.pow(10, (-59 - d.rssi) / 25).toFixed(1).padStart(4)}  ${d.kind.padEnd(14)}  ${d.addr.padEnd(6)}  ${d.label}`));
+        return true;
+      }
+      if (cmd === "pick" && +arg >= 1 && +arg <= st.devices.length) { st.pick = +arg - 1; st.view = 2; term.line(`  - picked ${arg}: ${st.devices[st.pick].label}`); return true; }
+      if (cmd === "mode") { st.active = arg ? arg === "active" : !st.active; st.footer = `+ ${st.active ? "active" : "passive"} scan, 100/${st.window} ms`; term.line(`  ${st.footer}`, "i"); return true; }
+      if (cmd === "scan") { this.actions[3].run(st, term); return true; }
+      if (cmd === "timing") { st.window = Math.max(10, Math.min(100, +(line.split(/\s+/)[2] || 100))); st.footer = `+ ${st.active ? "active" : "passive"} scan, 100/${st.window} ms`; term.line(`  ${st.footer} (${st.window}% listening)`, "i"); return true; }
+      return false;
+    },
+    draw(g, C, view, t, st) {
+      const T = (x, y, s, col, font = "8px 'IBM Plex Mono', monospace", align = "left") => { g.font = font; g.fillStyle = col; g.textAlign = align; g.fillText(s, x, y); g.textAlign = "left"; };
+      const KC = { phone: C.blue, audio: C.amber, input: C.teal, tag: C.coral, computer: C.violet, bench: C.ink, unknown: C.muted };
+      st.devices.forEach((d, i) => { d.rssi = d.base + Math.sin(t * 0.9 + i * 2) * 2.5; });
+      const rows = [...st.devices].sort((a, b) => b.rssi - a.rssi);
+      const picked = st.devices[st.pick];
+      const dist = (r) => Math.pow(10, (-59 - r) / 25);
+      if (view === 0) {
+        const cx = 82, cy = 98, rim = 64, rad = (m) => (Math.log10(1 + Math.min(m, 20)) / Math.log10(21)) * rim;
+        g.strokeStyle = C.dim; g.lineWidth = 1;
+        [1, 3, 10].forEach((m) => { g.beginPath(); g.arc(cx, cy, rad(m), 0, 7); g.stroke(); T(cx + rad(m) - 6, cy - 3, `${m}m`, C.dim); });
+        g.beginPath(); g.arc(cx, cy, rim, 0, 7); g.stroke();
+        const sweep = (t * 1.6) % 6.283;
+        if (st.scanning) for (let i = 0; i < 14; i++) { const a = sweep - i * 0.04; g.globalAlpha = 0.5 - i * 0.03; g.strokeStyle = C.teal; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * rim, cy + Math.sin(a) * rim); g.stroke(); }
+        g.globalAlpha = 1; g.fillStyle = C.blue; g.beginPath(); g.arc(cx, cy, 3, 0, 7); g.fill();
+        st.devices.forEach((d, i) => {
+          const r = rad(dist(d.rssi)), x = cx + Math.cos(d.at) * r, y = cy + Math.sin(d.at) * r;
+          const behind = (sweep - d.at + 6.283) % 6.283;
+          g.fillStyle = KC[d.kind]; g.globalAlpha = st.scanning ? 0.6 + 0.4 * Math.max(0, 1 - behind / 2.5) : 0.6;
+          g.beginPath(); g.arc(x, y, d.rssi > -60 ? 4 : d.rssi > -75 ? 3 : 2, 0, 7); g.fill(); g.globalAlpha = 1;
+          if (i === st.pick) { g.strokeStyle = C.ink; g.beginPath(); g.arc(x, y, 8 + Math.sin(t * 6) * 1.5, 0, 7); g.stroke(); }
+        });
+        T(170, 50, `${st.devices.length} devices`, C.ink, "bold 12px Archivo, sans-serif");
+        T(170, 62, `${st.pps[59]} packets/s  ${st.scanning ? (st.active ? "active" : "passive") : "paused"}`, st.scanning ? C.teal : C.amber);
+        rows.slice(0, 6).forEach((d, i) => {
+          const y = 76 + i * 14;
+          g.fillStyle = KC[d.kind]; g.beginPath(); g.arc(174, y, 3, 0, 7); g.fill();
+          T(182, y + 3, d.label, d === picked ? C.ink : C.muted);
+          T(284, y + 3, `${dist(d.rssi).toFixed(1)}m`, C.muted);
+        });
+      } else if (view === 1) {
+        T(6, 40, "#  name / maker        addr    dBm         age", C.dim);
+        rows.forEach((d, i) => {
+          const y = 52 + i * 12;
+          if (d === picked) { g.fillStyle = C.dim; g.fillRect(0, y - 8, 320, 12); }
+          T(6, y, String(i + 1), C.muted); g.fillStyle = KC[d.kind]; g.fillRect(20, y - 6, 6, 7);
+          T(30, y, d.label, d === picked ? C.ink : C.muted); T(144, y, d.addr, d.addr === "rpa" ? C.violet : C.muted);
+          const col = d.rssi >= -67 ? C.teal : d.rssi >= -82 ? C.amber : C.coral;
+          T(186, y, String(Math.round(d.rssi)), col); g.fillStyle = col; g.fillRect(210, y - 5, Math.max(0, Math.min(60, d.rssi + 100)), 5);
+          T(290, y, `${(i * 0.7 % 3).toFixed(0)}s`, C.muted);
+        });
+      } else if (view === 2) {
+        const d = picked;
+        T(6, 46, d.label, KC[d.kind], "bold 12px Archivo, sans-serif");
+        T(6, 60, `2C:4F:..:${(st.pick * 17 + 0x1a).toString(16).toUpperCase()}  ${d.addr}  connectable${st.active ? " +rsp" : ""}`, C.muted);
+        T(6, 72, `${Math.round(d.rssi)} dBm ~${dist(d.rssi).toFixed(1)} m · every ${d.kind === "phone" ? 182 : 100} ms`, C.ink);
+        const fields = d.kind === "phone" ? [[3, C.blue, "Flags 1A: discoverable"], [11, C.amber, "Apple: Nearby info (9 B)"], [3, C.teal, "TX power 12 dBm"]] : [[3, C.blue, "Flags 06: discoverable, LE only"], [10, C.amber, `Name "${d.label}"`], [12, C.teal, "Maker data (10 B)"]];
+        T(6, 86, `advert ${fields.reduce((a, f) => a + f[0], 0)}/31`, C.muted);
+        let i = 0;
+        fields.forEach(([n, col]) => { for (let k = 0; k < n; k++, i++) { g.fillStyle = col; g.globalAlpha = k < 2 ? 0.5 : 1; g.fillRect(90 + i * 7, 80, 6, 7); } });
+        g.globalAlpha = 1;
+        for (; i < 31; i++) { g.fillStyle = C.dim; g.fillRect(90 + i * 7, 80, 6, 7); }
+        fields.forEach(([, col, s], k) => { g.fillStyle = col; g.fillRect(6, 96 + k * 11, 4, 5); T(14, 101 + k * 11, s, C.ink); });
+        if (st.active) { T(6, 140, "scan rsp 12/31", C.muted); for (let k = 0; k < 31; k++) { g.fillStyle = k < 12 ? C.violet : C.dim; g.fillRect(90 + k * 7, 134, 6, 7); } T(6, 152, "Name / 128-bit service", C.ink); }
+      } else {
+        T(6, 40, "packets / s, last minute", C.muted);
+        const peak = Math.max(...st.pps), y0 = 120;
+        g.fillStyle = C.dim; g.fillRect(6, y0, 180, 1);
+        st.pps.forEach((p, i) => { const h = (p * (st.scanning ? st.window / 100 : 0.05) * 74) / peak; g.fillStyle = C.teal; g.globalAlpha = 0.6; g.fillRect(6 + i * 3, y0 - h, 2, h); });
+        g.globalAlpha = 1; g.strokeStyle = C.amber; g.beginPath();
+        st.pps.forEach((p, i) => { const y = y0 - 30 - Math.sin(i / 9) * 6; i ? g.lineTo(6 + i * 3, y) : g.moveTo(6, y); }); g.stroke();
+        T(6, 132, `peak ${peak}/s`, C.teal); T(86, 132, "devices (max 7)", C.amber);
+        T(6, 144, `${st.scanning ? (st.active ? "active" : "passive") : "paused"} · ${st.window}/100 ms · ${st.window}% listening`, C.muted);
+        const kinds = [["public", 1, C.ink], ["random static", 1, C.teal], ["private (RPA)", 3, C.violet], ["private (NRPA)", 2, C.muted]];
+        T(200, 40, "address types", C.muted);
+        kinds.forEach(([n, c, col], k) => { const y = 52 + k * 22; T(200, y, `${n}  ${c}`, C.muted); g.strokeStyle = C.dim; g.strokeRect(200, y + 4, 112, 6); g.fillStyle = col; g.fillRect(200, y + 4, (c * 112) / 7, 6); });
+        T(200, 146, "rpa = a phone hiding", C.violet);
+      }
+    },
+  };
+
+  // ---------- B3 Connect & talk ----------
+  BLE_LESSONS.push({
+    ...bleCommon, id: "B3", title: "Connect & talk", cmd: "uv run pio run -e ble-lab-b3 -t upload",
+    heading: "Your phone connects, reads and writes",
+    goal: "Advertising is shouting; a <b>connection</b> is a private conversation. The phone (the <i>central</i>) connects to the board (the <i>peripheral</i>), and from then on they meet on a fixed beat, the connection interval, hopping over 37 data channels. On the board sits a small database, the <b>GATT</b> table: the Bench service with LED, Message, Button, Temperature and Uptime. From nRF Connect or LightBlue you write the LED's colour, put a message on the screen, read the chip's temperature and subscribe to the button.",
+    goalLine: "Control the board from your phone over Bluetooth, and see every operation arrive on the gatt view.",
+    goalCheck: [
+      "nRF Connect (or LightBlue) shows <b>Bench B3</b>, connects, and lists the Bench service with five named characteristics plus Device Information and Battery.",
+      "Writing <code>FF5000</code> to <b>LED</b> turns the on-board LED orange, and the LED row flashes blue on the gatt view.",
+      "Writing text to <b>Message</b> shows it big on the message view.",
+      "After you subscribe to <b>Button</b>, every click on the board arrives on the phone as a notification; the Temperature notifies every 2 s.",
+      "The <b>link</b> view shows the connection interval, MTU and RSSI, and <code>params slow</code> visibly changes the interval.",
+    ],
+    learn: ["central & peripheral", "GATT: services & characteristics", "UUIDs (16 & 128-bit)", "read · write · notify", "CCCD (subscribing)", "MTU", "connection interval"],
+    panels: [
+      { title: "From advert to conversation, step by step", fn: "b3Seq", intro: "What happens when you tap Connect in nRF Connect, and when you write the LED or the board notifies a click. Each step shows the real ATT bytes: the first byte is the opcode, the next two the handle (the row number in the board's table), the rest the value." },
+      { title: "The Bench service, live", fn: "b3Table", intro: "The board's GATT table as nRF Connect shows it. Press an operation to send it: the packet crosses over, the board's row lights like on the gatt view, and the bytes are decoded underneath." },
+      { title: "What the screen shows", fn: "bleScreens", intro: "Four views. A click goes to the next view; every gesture (click, double-click, long press) is also sent to a subscribed phone as a Button notification. A double-click on the gatt and message views sends an extra click." },
+    ],
+    commands: [
+      { c: "uv run pio run -e ble-lab-b3 -t upload", where: "mac", card: "bnone", does: "Builds lab B3 and writes it to the board.", see: "The <b>gatt</b> view with five rows; the radio icon shows rings: advertising.", fix: "“Failed to connect”: hold BOOT, tap RST, release BOOT, run it again." },
+      { c: "uv run pio device monitor", where: "mac", card: "bnone", does: "Opens the serial monitor.", see: "<code>- advertising as \"Bench B3\"</code>, then the command list.", fix: "" },
+      { c: "nRF Connect → Scanner → Bench B3 → Connect", where: "phone", card: "bscan", does: "Your phone connects. Install nRF Connect for Mobile (Nordic, free; iPhone and Android) or LightBlue. On iPhone, never connect from Settings → Bluetooth: apps do it.", see: "Monitor: <code>+ connected: 5A:3C:…</code> and <code>- interval 30.00 ms …</code>, soon <code>- MTU 255: 252 bytes of data per packet</code>. The radio icon turns into two rings, the LED steady blue.", fix: "Bench B3 not listed: scroll, or filter by name “Bench”. Still nothing: <code>adv on</code>." },
+      { c: "LED → write → 0xFF5000 (byte array)", where: "phone", card: "bconn", does: "Writes 3 bytes: red FF, green 50, blue 00.", see: "<code>&lt; write LED FF 50 00</code>; the on-board LED glows orange; the LED row flashes blue and shows the colour swatch.", fix: "<code>LED wants 3 bytes, got 1</code>: choose Byte Array, not Text or UINT8." },
+      { c: "Message → write → Text “hello bench”", where: "phone", card: "bconn", does: "Writes UTF-8 text (up to 40 bytes).", see: "<code>&lt; write Message \"hello bench\"</code>; click to the <b>message</b> view: big text, “written 3s ago”.", fix: "Accents show as boxes: the screen font is plain ASCII." },
+      { c: "Button → subscribe (the ↓↓↓ / bell icon), then click the board's button", where: "phone", card: "bconn", does: "Subscribing writes 01 00 into the Button's CCCD. Each gesture then pushes a 3-byte value: gesture, count (2 bytes).", see: "<code>&lt; subscribe Button (CCCD = 1)</code>, then per click <code>&gt; notify Button: click #3</code>; the phone shows <code>01-03-00</code>. A bell appears on the Button row.", fix: "<code>(nobody subscribed)</code> in the monitor: subscribe first." },
+      { c: "Temperature → read, then subscribe", where: "phone", card: "bconn", does: "Reads 2 bytes (°C × 100, little-endian). The 2904 descriptor tells apps how to show it.", see: "nRF Connect shows <code>41.42 °C</code> (raw <code>2E-10</code>); subscribed, it updates every 2 s.", fix: "" },
+      { c: "params slow, then params fast", card: "bconn", does: "Asks the phone for a 100-200 ms interval (and to let the board skip 4 events), then for 15-30 ms. The phone decides.", see: "<code>- new params: 112.50 ms, latency 4</code>; the dot on the <b>link</b> view slows down. Notifications now arrive in bursts.", fix: "<code>params</code> rejected or ignored: iPhones refuse some values; try again after a few seconds." },
+      { c: "disconnect", card: "bconn", does: "Hangs up. The board advertises again by itself.", see: "<code>! disconnected 0x16: we hung up</code>; the link view keeps the reason.", fix: "" },
+    ],
+    steps: [
+      "Same wiring as B1. Flash <code>ble-lab-b3</code>, open the monitor. <b>Checkpoint 1:</b> <code>advertising as \"Bench B3\"</code>.",
+      "On your phone, install nRF Connect (or LightBlue), find <b>Bench B3</b> and connect. <b>Checkpoint 2:</b> <code>connected</code> in the monitor and the Bench service with LED, Message, Button, Temperature and Uptime on the phone.",
+      "Write <code>FF5000</code> to LED and a text to Message. <b>Checkpoint 3:</b> the LED is orange, the message is on the screen.",
+      "Subscribe to Button and Temperature, then click the board's button. <b>Checkpoint 4:</b> the values arrive on the phone; bells on the gatt view.",
+      "Click to the <b>link</b> view and try <code>params slow</code> / <code>params fast</code> and <code>phy 2m</code>. <b>Checkpoint 5:</b> the interval changes on screen.",
+      "Type <code>led auto</code> to give the LED back to the radio status, then <code>disconnect</code>.",
+    ],
+    note: "Anyone nearby can connect to Bench B3 and change the LED: there is no pairing yet, everything travels in plain text. That's B4. iPhones cache a device's GATT table: if a later lab changes the table and the iPhone shows old rows, turn Bluetooth off and on. The ESP32-S3 has one radio: B3 doesn't use Wi-Fi, so there is no coexistence to worry about.",
+  });
+
+  // ---------- B3 panel: connect, discover, write, notify ----------
+  function b3Seq(root) {
+    const FLOWS = {
+      discover: {
+        label: "Connect & discover",
+        lanes: [["phone", "the central"], ["NimBLE", "board, peripheral"], ["loop()", "screen and LED"]],
+        steps: [
+          { f: 1, t: 0, msg: "ADV_IND + SCAN_RSP", ms: 30, net: true, title: "The board advertises", text: "Flags and the 128-bit Bench service UUID in the advertisement, the name in the scan response. The phone's scanner shows Bench B3.", code: "ADV_IND   02 01 06 | 11 07 a7 b0 7c be 7c be 5c 9e b1 4a e5 b1 00 00 5e ba\nSCAN_RSP  09 09 'Bench B3' | 03 19 40 05" },
+          { f: 0, t: 1, msg: "CONNECT_IND", ms: 1, net: true, title: "The phone connects", text: "In answer to one advert, the phone sends the connection's settings: a new random access address, the hop pattern over 37 data channels, the interval and the timeout. From now on they meet every interval.", code: "access address  5A1F3C9D (random)\ninterval        24 x 1.25 ms = 30 ms\nlatency 0 · timeout 720 ms · hop 7 · 37 channels" },
+          { f: 1, t: 2, msg: "onConnect", ms: 0, title: "The board takes note", text: "NimBLE calls ServerLink::onConnect in its own task. It only updates the shared link state and the activity log; loop() draws the two rings and prints the line.", code: "+ connected: 5A:3C:91:2E:7B:44\n- interval 30.00 ms, latency 0, timeout 720 ms" },
+          { f: 0, t: 1, msg: "Exchange MTU 517", ms: 30, net: true, title: "How big may a packet be?", text: "By default an ATT packet carries 23 bytes. The phone offers more, the board answers what it can take (255); both use the smaller.", code: "phone → 02 05 02        Exchange MTU Request, 517\nboard → 03 FF 00        Exchange MTU Response, 255\n- MTU 255: 252 bytes of data per packet" },
+          { f: 0, t: 1, msg: "Read By Group Type", ms: 60, net: true, title: "Which services are there?", text: "The phone asks for all primary services (UUID 2800) between handles 0001 and FFFF. The board answers with each service's first handle, last handle and UUID.", code: "phone → 10 01 00 FF FF 00 28\nboard → 11 14 0E 00 1E 00 a7 b0 7c … 00 00 5e ba   Bench  (000E-001E)\n           … 1F 00 26 00 0A 18                  Device Information\n           … 27 00 2A 00 0F 18                  Battery" },
+          { f: 0, t: 1, msg: "Read By Type 2803", ms: 90, net: true, title: "…and which characteristics?", text: "For each service, the characteristic declarations: properties (a bit field), the value's handle and the UUID. 0A = read + write, 12 = read + notify.", code: "LED          props 0A  value handle 0010  ba5e0001-…\nMessage      props 0E  value handle 0013  ba5e0002-…\nButton       props 12  value handle 0016  ba5e0003-…\nTemperature  props 12  value handle 001A  ba5e0004-…" },
+          { f: 0, t: 1, msg: "Find Information", ms: 60, net: true, title: "…and their descriptors", text: "Descriptors sit right after a value: 2902 (the CCCD, where you subscribe), 2901 (the name apps show), 2904 (number format: sint16, ×10^-2, °C).", code: "0017 2902 CCCD          (Button)\n0018 2901 'Button: gesture, count'\n001C 2904 sint16 exp -2 unit 272F (°C)" },
+          { f: 0, t: 1, msg: "Write CCCD 01 00", ms: 30, net: true, title: "Subscribe to the button", text: "Tapping the notify icon writes 0001 into the Button's CCCD. NimBLE calls onSubscribe: a bell appears on the row.", code: "phone → 12 17 00 01 00   Write Request, handle 0017, value 0001\nboard → 13               Write Response\n< subscribe Button (CCCD = 1)" },
+        ],
+      },
+      write: {
+        label: "Write the LED",
+        lanes: [["phone", "nRF Connect"], ["NimBLE", "onWrite()"], ["loop()", "tick() → LED"]],
+        steps: [
+          { f: 0, t: 1, msg: "Write Request", ms: 15, net: true, title: "Three bytes", text: "Opcode 12 (Write Request), handle 0010 (the LED value), then FF 50 00. It waits for the next connection event: up to one interval.", code: "12 10 00 FF 50 00" },
+          { f: 1, t: 1, msg: "onWrite", ms: 0, title: "The callback runs in NimBLE's task", text: "It checks there are exactly 3 bytes, copies them under the spinlock and raises a flag. It does not touch the LED: only one task ever drives it.", code: "< write LED FF 50 00\nstate.led = {FF, 50, 00}; ledFresh = true" },
+          { f: 1, t: 0, msg: "Write Response", ms: 15, net: true, title: "The phone gets its OK", text: "Opcode 13. With “write without response” (opcode 52) there is no answer at all: faster, but the phone never learns whether it arrived.", code: "13" },
+          { f: 2, t: 2, msg: "takeLed()", ms: 1, title: "loop() lights it", text: "The next loop() sees the flag, claims the LED from the status display and writes the colour to the WS2812 on GPIO 48. The gatt row flashes blue.", code: "rgbLedWrite(48, 255, 80, 0)" },
+        ],
+      },
+      notify: {
+        label: "Notify a click",
+        lanes: [["phone", "subscribed"], ["NimBLE", "the stack"], ["loop()", "button"]],
+        steps: [
+          { f: 2, t: 2, msg: "click", ms: 0, title: "You click", text: "The Button class debounces it and reports a Click. The lab's gesture hook hands it to the Bench service, then the shell moves to the next view.", code: "gesture(Click) → bench.button(1)" },
+          { f: 2, t: 1, msg: "notify()", ms: 0, title: "Set the value, notify", text: "Gesture 1, count 7 (little-endian). notify() queues it for the next connection event; nothing waits for an answer.", code: "value = 01 07 00\n> notify Button: click #7" },
+          { f: 1, t: 0, msg: "Handle Value Notification", ms: 15, net: true, title: "On air", text: "Opcode 1B, the handle, the value. No response: notifications are fire and forget. (Indications, 1D, would wait for a 1E confirmation.)", code: "1B 16 00 01 07 00" },
+        ],
+      },
+    };
+    return sequenceDiagram(root, FLOWS, {
+      legend: `<span class="li"><span class="lg lg-msg"></span> radio packet or call (orange: this step)</span>`,
+      waitLane: 1,
+    });
+  }
+  BLE_PANELS.b3Seq = b3Seq;
+
+  // ---------- B3 panel: the GATT table, operation by operation ----------
+  function b3Table(root) {
+    const ROWS = [
+      { name: "LED", uuid: "ba5e0001", h: 0x10, props: "read · write", ops: { read: [0xff, 0x50, 0x00], write: [0x00, 0x80, 0xff] }, show: (v) => `R ${v[0]} G ${v[1]} B ${v[2]}` },
+      { name: "Message", uuid: "ba5e0002", h: 0x13, props: "read · write", ops: { write: [..."hi bench"].map((c) => c.charCodeAt(0)) }, show: (v) => `“${String.fromCharCode(...v)}”` },
+      { name: "Button", uuid: "ba5e0003", h: 0x16, props: "read · notify", cccd: 0x17, ops: { subscribe: [0x01, 0x00], notify: [0x02, 0x08, 0x00] }, show: (v) => (v.length === 2 ? "CCCD = notifications on" : `gesture ${v[0]} (${["", "click", "double", "long"][v[0]]}), count ${v[1] | (v[2] << 8)}`) },
+      { name: "Temperature", uuid: "ba5e0004", h: 0x1a, props: "read · notify", ops: { read: [0x2e, 0x10] }, show: (v) => `${(((v[1] << 24) >> 16) | v[0]) / 100} °C` },
+      { name: "Uptime", uuid: "ba5e0005", h: 0x1e, props: "read", ops: { read: [0x2c, 0x01, 0x00, 0x00] }, show: (v) => `${v[0] | (v[1] << 8) | (v[2] << 16)} s` },
+    ];
+    const OPS = {
+      read: { req: (r) => [0x0a, r.h, 0x00], rsp: (r, v) => [0x0b, ...v], dir: "in", what: "Read Request (0A) + handle → Read Response (0B) + value" },
+      write: { req: (r, v) => [0x12, r.h, 0x00, ...v], rsp: () => [0x13], dir: "in", what: "Write Request (12) + handle + value → Write Response (13)" },
+      subscribe: { req: (r, v) => [0x12, r.cccd, 0x00, ...v], rsp: () => [0x13], dir: "in", what: "a Write Request into the CCCD descriptor (handle + 1): 01 00 = notifications on" },
+      notify: { req: (r, v) => [0x1b, r.h, 0x00, ...v], rsp: null, dir: "out", what: "Handle Value Notification (1B) + handle + value, no answer" },
+    };
+    root.innerHTML = `<div class="wd"><svg viewBox="0 0 680 230" role="img" aria-label="The phone on the left, the board's GATT table on the right; a packet travels between them for the chosen operation." style="width:100%;height:auto;display:block"></svg>
+      <div class="quick" data-o="ops"></div><p class="ble-field" data-o="bytes"></p></div>`;
+    const svg = root.querySelector("svg"), opsEl = root.querySelector('[data-o="ops"]'), out = root.querySelector('[data-o="bytes"]');
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    svg.append(svgEl("rect", { x: 20, y: 40, width: 90, height: 160, rx: 14, fill: "var(--surface)", stroke: "var(--line)", "stroke-width": 2 }));
+    svg.append(svgEl("text", { x: 65, y: 125, "text-anchor": "middle", "font-size": 13, fill: "var(--ink)" }, "phone"));
+    svg.append(svgEl("text", { x: 400, y: 26, "font-size": 12, fill: "var(--muted)", "font-family": "var(--font-mono)" }, "Bench service ba5e0000-…  (board)"));
+    const rowEls = ROWS.map((r, i) => {
+      const y = 40 + i * 36;
+      const rect = svgEl("rect", { x: 260, y, width: 400, height: 30, rx: 6, fill: "var(--surface)", stroke: "var(--line)" });
+      svg.append(rect);
+      svg.append(svgEl("text", { x: 272, y: y + 19, "font-size": 13, fill: "var(--ink)", "font-weight": 600 }, r.name));
+      svg.append(svgEl("text", { x: 372, y: y + 19, "font-size": 11, fill: "var(--muted)", "font-family": "var(--font-mono)" }, `${r.uuid} · ${hx(r.h)}h · ${r.props}`));
+      return rect;
+    });
+    const dot = svgEl("circle", { r: 7, fill: "var(--ble)", cx: -20, cy: -20 });
+    svg.append(dot);
+    ROWS.forEach((r, i) => Object.keys(r.ops).forEach((op) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.textContent = `${op} ${r.name}`;
+      b.addEventListener("click", () => send(i, op)); opsEl.append(b);
+    }));
+    let raf;
+    function send(i, op) {
+      const r = ROWS[i], v = r.ops[op], o = OPS[op];
+      const req = o.req(r, v), rsp = o.rsp ? o.rsp(r, v) : null;
+      out.innerHTML = `<b>${op} ${r.name}</b>: ${o.what}.<br><code>${o.dir === "out" ? "board → phone" : "phone → board"}  ${hxs(req)}</code>${rsp ? `<br><code>${o.dir === "out" ? "phone → board" : "board → phone"}  ${hxs(rsp)}</code>` : ""}<br>Value: ${r.show(v)}`;
+      rowEls.forEach((e, k) => e.setAttribute("stroke", k === i ? (op === "notify" ? "var(--w-cs)" : op === "read" ? "var(--ok)" : "var(--ble)") : "var(--line)"));
+      cancelAnimationFrame(raf);
+      const y = 55 + i * 36, t0 = performance.now(), dur = reduce ? 1 : 900;
+      const legs = rsp ? 2 : 1;
+      const anim = (now) => {
+        const k = Math.min((now - t0) / dur, legs);
+        const leg = Math.floor(Math.min(k, legs - 0.0001)), f = k - leg;
+        const out_ = (o.dir === "out") !== (leg === 1);
+        const x = out_ ? 255 - f * 140 : 115 + f * 140;
+        dot.setAttribute("cx", x); dot.setAttribute("cy", 120 + (y - 120) * (out_ ? 1 - f : f));
+        dot.setAttribute("fill", leg === 1 ? "var(--ok)" : "var(--ble)");
+        if (k < legs) raf = requestAnimationFrame(anim); else dot.setAttribute("cx", -20);
+      };
+      raf = requestAnimationFrame(anim);
+    }
+    send(0, "write");
+    return () => cancelAnimationFrame(raf);
+  }
+  BLE_PANELS.b3Table = b3Table;
+
+  // ---------- B3 screens: gatt · message · link · log ----------
+  // Shared with B4 and B5 (they reuse the Bench service): bleDrawGatt draws the gatt view.
+  function bleDrawGatt(g, C, t, st, vault = false) {
+    const T = (x, y, s, col, font = "8px 'IBM Plex Mono', monospace") => { g.font = font; g.fillStyle = col; g.fillText(s, x, y); };
+    T(6, 40, "Bench service ba5e0000-...", C.muted);
+    g.strokeStyle = C.muted; g.lineWidth = 1; g.strokeRect(292, 66, 22, 44);
+    const rows = [["LED", "R W", `${hx(st.led[0])} ${hx(st.led[1])} ${hx(st.led[2])}`], ["Message", "R W", `"${st.message.slice(0, 14)}"`], ["Button", "R N", `#${st.count}`], ["Temperature", "R N", `${st.temp.toFixed(2)} C`], ["Uptime", "R", `${Math.floor(t)}s`]];
+    if (vault) rows.push(["Vault", "R W lock", "encrypted"]);
+    const OPC = { read: C.teal, write: C.blue, notify: C.violet, subscribe: C.amber, refused: C.coral };
+    rows.forEach(([n, p, v], i) => {
+      const y = 46 + i * 18, op = st.ops[i], age = op ? t - op.at : 9;
+      g.fillStyle = C.dim; g.globalAlpha = 0.6; g.beginPath(); g.roundRect(4, y - 2, 238, 16, 3); g.fill(); g.globalAlpha = 1;
+      if (age < 0.9) { g.fillStyle = OPC[op.kind]; g.globalAlpha = 0.8 * (1 - age / 0.9); g.beginPath(); g.roundRect(4, y - 2, 238, 16, 3); g.fill(); g.globalAlpha = 1; }
+      T(10, y + 9, n, C.ink); T(84, y + 9, p, C.muted);
+      if (st.sub[i]) { g.fillStyle = C.amber; g.fillRect(126, y + 1, 7, 6); g.fillRect(125, y + 7, 9, 1); }
+      T(140, y + 9, v, age < 0.9 ? C.ink : C.muted);
+      if (i === 0) { g.fillStyle = `rgb(${st.led[0]},${st.led[1]},${st.led[2]})`; g.fillRect(222, y + 1, 14, 10); }
+      if (age < 0.6) {
+        const k = age / 0.6, out = op.kind === "notify";
+        const x = out ? 244 + k * 46 : 290 - k * 46, yy = y + 6 + (88 - y - 6) * (out ? k : 1 - k);
+        g.fillStyle = OPC[op.kind]; g.beginPath(); g.arc(x, yy, 3, 0, 7); g.fill();
+        T(248, y + 9, op.kind, OPC[op.kind]);
+      }
+    });
+  }
+  function bleDrawLink(g, C, t, st) {
+    const T = (x, y, s, col, font = "8px 'IBM Plex Mono', monospace") => { g.font = font; g.fillStyle = col; g.fillText(s, x, y); };
+    const B = "bold 12px Archivo, sans-serif";
+    g.strokeStyle = C.blue; g.lineWidth = 1; g.strokeRect(8, 40, 44, 44); g.strokeRect(134, 36, 32, 52);
+    T(12, 64, "periph", C.ink); T(136, 64, "central", C.ink);
+    T(12, 94, "this board", C.muted); T(134, 94, "phone", C.muted);
+    if (st.radio === "connected") {
+      const period = Math.max((st.interval * 20) / 1000, 0.15), k = (t % period) / period;
+      g.fillStyle = C.dim; g.fillRect(54, 56, 76, 1); g.fillRect(54, 68, 76, 1);
+      g.fillStyle = st.encrypted ? C.violet : C.blue; g.beginPath(); g.arc(54 + k * 76, 56, 3, 0, 7); g.fill();
+      g.fillStyle = C.teal; g.beginPath(); g.arc(130 - k * 76, 68, 3, 0, 7); g.fill();
+      [["interval", `${st.interval.toFixed(2)} ms`, 190, 40, C.blue], ["MTU", "255 B", 264, 40, C.ink], ["latency", String(st.latency), 190, 76, C.ink], ["timeout", "720 ms", 264, 76, C.ink], ["PHY tx/rx", st.phy, 190, 112, C.ink], ["RSSI", `${st.rssi} dBm`, 264, 112, C.teal]]
+        .forEach(([l, v, x, y, c]) => { T(x, y, l, C.muted); T(x, y + 18, v, c, B); });
+      T(8, 120, st.encrypted ? "encrypted + bonded" : "plain text", st.encrypted ? C.violet : C.muted);
+      T(8, 132, `5A:3C:91:2E:7B:44  up ${Math.floor(t % 300)}s`, C.muted);
+      T(8, 144, `rx ${st.rx} ops`, C.blue); T(8, 154, `tx ${st.tx} ops`, C.violet);
+    } else T(60, 60, "waiting...", C.muted);
+  }
+  function bleDrawLog(g, C, st) {
+    const T = (x, y, s, col) => { g.font = "8px 'IBM Plex Mono', monospace"; g.fillStyle = col; g.fillText(s, x, y); };
+    const COL = { "+": C.teal, "!": C.amber, x: C.coral, "<": C.blue, ">": C.violet, "-": C.muted };
+    st.log.slice(-10).forEach(([ts, m, s], i, a) => { const y = 42 + i * 12; T(4, y, ts, C.dim); T(50, y, m, COL[m]); T(60, y, s, i === a.length - 1 ? C.ink : C.muted); });
+  }
+  function bleSimLog(st, term, mark, text) {
+    const ts = (performance.now() / 1000).toFixed(1).padStart(7);
+    st.log.push([ts, mark, text]); if (st.log.length > 30) st.log.shift();
+    st.footer = `${mark} ${text}`; st.footerCol = { "+": "teal", "!": "amber", x: "coral", "<": "blue", ">": "violet", "-": "muted" }[mark];
+    term.line(`  ${mark} ${text}`, mark === "+" ? "i" : mark === "!" || mark === "x" ? "w" : "");
+  }
+  function bleBenchInit(extra = {}) {
+    return {
+      radio: "advertising", rssi: -52, interval: 30, latency: 0, phy: "1M/1M", led: [0, 0, 0], message: "", count: 0, temp: 41.42,
+      ops: [], sub: [false, false, false, false, false, false], rx: 0, tx: 0, encrypted: false, bonded: false,
+      log: [["    2.1", "-", "advertising as \"Bench B3\""]], footer: "- advertising as \"Bench B3\"", ...extra,
+    };
+  }
+  const bleOp = (st, i, kind) => { st.ops[i] = { kind, at: performance.now() / 1000 }; };
+  BLE_SCREENS.B3 = {
+    views: ["gatt", "message", "link", "log"],
+    captions: [
+      "The Bench service as a table: name, properties (R read, W write, N notify) and the current value. An operation lights its row: teal read, blue write, violet notify, amber subscribe. A dot travels to or from the phone on the right; a bell means subscribed.",
+      "The last message written from the phone, word-wrapped in 12 pt, and the LED's colour as a glowing disc.",
+      "The live connection: who is central, the connection events ticking (slowed down 20x), interval, MTU, latency, timeout, PHY, RSSI, security, and the traffic counters.",
+      "The activity log, newest at the bottom: < received from the phone, > sent to it, + good news, ! warnings.",
+    ],
+    boot: ["ble-lab-b3: NimBLE 2.5.1 up, address 7C:DF:A1:0B:5E:3C, TX power 9 dBm", "  - advertising as \"Bench B3\"", "", "Bluetooth lab B3 Connect & talk  (ble-lab-b3)  ·  phones see \"Bench B3\""],
+    init: () => bleBenchInit(),
+    actions: [
+      { label: "phone: connect", run(st, term) { if (st.radio === "connected") return; st.radio = "connected"; bleSimLog(st, term, "+", "connected: 5A:3C:91:2E:7B:44"); bleSimLog(st, term, "-", "MTU 255: 252 bytes of data per packet"); } },
+      { label: "phone: write LED FF5000", run(st, term) { if (st.radio !== "connected") return term.line("[W] connect first", "w"); st.led = [255, 80, 0]; bleOp(st, 0, "write"); st.rx++; bleSimLog(st, term, "<", "write LED FF 50 00"); } },
+      { label: "phone: write Message", run(st, term) { if (st.radio !== "connected") return term.line("[W] connect first", "w"); st.message = "hello bench"; bleOp(st, 1, "write"); st.rx++; bleSimLog(st, term, "<", "write Message \"hello bench\""); } },
+      { label: "phone: subscribe Button", run(st, term) { if (st.radio !== "connected") return term.line("[W] connect first", "w"); st.sub[2] = true; bleOp(st, 2, "subscribe"); bleSimLog(st, term, "<", "subscribe Button (CCCD = 1)"); } },
+      { label: "board: click", run(st, term) { st.count++; if (st.sub[2]) { bleOp(st, 2, "notify"); st.tx++; bleSimLog(st, term, ">", `notify Button: click #${st.count}`); } else bleSimLog(st, term, "-", `button click #${st.count} (nobody subscribed)`); st.view = (st.view + 1) % 4; } },
+    ],
+    onCommand(line, st, term) {
+      const [cmd, ...rest] = line.split(/\s+/);
+      if (cmd === "message" && rest.length) { st.message = rest.join(" ").slice(0, 40); st.view = 1; bleSimLog(st, term, "-", "Message set here: a phone that reads it now gets it"); return true; }
+      if (cmd === "params" && st.radio === "connected") { st.interval = rest[0] === "slow" ? 112.5 : 22.5; st.latency = rest[0] === "slow" ? 4 : 0; bleSimLog(st, term, ">", `asked the phone for ${rest[0]} parameters`); setTimeout(() => bleSimLog(st, term, "-", `new params: ${st.interval.toFixed(2)} ms, latency ${st.latency}`), 600); return true; }
+      if (cmd === "phy" && st.radio === "connected") { st.phy = rest[0] === "2m" ? "2M/2M" : "1M/1M"; bleSimLog(st, term, "-", `PHY now ${st.phy.replace("/", " / ")}`); return true; }
+      if (cmd === "disconnect" && st.radio === "connected") { st.radio = "advertising"; st.sub = st.sub.map(() => false); bleSimLog(st, term, "!", "disconnected 0x16: we hung up"); return true; }
+      if (cmd === "press") { this.actions[4].run(st, term); return true; }
+      return false;
+    },
+    draw(g, C, view, t, st) {
+      if (view === 0) bleDrawGatt(g, C, t, st);
+      else if (view === 1) {
+        const glow = g.createRadialGradient(270, 96, 2, 270, 96, 28); glow.addColorStop(0, `rgb(${st.led.join(",")})`); glow.addColorStop(1, C.paper);
+        g.fillStyle = glow; g.beginPath(); g.arc(270, 96, 28, 0, 7); g.fill();
+        g.font = "8px 'IBM Plex Mono', monospace"; g.fillStyle = C.muted; g.fillText(st.led.some(Boolean) ? "LED from phone" : "LED: write 0001", 240, 140);
+        g.font = "bold 18px Archivo, sans-serif"; g.fillStyle = C.ink;
+        if (st.message) { g.fillText(st.message, 10, 80); g.font = "8px 'IBM Plex Mono', monospace"; g.fillStyle = C.muted; g.fillText("written 3s ago", 10, 150); }
+        else { g.font = "bold 12px Archivo, sans-serif"; g.fillText("Write a message", 10, 70); g.font = "8px 'IBM Plex Mono', monospace"; g.fillStyle = C.muted; g.fillText("to characteristic ba5e0002 in nRF Connect", 10, 86); }
+      } else if (view === 2) bleDrawLink(g, C, t, st);
+      else bleDrawLog(g, C, st);
+    },
+  };
+  // ===== BLE PARTS END =====
 
   // ---------- Lessons ----------
   const LESSONS = [
@@ -1178,8 +1966,49 @@ ol.rules-list li.open b { color: var(--ok); }
           ],
           note: "Why the board decides and not the card: a card's UID and the data on a MIFARE Classic can be read by anyone with a reader, so they are fine as a name tag, not as proof. Real access systems keep the decision on a server and use cards with modern cryptography (e.g. MIFARE DESFire); this lab teaches the server side of that. Reading the API is open on your Wi-Fi; every change needs the token. The card list lives in the board's NVS and survives re-flashing; it is separate from the R1-R6 labs. Copying moves data only: block 0 is written once at the factory, so the copy keeps its own UID and the door treats it as a different card. That is also why access never rests on the data: it would be copied along.",
         },
+        {
+          ...common, id: "R8", title: "Card friends", status: "built, not flashed", sim: "friends", cmd: "uv run pio run -e rfid-lab-r8 -t upload",
+          heading: "A friend lives on every card",
+          goal: "A lab for kids, built from R7's parts. Its own firmware (rfid-lab-r8) makes every card the home of a friend: a fox, a robot, a dragon, a penguin, an alien, a cat, a frog or a unicorn. Tap a card and its friend pops out on the board's screen with stars in its colours, and in 3D in a small React app (test-esp/friends-app), with its own move, sparkles, sky and tune. Card 1 and card 2 show different friends; tap both and they play together. A new card adds itself on its first tap, and you drag a friend onto it. The app has two tabs: Play for the kids, Setup for the grown-up (real or pretend board, reader health, the card list, sound, calm motion, day or night).",
+          goalLine: "Give the white card and the key tag a friend each, then tap them and watch both friends play.",
+          goalCheck: [
+            "The app's Setup tab shows <b>live</b>, the reader chip B2h, and the card count going up as you tap new cards.",
+            "A new card shows a wobbling <b>?</b> on the screen and “New card! Who lives here?” in the app.",
+            "After dragging a friend onto it, the friend pops out on the screen and in 3D at the same moment.",
+            "Tapping card 1, then card 2, puts two different friends on the 3D stage, each on its own numbered card.",
+            "Poking a friend on the 3D stage makes it play its move again.",
+          ],
+          learn: ["UID as a key", "auto-enrolment", "state on the board, show in the app", "WebSocket push", "drag and drop with pointer events", "three.js toon shading", "Web Audio", "accessible alternatives (tap, keyboard)"],
+          panels: [
+            { title: "Meet the cast", fn: "friendsCast", intro: "The eight friends, drawn the way the board draws them (circles and triangles, no pictures in flash). Press one to see what it does. The board stores only its id; the app knows its move, sparkles, sky and tune." },
+            { title: "Follow one tap, and a new card getting a friend", fn: "friendsSeq", intro: "The card only brings its UID. The board decides who lives there, shows it on its own screen and tells every app." },
+          ],
+          commands: [
+            { c: "uv run pio run -e rfid-lab-r8 -t upload", where: "mac", card: "any", does: "Flashes the friends firmware. It uses R7's web libraries and the Wi-Fi network W1/W2 saved.", see: "<b>FRIENDS stage</b>, a breathing card outline and “Tap a card!”, <code>http://bench.local</code> at the bottom once Wi-Fi joins.", fix: "“no Wi-Fi saved: run W1 once”: flash W1, <code>join</code>, then R8 again." },
+            { c: "token", card: "any", does: "Prints the admin token (the same one W2 and R7 use). Moving a friend onto a card needs it.", see: "<code>Admin token: 3f…</code>", fix: "Keep it out of chats and git." },
+            { c: "cd test-esp/friends-app && cp .env.example .env", where: "mac", card: "any", does: "<code>BENCH_URL=http://bench.local</code> (or the IP from <code>status</code>), <code>BENCH_TOKEN=</code> the token.", see: "A git-ignored .env next to package.json.", fix: "" },
+            { c: "pnpm install, then pnpm dev", where: "mac", card: "any", does: "Starts the app on port 5175 (it can run next to the door-app). Vite forwards /api and /ws to the board and adds the token. A tablet on the same Wi-Fi can open it on the Mac's address.", see: "<code>http://localhost:5175</code>: Play and Setup tabs, “board live” at the top.", fix: "No board at hand? Setup → <b>Pretend board</b> plays by the same rules in the browser." },
+            { c: "tap a card it hasn't seen", where: "hands", card: "move", does: "The board adds it as the next card (up to 12) with nobody on it.", see: "Screen: a wobbling ? card, “New card! Give it a friend”. App: a new tile calling for a friend.", fix: "“12 cards!”: forget one in Setup, or serial <code>forget 3</code>." },
+            { c: "drag a friend onto the card", where: "app", card: "any", does: "Or tap the friend, then the card (or Enter, Enter with the keyboard). Sends <code>PUT /api/card?uid=… {\"character\":\"robot\"}</code>, then shows it. Serial: <code>give 2 robot</code>.", see: "The friend pops out on the screen and on the 3D stage; the tile shows its face.", fix: "401: BENCH_TOKEN is missing or old, restart <code>pnpm dev</code> after changing .env." },
+            { c: "tap card 1, then card 2", where: "hands", card: "move", does: "Each tap: the friend's move, sparkles, sky and tune. Two cards within 30 s play together; three at most.", see: "Two friends on the stage, each standing on its numbered card.", fix: "No sound: touch the page once (browsers need that), or check Setup → Sound." },
+            { c: "Setup → name on this card", where: "app", card: "any", does: "A name for that friend on that card (up to 15 plain characters). Serial: <code>name 1 Rusty</code>, <code>name 1 -</code> to go back.", see: "“Hi again! Rusty” on the screen and in the bubble.", fix: "" },
+            { c: "cards, cast", card: "any", does: "Lists every card with its friend and visits, and the friends this firmware knows.", see: "<code>1  9C4F2A1B  fox  Foxy  taps 5</code>", fix: "" },
+          ],
+          steps: [
+            "Same wiring as R1. Flash <code>rfid-lab-r8</code>. The board needs the Wi-Fi network W1/W2 saved.",
+            "In the monitor: <code>token</code>, into <code>test-esp/friends-app/.env</code> as <code>BENCH_TOKEN=</code>.",
+            "<code>pnpm install</code> and <code>pnpm dev</code> in test-esp/friends-app, open <code>http://localhost:5175</code>. <b>Checkpoint:</b> Setup says live, chip B2h.",
+            "Tap the white card and the key tag once each. <b>Checkpoint:</b> two tiles in Play, each asking “Who lives here?”.",
+            "Drag a friend onto each card. Watch the board's screen and the 3D stage together.",
+            "Tap card 1, then card 2: two different friends play together. Poke one on the stage.",
+            "Try Setup → Calm motion and Night, then hand the tablet to a kid.",
+          ],
+          note: "The friend is not on the card: the board keeps a list (UID → friend id) in its NVS, namespace friends, separate from R7's door list. So any card works, even one you can't write, and moving a friend is instant. The same idea as R7 (the card only brings its UID) in a friendlier costume. The 3D figures are built in code from spheres, cones and boxes with toon shading, so there are no model files, and the board's screen draws the same shapes in 2D.",
+        },
       ];
     })(),
+    // ----- Bluetooth LE track (one firmware per lab: ble-lab-b1 … b8; shared code: lib/ble-kit) -----
+    ...BLE_LESSONS,
   ];
 
   // ---------- Storage (per-viewer convenience only) ----------
@@ -1194,8 +2023,9 @@ ol.rules-list li.open b { color: var(--ok); }
   if (hash === "w1") current = "W1";
   if (hash === "w2") current = "W2";
   if (hash === "w3") current = "W3";
-  if (/^r[1-7]$/.test(hash)) current = hash.toUpperCase();
-  const hashTrack = { intro: "00", display: "03", wifi: "W1", rfid: "R1" }[hash];
+  if (/^r[1-8]$/.test(hash)) current = hash.toUpperCase();
+  if (/^b[1-8]$/.test(hash)) current = hash.toUpperCase();
+  const hashTrack = { intro: "00", display: "03", wifi: "W1", rfid: "R1", ble: "B1" }[hash];
   if (hashTrack) current = hashTrack;
 
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -1293,7 +2123,7 @@ ol.rules-list li.open b { color: var(--ok); }
     { id: "wifi", title: "Wi-Fi", blurb: "Scan, join, serve pages, update over the air", color: "--w-sda" },
     { id: "rfid", title: "RFID & NFC", blurb: "Cards, tags and the 13.56 MHz field", color: "--rfid" },
     { id: "sensors", title: "Sensors", blurb: "Temperature, air, motion over I2C", color: "--w-dc", planned: true },
-    { id: "ble", title: "Bluetooth LE", blurb: "Talk to your phone without Wi-Fi", color: "--w-cs", planned: true },
+    { id: "ble", title: "Bluetooth LE", blurb: "Listen, pair, control: phones, keyboards, music", color: "--ble" },
   ];
   const trackOf = (id) => (LESSONS.find((l) => l.id === id) || LESSONS[0]).track;
   const working = (l) => !l.disabled && (lessonDone(l) || /works|runs|on board/.test(l.status));
@@ -1407,7 +2237,7 @@ ol.rules-list li.open b { color: var(--ok); }
       });
     });
     const sim = document.getElementById("sim");
-    const stopMain = ({ usb: simUsb, hello: simHello, led: simLed, display: simDisplay, showcase: simShowcase, wifi: simWifi, phone: simPhone, weather: simWeather, rfid: simRfid, door: simDoor })[l.sim](sim, l) || (() => {});
+    const stopMain = ({ usb: simUsb, hello: simHello, led: simLed, display: simDisplay, showcase: simShowcase, wifi: simWifi, phone: simPhone, weather: simWeather, rfid: simRfid, door: simDoor, friends: simFriends, ble: simBle })[l.sim](sim, l) || (() => {});
     const stopDiagram = l.diagram ? wiringDiagram(document.getElementById("diagram")) : () => {};
     const stopButton = l.buttonDiagram ? buttonDiagram(document.getElementById("btn-diagram")) : () => {};
     const stopFull = l.fullWiring ? fullWiring(document.getElementById("full-wiring")) : () => {};
@@ -1417,14 +2247,15 @@ ol.rules-list li.open b { color: var(--ok); }
     const stopRemote = l.remoteConcepts ? remoteConcepts(document.getElementById("remote-concepts")) : () => {};
     const stopHttps = l.httpsConcepts ? httpsConcepts(document.getElementById("https-concepts")) : () => {};
     if (l.compare) renderCompare(document.getElementById("compare"));
-    const stopPanels = (l.panels || []).map((p, i) => RFID_PANELS[p.fn](document.getElementById(`rpanel-${i}`), p, l) || (() => {}));
+    const stopPanels = (l.panels || []).map((p, i) => (RFID_PANELS[p.fn] || BLE_PANELS[p.fn])(document.getElementById(`rpanel-${i}`), p, l) || (() => {}));
     lessonEl.querySelectorAll(".variants button").forEach((b) => b.addEventListener("click", () => { store.set(`esp-variant-${base.id}`, b.id.replace("var-", "")); render(); }));
     stopSim = () => { stopMain(); stopDiagram(); stopButton(); stopFull(); stopConcepts(); stopWeb(); stopRemote(); stopHttps(); stopPanels.forEach((f) => f()); };
   }
 
   // "Commands, in order": what to type, where the card should be, what it does, what you should see.
-  const CARD_STATE = { off: "card away", any: "card: doesn't matter", on: "card on the reader", both: "card + tag together", still: "card on, held still", move: "card on, then move it" };
-  const WHERE = { mac: "Mac terminal", button: "push button / BOOT", hands: "with your hands", app: "in the app" };
+  const CARD_STATE = { off: "card away", any: "card: doesn't matter", on: "card on the reader", both: "card + tag together", still: "card on, held still", move: "card on, then move it",
+    bnone: "no phone needed", bscan: "phone: scanner app open", bconn: "phone connected", bpair: "phone paired", bhost: "paired as keyboard/MIDI", bperiph: "your keyboard/mouse on" };
+  const WHERE = { mac: "Mac terminal", button: "push button / BOOT", hands: "with your hands", app: "in the app", phone: "on your phone" };
   function commandsPanel(l) {
     return `<div class="panel"><h3>Commands, in order</h3>
       <p class="panel-intro">Type these in the serial monitor (<code>uv run pio device monitor</code>) unless the grey tag says otherwise. The coloured tag says where the card should be while it runs.</p>
@@ -4730,7 +5561,248 @@ ol.rules-list li.open b { color: var(--ok); }
     return () => { cancelAnimationFrame(raf); rgbDot.setAttribute("fill", "var(--silk-dim)"); };
   }
 
-  const RFID_PANELS = { doorRules: doorRulesPanel, doorSeq: doorSeqPanel, doorCopy: doorCopyPanel, spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge, screens: rfidScreens };
+  // ---------- R8: the cast, drawn like the board does (src/rfid-lab-r8/characters.h) ----------
+  const FRIEND_CAST = [
+    { id: "fox", name: "Foxy", what: "a quick little fox", body: "rgb(250,130,40)", accent: "rgb(60,36,28)", belly: "rgb(255,240,225)", move: "spins twice in a jump", fx: "gold stars", sky: "sunset" },
+    { id: "robot", name: "Bolt", what: "a dancing robot", body: "rgb(120,200,220)", accent: "rgb(255,210,60)", belly: "rgb(225,240,245)", move: "dances, arms swinging", fx: "sparks", sky: "deep teal" },
+    { id: "dragon", name: "Ember", what: "a tiny dragon", body: "rgb(90,200,110)", accent: "rgb(255,90,70)", belly: "rgb(240,230,150)", move: "flies a loop", fx: "fire", sky: "volcano orange" },
+    { id: "penguin", name: "Pip", what: "a sliding penguin", body: "rgb(50,70,120)", accent: "rgb(255,160,40)", belly: "rgb(245,248,255)", move: "belly slide in a circle", fx: "snow", sky: "winter blue" },
+    { id: "alien", name: "Zib", what: "a friendly alien", body: "rgb(170,240,80)", accent: "rgb(150,90,230)", belly: "rgb(220,255,190)", move: "beams up and spins", fx: "rings", sky: "space purple" },
+    { id: "cat", name: "Mochi", what: "a cuddly cat", body: "rgb(255,160,200)", accent: "rgb(120,60,90)", belly: "rgb(255,235,245)", move: "happy wiggle", fx: "hearts", sky: "candy pink" },
+    { id: "frog", name: "Hopper", what: "a bouncy frog", body: "rgb(60,180,90)", accent: "rgb(255,110,140)", belly: "rgb(200,240,150)", move: "leaps high with a flip", fx: "bubbles", sky: "pond" },
+    { id: "unicorn", name: "Luna", what: "a magic unicorn", body: "rgb(245,235,255)", accent: "rgb(255,200,70)", belly: "rgb(190,150,255)", move: "gallops side to side", fx: "rainbow stars", sky: "pastel" },
+  ];
+  const friendOf = (id) => FRIEND_CAST.find((f) => f.id === id);
+
+  // One friend standing on (cx, ground): s = head radius, t = seconds (blink), squash > 1 = wide.
+  function drawFriend2d(g, f, cx, ground, s, t, squash = 1, ink = "rgb(10,14,22)") {
+    const rx = s * squash, ry = s / squash, cy = ground - ry;
+    const blink = (t + cx * 0.013) % 3.2 < 0.12;
+    const fill = (c) => (g.fillStyle = c);
+    const circle = (x, y, r, c) => { fill(c); g.beginPath(); g.arc(x, y, Math.max(1, r), 0, 7); g.fill(); };
+    const oval = (x, y, a, b, c) => { fill(c); g.beginPath(); g.ellipse(x, y, Math.max(1, a), Math.max(1, b), 0, 0, 7); g.fill(); };
+    const tri = (a, b, c, col) => { fill(col); g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.lineTo(...c); g.fill(); };
+    oval(cx, ground + 2, rx, Math.max(2, s / 6), "rgba(0,0,0,0.25)");
+    if (f.id === "fox" || f.id === "cat") for (const side of [-1, 1]) {
+      const ex = cx + side * rx * 0.6;
+      tri([ex - s / 3, cy - ry * 0.6], [ex + s / 3, cy - ry * 0.6], [ex + side * s / 8, cy - ry - s / 2], f.body);
+      tri([ex - s / 7, cy - ry * 0.7], [ex + s / 7, cy - ry * 0.7], [ex + side * s / 12, cy - ry - s / 5], f.id === "fox" ? f.accent : f.belly);
+    }
+    if (f.id === "fox") oval(cx + rx + s / 4, cy + ry / 3, s / 2, s / 4, f.body);
+    if (f.id === "robot") { g.strokeStyle = f.accent; g.beginPath(); g.moveTo(cx, cy - ry); g.lineTo(cx, cy - ry - s / 2); g.stroke(); circle(cx, cy - ry - s / 2, s / 7, Math.floor(t * 3) % 2 ? f.accent : "rgb(255,96,84)"); }
+    if (f.id === "dragon") for (const side of [-1, 1]) {
+      const flap = Math.sin(t * 6) * s * 0.25;
+      tri([cx + side * rx * 0.7, cy], [cx + side * (rx + s * 0.9), cy - s * 0.7 - flap], [cx + side * (rx + s / 3), cy + s / 3], f.accent);
+      tri([cx + side * s / 3, cy - ry * 0.8], [cx + side * s / 6, cy - ry * 0.8], [cx + side * s / 2, cy - ry - s / 3], f.belly);
+    }
+    if (f.id === "alien") for (const side of [-1, 1]) {
+      const tx = cx + side * s / 2 + Math.sin(t * 4 + side) * s / 8;
+      g.strokeStyle = f.body; g.beginPath(); g.moveTo(cx + side * s / 4, cy - ry * 0.8); g.lineTo(tx, cy - ry - s / 2); g.stroke();
+      circle(tx, cy - ry - s / 2, s / 7, f.accent);
+    }
+    if (f.id === "unicorn") {
+      for (let i = 0; i < 4; i++) circle(cx - rx * 0.7 - i * s / 8, cy - ry / 2 + i * s / 4, s / 4, `hsl(${280 + i * 35}, 85%, 75%)`);
+      tri([cx - s / 7, cy - ry * 0.8], [cx + s / 7, cy - ry * 0.8], [cx, cy - ry - s * 0.75], f.accent);
+    }
+    if (f.id === "frog") for (const side of [-1, 1]) circle(cx + side * s / 2, cy - ry * 0.8, s / 3, f.body);
+    if (f.id === "robot") {
+      fill(f.body); g.beginPath(); g.roundRect(cx - rx, cy - ry, rx * 2, ry * 2, s / 3); g.fill();
+      fill(f.belly); g.beginPath(); g.roundRect(cx - rx * 0.7, cy - ry / 2, rx * 1.4, ry * 1.1, s / 5); g.fill();
+    } else { oval(cx, cy, rx, ry, f.body); oval(cx, cy + ry / 4, rx * 0.7, ry * 0.6, f.belly); }
+    const eyeY = f.id === "frog" ? cy - ry * 0.8 : cy - ry / 6, eyeR = Math.max(2, s / 6);
+    if (f.id === "alien") { circle(cx, eyeY, eyeR * 2, "rgb(240,244,250)"); if (!blink) circle(cx + s / 12, eyeY, eyeR, ink); }
+    else for (const side of [-1, 1]) {
+      const ex = cx + side * s * (f.id === "frog" ? 0.5 : 0.3);
+      if (blink) { fill(ink); g.fillRect(ex - eyeR, eyeY, eyeR * 2, Math.max(1, s / 16)); continue; }
+      if (f.id === "robot") { fill(ink); g.fillRect(ex - eyeR, eyeY - eyeR, eyeR * 2, eyeR * 2); } else circle(ex, eyeY, eyeR, ink);
+      circle(ex + eyeR / 3, eyeY - eyeR / 3, eyeR / 3, "rgb(240,244,250)");
+    }
+    const my = cy + ry / 4;
+    if (f.id === "penguin") tri([cx - s / 6, my - s / 12], [cx + s / 6, my - s / 12], [cx, my + s / 6], f.accent);
+    else if (f.id === "fox") circle(cx, my - s / 12, s / 10, f.accent);
+    else if (f.id === "robot") { fill(f.accent); g.fillRect(cx - s / 4, my, s / 2, Math.max(2, s / 10)); }
+    else { g.strokeStyle = ink; g.lineWidth = Math.max(1, s / 14); g.beginPath(); g.arc(cx, my - s / 8, s / 4, 0.3, Math.PI - 0.3); g.stroke(); g.lineWidth = 1; }
+    if (f.id !== "robot" && f.id !== "alien") for (const side of [-1, 1]) circle(cx + side * rx * 0.6, my, s / 9, "rgba(255,110,120,0.75)");
+  }
+
+  // ---------- R8 panel: meet the cast ----------
+  function friendsCastPanel(root) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    root.innerHTML = `<div class="fc-grid">${FRIEND_CAST.map((f) => `<button type="button" class="fc-card" data-id="${f.id}" aria-pressed="false"><canvas width="120" height="104" aria-hidden="true"></canvas><b>${f.name}</b><small>${f.what}</small></button>`).join("")}</div>
+      <p class="fc-out" aria-live="polite">Press a friend: it jumps, and you see what it does on the board's screen and in the 3D app.</p>`;
+    const out = root.querySelector(".fc-out");
+    const cards = [...root.querySelectorAll(".fc-card")].map((b) => ({ b, g: b.querySelector("canvas").getContext("2d"), f: friendOf(b.dataset.id), jumpAt: -9 }));
+    for (const c of cards) c.b.addEventListener("click", () => {
+      c.jumpAt = performance.now() / 1000;
+      cards.forEach((o) => o.b.setAttribute("aria-pressed", String(o === c)));
+      out.innerHTML = `<b>${c.f.name}</b>, id <code>${c.f.id}</code> (the only thing the board stores for the card). In the app: <b>${c.f.move}</b>, ${c.f.fx}, a ${c.f.sky} sky and its own tune. Give it to card 1 with serial <code>give 1 ${c.f.id}</code>, or drag it in the app.`;
+    });
+    let raf;
+    function frame(ms) {
+      const t = ms / 1000;
+      for (const c of cards) {
+        const k = t - c.jumpAt, hop = k < 1 ? Math.sin(Math.PI * k) * 34 : reduce ? 0 : Math.abs(Math.sin(t * 2 + c.f.name.length)) * 3;
+        c.g.clearRect(0, 0, 120, 104);
+        if (k < 1) for (let i = 0; i < 10; i++) {
+          const a = i * 0.63, r = k * 50;
+          c.g.fillStyle = i % 2 ? c.f.accent : "rgb(255,214,90)";
+          c.g.beginPath(); c.g.arc(60 + Math.cos(a) * r, 60 - Math.sin(a) * r * 0.8 + k * k * 30, 3, 0, 7); c.g.fill();
+        }
+        drawFriend2d(c.g, c.f, 60, 92 - hop, 24, t, k > 0.85 && k < 1.1 ? 1.15 : 1);
+      }
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }
+
+  // ---------- R8 panel: follow one tap, and a new card getting a friend ----------
+  function friendsSeqPanel(root) {
+    const lanes = [["friends-app", "browser / tablet"], ["Vite server", "on your Mac"], ["web server", "board, core 1"], ["reader task", "board, core 0"], ["card", "your tag"]];
+    const white = hxs(RF.card.uid).replace(/ /g, ""), tag = hxs(RF.tag.uid).replace(/ /g, "");
+    const FLOWS = {
+      tap: {
+        label: "Tap card 1", lanes, wait: [-1, -1],
+        steps: [
+          { f: 4, t: 3, msg: `UID ${white}`, ms: 3, net: true, title: "The card says who it is", text: "Wake-up, anticollision and select, as in R2. R8 reads nothing else from the card: no blocks, no keys.", code: `WUPA → ATQA 04 00 → ANTICOLL → ${hxs(RF.card.uid)} → SELECT → SAK 08` },
+          { f: 3, t: 3, msg: "who lives here?", ms: 1, title: "The board looks the UID up", text: "friends::List::tap() finds card 1, counts the visit and saves the list to NVS. The friend is just an id string.", code: "card 1 · character \"fox\" · name \"\" (so: Foxy) · taps 4 → 5" },
+          { f: 3, t: 3, msg: "Foxy pops out", ms: 6000, live: true, title: "The board's own screen", text: "The stage view grows Foxy out of the card with an overshoot, stars fly out in its colours, then it bounces: “Hi again! Foxy · card 1 · 5 visits”. The LED flashes orange." },
+          { f: 3, t: 2, msg: "tap JSON", ms: 1, title: "A message for every app", text: "The reader task puts it in its outbox; loop() on the other core sends it over the WebSocket.", code: '{"type":"tap","data":{"seq":12,"uid":"' + white + '","character":"fox","number":1,"taps":5,"isNew":false}}' },
+          { f: 2, t: 0, msg: "WebSocket push", ms: 30, net: true, title: "The 3D stage plays", text: "The app puts Foxy on stage: a puff, a pop out of card 1, a double spin, gold stars, the sky turns sunset and its tune plays. Tap card 2 now and Bolt joins it, dancing." },
+        ],
+      },
+      newcard: {
+        label: "A new card gets a friend", lanes, wait: [0, 4],
+        steps: [
+          { f: 4, t: 3, msg: `UID ${tag}`, ms: 3, net: true, title: "A card the board has never seen", text: "Same select as always, but this UID isn't in the list." },
+          { f: 3, t: 3, msg: "add as card 2, nobody yet", ms: 2, title: "It adds itself", text: "Up to 12 cards. character = \"\": the screen shows a wobbling “?” card: “New card! Give it a friend”.", code: "card 2 · " + tag + " · character \"\" · taps 1 · saved" },
+          { f: 2, t: 0, msg: "tap {isNew, character: \"\"}", ms: 30, net: true, title: "The app asks for a friend", text: "The bubble says “New card 2! Who lives here?” and card 2's tile calls for attention." },
+          { f: 0, t: 1, msg: "PUT /api/card?uid=… {robot}", ms: 2, net: true, title: "You drag Bolt onto card 2", text: "Or tap Bolt, then the card. The browser has no token.", code: `PUT /api/card?uid=${tag}\n{"character":"robot"}` },
+          { f: 1, t: 2, msg: "+ Authorization", ms: 20, net: true, title: "The dev server adds the token", text: "Vite's proxy adds it from friends-app/.env (the same token as W2 and R7).", code: "Authorization: Bearer 3f…(32 hex)" },
+          { f: 2, t: 2, msg: "check id, save", ms: 10, title: "The board checks the id", text: "Only ids in characters.h are accepted (GET /api/cast lists them). The card list changes under its mutex and goes to NVS.", code: "\"robot\" ✓ → card 2 · character \"robot\" · saved" },
+          { f: 0, t: 2, msg: "POST /api/show", ms: 25, net: true, title: "Show it right away", text: "The app asks the board to show card 2 (it doesn't count as a visit): Bolt pops out on the screen and in 3D at the same moment." },
+        ],
+      },
+    };
+    return sequenceDiagram(root, FLOWS, {
+      legend: `<span class="li"><span class="lg lg-msg"></span> HTTP, WebSocket or radio (orange: this step)</span><span class="li"><span class="lg lg-wait"></span> the app waiting for the board</span>`,
+      waitLane: 0,
+      live: (_f, secs) => `screen   Foxy bouncing on card 1 … ${secs} s of 6\nweb      status to every app once a second`,
+    });
+  }
+
+  // ---------- Sim R8: the friends screen + serial monitor (example data) ----------
+  function simFriends(parent) {
+    const W = 320, H = 170, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const C = rfidPalette();
+    const cards = [
+      { uid: hxs(RF.card.uid).replace(/ /g, ""), number: 1, character: "fox", taps: 4, label: "White card" },
+      { uid: hxs(RF.tag.uid).replace(/ /g, ""), number: 2, character: "", taps: 0, label: "Key tag" },
+    ];
+    const st = { view: 0, show: null, showAt: -1e9 };
+    const row = document.createElement("div"); row.className = "quick";
+    row.innerHTML = `<button type="button" class="btn" data-t="0">tap: White card</button><button type="button" class="btn" data-t="1">tap: Key tag</button><button type="button" class="btn" data-t="new">tap: a new card</button>`;
+    const row2 = document.createElement("div"); row2.className = "quick";
+    row2.innerHTML = `<label class="btn">app: move <select data-a="who" aria-label="Which friend">${FRIEND_CAST.map((f) => `<option value="${f.id}">${f.name}</option>`).join("")}</select> onto card <select data-a="card" aria-label="Which card"></select></label><button type="button" class="btn" data-a="give">move in</button><button type="button" class="btn" data-a="view">button: next view</button>`;
+    const frame = document.createElement("div"); frame.className = "screen-frame";
+    frame.innerHTML = `<canvas width="${W}" height="${H}" aria-label="Simulated friends screen"></canvas>`;
+    const cap = document.createElement("p"); cap.className = "sim-cap";
+    cap.textContent = "Example data. The board draws the same shapes (characters.h); the app shows them in 3D.";
+    parent.append(row, row2, frame, cap);
+    const term = terminal(parent, "$ uv run pio device monitor", false);
+    const g = frame.querySelector("canvas").getContext("2d");
+    const cardSelect = row2.querySelector('[data-a="card"]');
+    const fillCards = () => { cardSelect.innerHTML = cards.map((c) => `<option value="${c.number}">${c.number}</option>`).join(""); };
+    fillCards();
+    const announce = (c, isNew, fromApp) => {
+      st.show = { ...c, isNew, fromApp }; st.showAt = performance.now(); st.view = 0;
+      const f = friendOf(c.character);
+      term.line(`[I][tap_reader.h] announce(): ${fromApp ? "show" : "tap"} card ${c.number} (${c.uid}): ${f ? f.name : "nobody yet"}${isNew ? ", new card" : ""}`, "i");
+      rgbDot.setAttribute("fill", f ? f.body : "var(--ok)");
+      setTimeout(() => rgbDot.setAttribute("fill", "var(--silk-dim)"), 1500);
+    };
+    function tap(which) {
+      let c = which === "new" ? null : cards[Number(which)];
+      if (!c) {
+        if (cards.length >= 12) return term.line("[W][tap_reader.h] onTap(): the list is full (12 cards), forget one in the app", "w");
+        c = { uid: Array.from({ length: 4 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, "0").toUpperCase()).join(""), number: cards.length + 1, character: "", taps: 0 };
+        cards.push(c); fillCards();
+        c.taps++; return announce(c, true, false);
+      }
+      c.taps++; announce(c, c.taps === 1, false);
+    }
+    const T = (x, y, s, col, font = "11px Archivo, sans-serif", align = "left") => { g.font = font; g.fillStyle = col; g.textAlign = align; g.fillText(s, x, y); g.textAlign = "left"; };
+    let raf;
+    function draw(now) {
+      const t = now / 1000;
+      g.fillStyle = C.paper; g.fillRect(0, 0, W, H);
+      const since = (now - st.showAt) / 1000;
+      if (st.view === 0 && st.show && since < 6) {
+        const f = friendOf(st.show.character);
+        g.fillStyle = f ? f.body : C.teal; g.globalAlpha = 0.18; g.beginPath(); g.arc(84, 100, 66, 0, 7); g.fill(); g.globalAlpha = 1;
+        for (let i = 0; i < 14; i++) {
+          const a = i * 0.449 + 0.3, k = since * (0.9 + (i % 4) * 0.15);
+          if (k > 1.6) continue;
+          g.fillStyle = i % 2 ? (f ? f.accent : C.amber) : C.ink;
+          g.beginPath(); g.arc(84 + Math.cos(a) * k * 110, 100 - (Math.sin(a) * k * 90 - k * k * 40), 2 + (i % 3), 0, 7); g.fill();
+        }
+        if (!f) {
+          const wob = reduce ? 0 : Math.sin(t * 6) * 4;
+          g.fillStyle = C.ink; g.beginPath(); g.roundRect(52, 68 + wob, 64, 44, 6); g.fill();
+          T(84, 102 + wob, "?", C.paper, "bold 26px Archivo, sans-serif", "center");
+          T(228, 66, `card ${st.show.number}`, C.muted, undefined, "center");
+          T(228, 94, st.show.isNew ? "New card!" : "Who lives here?", C.ink, "bold 14px Archivo, sans-serif", "center");
+          T(228, 116, "Give it a friend", C.ink, undefined, "center");
+          T(228, 140, "drag one in the app", C.muted, undefined, "center");
+        } else {
+          const pop = Math.min(1, since / 0.6), over = pop < 1 ? 1 + 2.7 * (pop - 1) ** 3 + 1.7 * (pop - 1) ** 2 : 1;
+          const hop = since > 0.6 && !reduce ? Math.abs(Math.sin((since - 0.6) * 6)) : 0;
+          drawFriend2d(g, f, 84, 146 - hop * 14, Math.max(4, 34 * over), t, since > 0.6 ? 1 + (1 - hop) * 0.15 : 1, C.paper);
+          T(228, 72, st.show.taps > 1 && !st.show.fromApp ? "Hi again!" : "Hello!", C.muted, undefined, "center");
+          T(228, 104, f.name, C.ink, "bold 22px Archivo, sans-serif", "center");
+          T(228, 130, st.show.fromApp ? `card ${st.show.number}` : `card ${st.show.number}  -  ${st.show.taps} visit${st.show.taps === 1 ? "" : "s"}`, C.muted, undefined, "center");
+        }
+      } else if (st.view === 0) {
+        const k = 0.5 + 0.5 * Math.sin(t * 2.4);
+        g.strokeStyle = k > 0.5 ? C.teal : C.dim; g.lineWidth = 2; g.beginPath(); g.roundRect(118, 40, 84, 54, 8); g.stroke(); g.lineWidth = 1;
+        T(160, 116, "Tap a card!", C.ink, "bold 14px Archivo, sans-serif", "center");
+        const walkers = cards.map((c) => friendOf(c.character)).filter(Boolean);
+        walkers.forEach((f, i) => {
+          const x = ((t * 26 + i * (360 / walkers.length)) % 360) - 20, hop = reduce ? 0 : Math.abs(Math.sin(t * 5 + i));
+          drawFriend2d(g, f, x, 152 - hop * 6, 12, t, 1 + (1 - hop) * 0.12, C.paper);
+        });
+        if (!walkers.length) T(160, 140, "a friend will pop out of it", C.muted, undefined, "center");
+      } else {
+        cards.forEach((c, i) => {
+          const x = 8 + (i % 6) * 51, y = 34 + Math.floor(i / 6) * 62, f = friendOf(c.character);
+          g.strokeStyle = C.dim; g.beginPath(); g.roundRect(x + 0.5, y + 0.5, 47, 58, 6); g.stroke();
+          T(x + 4, y + 12, String(c.number), C.muted, "9px 'IBM Plex Mono', monospace");
+          if (f) { drawFriend2d(g, f, x + 23, y + 40, 11, t + i, 1, C.paper); T(x + 23, y + 53, f.name, C.ink, "9px Archivo, sans-serif", "center"); }
+          else T(x + 23, y + 34, "?", C.muted, "bold 14px Archivo, sans-serif", "center");
+        });
+      }
+      T(8, 18, "FRIENDS", C.ink, "bold 12px Archivo, sans-serif"); T(70, 18, ["stage", "cards"][st.view], C.muted);
+      g.fillStyle = C.paper; g.fillRect(0, H - 11, W, 11);
+      T(6, H - 3, "http://bench.local", C.muted, "8px 'IBM Plex Mono', monospace"); T(W - 70, H - 3, `${cards.length} cards  1 app`, C.teal, "8px 'IBM Plex Mono', monospace");
+      raf = requestAnimationFrame(draw);
+    }
+    row.querySelectorAll("[data-t]").forEach((b) => b.addEventListener("click", () => tap(b.dataset.t)));
+    row2.querySelector('[data-a="give"]').addEventListener("click", () => {
+      const id = row2.querySelector('[data-a="who"]').value, c = cards.find((x) => x.number === Number(cardSelect.value));
+      if (!c) return;
+      c.character = id;
+      term.line(`[I][friends_api.h] PUT /api/card?uid=${c.uid} {"character":"${id}"} -> 200`, "");
+      announce(c, false, true);
+    });
+    row2.querySelector('[data-a="view"]').addEventListener("click", () => { st.view = (st.view + 1) % 2; });
+    term.line("[I][main.cpp] setup(): rfid-lab-r8: reader task on core 0. Type token for the app's .env, help for commands.");
+    term.line("[I][friends.h] begin(): friend list: 2 cards", "");
+    term.line("[I][main.cpp] loop(): App: http://bench.local or http://192.168.178.57  (set BENCH_URL in friends-app/.env)", "");
+    raf = requestAnimationFrame(draw);
+    return () => { cancelAnimationFrame(raf); rgbDot.setAttribute("fill", "var(--silk-dim)"); };
+  }
+
+  const RFID_PANELS = { friendsCast: friendsCastPanel, friendsSeq: friendsSeqPanel, doorRules: doorRulesPanel, doorSeq: doorSeqPanel, doorCopy: doorCopyPanel, spi: rfidSpi, field3d: rfidField3d, seq: rfidSeq, anticoll: rfidAnticoll, memory3d: rfidMemory3d, access: rfidAccess, value: rfidValue, edge: rfidEdge, screens: rfidScreens };
 
   const LOG = [
     { n: 1, types: ["install"], title: "Install PlatformIO into the project", where: "Mac · test-esp/.venv",
@@ -4954,6 +6026,11 @@ ol.rules-list li.open b { color: var(--ok); }
       why: "You asked for another lock that admins open and residents don't. New role: admin (stored as the next role byte, so your card list stays). Two locks: Front door (every role, as before) and Admin room. New rule right after “blocked”: at the admin room, anything but an admin card → DENIED · admins only. Admins also open during lockdown. The bench has one reader, so it is mounted at one lock at a time: Move reader here in the app, or serial at front|admin (saved on the board). Each lock has its own OPEN / DENIED / LOCKED and its own Open 5 s (POST /api/open?lock=admin). Cards show what a tap would do at each lock; the log says which lock. The guide's rule panel has the new rule; the bench simulator still shows one door.",
       out: "all door rule checks passed\nrfid-lab-r7 SUCCESS, no warnings · RAM 17.0%  Flash 18.1%\ndoor-app: typecheck clean · 10 tests passed · no page errors, no sideways scroll (1280 / 390 px)",
       result: "Next, by you: flash, reload the app, give one card the admin role (Edit → Role), Move reader here on the Admin room, tap it and a resident card. Nothing was sent to the board." },
+    { n: 46, types: ["install", "build"], title: "R8 Card friends: a kids' lab with 3D friends", where: "Mac · no board",
+      cmd: "uv run pio run -e rfid-lab-r8   (build only; first build installed R7's web libraries into its env)\ncd friends-app && pnpm install   (door-app's versions + three 0.186.1)\nfriends-app: tsc · vitest · vite + pretend board, headless Chromium",
+      why: "You asked for another RFID example for kids: more animation, 3D and effects, tag 1 different from tag 2, characters you move onto a card, and two tabs. Firmware rfid-lab-r8 (R7's driver, reader health, web libraries, token): new cards add themselves, the board keeps card → friend in NVS and shows it on its screen. friends-app: Play (3D stage, cards, a friend shelf to drag from) and Setup (real or pretend board, health, card list, sound, calm motion, day/night). The first headless run caught a phone problem (friends below the screen, so no drag): fixed with a shorter stage, smaller tiles, a sideways friend row and auto-scroll.",
+      out: "rfid-lab-r8 SUCCESS, no warnings · RAM 16.3%  Flash 17.6%\nfriends-app: typecheck clean · 8 tests passed · no page errors, no sideways scroll (390 / 1280 px)\ntap card 1 → Foxy · drag Bolt → card 2 · tap-then-tap Ember → card 1 · new card asks who lives here",
+      result: "Next, by you: flash rfid-lab-r8, token into friends-app/.env, pnpm dev, tap both cards, drag a friend onto each. Nothing was sent to the board." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";
