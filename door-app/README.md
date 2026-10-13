@@ -39,6 +39,29 @@ pnpm dev                   # http://localhost:5174
 | **Remove from the list** (confirm)               | forgets the card; the card itself is untouched                                                                                      |
 | **Open for 5 s**, **Lockdown**                   | remote open; only maintenance cards open during lockdown                                                                            |
 | **Read the card on the reader**                  | UID, type, whether it is in the list, blocks 4-6 and 8-10                                                                           |
+| **Edit → Copy rules from…**                      | fills the form with another card's role, hours, end date and uses (not its name or block); Save sends what changed                  |
+| **Edit → Replace with a new card** (confirm)     | waits 20 s for a new card; it takes over the name, role and rules, the old card stays in the list blocked as "… old"                |
+| **Card data → Save the card on the reader**      | reads blocks 4-6 and 8-10 with the factory key into a named snapshot on the board (up to 8, NVS)                                    |
+| **Card data → Copy this card onto another**      | reads the card on the reader, waits 20 s for a different card (screen: COPY: 2ND CARD, LED blinking violet), writes and reads back  |
+| **Write onto the card on the reader** (confirm)  | a snapshot back onto the card it came from (restore) or onto another card                                                           |
+| **Compare with the reader**                      | the card on the reader next to a snapshot, block by block: same, different, not saved, closed                                       |
+| **Download**, **Import a saved file**            | a snapshot as a JSON file on your Mac, and back onto the board (lab blocks only, checked by the app and the board)                  |
+
+A copy moves data, never identity: block 0 (the UID) and the sector trailers (keys, access bits) are never written, so the copy is a different card to the door and needs its own place in the list.
+
+```mermaid
+sequenceDiagram
+  participant App as React app
+  participant Board as board (reader task)
+  participant A as card A
+  participant B as card B
+  App->>Board: POST /api/copy
+  Board->>A: AUTH sector 1, 2 (factory key) · READ 4-6, 8-10
+  Note over Board: screen COPY: 2ND CARD, LED violet, 20 s
+  B->>Board: a different UID
+  Board->>B: WRITE each block, READ it back
+  Board-->>App: job: "6 of 6 blocks copied"
+```
 
 The rule order (`src/rfid-lab-r7/access_rules.h`, tested in `test/host/door_rules_test.cpp`): unknown → blocked → lockdown → no clock yet (fail closed) → expired → outside hours → no uses left → granted.
 
@@ -46,5 +69,6 @@ The rule order (`src/rfid-lab-r7/access_rules.h`, tested in `test/host/door_rule
 
 ```sh
 pnpm typecheck
-pnpm test        # rules.test.ts: rule text, dates, presets, what a save sends
+pnpm test        # rules.test.ts: rule text, dates, presets, what a save sends, copy rules
+                 # cardData.test.ts: block text and values, compare, the snapshot file
 ```

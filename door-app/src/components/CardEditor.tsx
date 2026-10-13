@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { api, type Card, type CardPatch, type JobResult, type Role } from "../api.ts";
-import { anyTime, diff, fromLocalInput, PRESETS, toLocalInput } from "../rules.ts";
+import { anyTime, diff, fromLocalInput, PRESETS, rulesOf, toLocalInput } from "../rules.ts";
 
 interface Props {
   card: Card;
+  others: Card[]; // the rest of the list, for "Copy rules from"
+  waiting: boolean; // the board is already waiting for a card
   present: boolean; // this card is lying on the reader right now
   runJob: (start: () => Promise<number>) => Promise<JobResult>;
   notify: (text: string, ok: boolean) => void;
@@ -12,9 +14,9 @@ interface Props {
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
-// One card's settings. Presets fill the form; nothing is sent until Save. The card actions at the
-// bottom need the card on the reader and ask for a second click before they change it.
-export function CardEditor({ card, present, runJob, notify, onClose }: Props) {
+// One card's settings. Presets (or another card's rules) fill the form; nothing is sent until
+// Save. The card actions at the bottom ask for a second click before they change anything.
+export function CardEditor({ card, others, waiting, present, runJob, notify, onClose }: Props) {
   const [draft, setDraft] = useState<CardPatch>({
     name: card.name,
     role: card.role,
@@ -24,7 +26,7 @@ export function CardEditor({ card, present, runJob, notify, onClose }: Props) {
     toHour: card.toHour,
     usesLeft: card.usesLeft,
   });
-  const [confirm, setConfirm] = useState<"wipe" | "remove" | null>(null);
+  const [confirm, setConfirm] = useState<"wipe" | "remove" | "replace" | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (p: CardPatch) => setDraft((d) => ({ ...d, ...p }));
   const changes = diff(card, draft);
@@ -61,6 +63,25 @@ export function CardEditor({ card, present, runJob, notify, onClose }: Props) {
             {p.label}
           </button>
         ))}
+        {others.length > 0 && (
+          <label className="copy-rules">
+            Copy rules from
+            <select
+              value=""
+              onChange={(e) => {
+                const from = others.find((o) => o.uid === e.target.value);
+                if (from) set(rulesOf(from));
+              }}
+            >
+              <option value="">another card…</option>
+              {others.map((o) => (
+                <option key={o.uid} value={o.uid}>
+                  {o.name} ({o.role})
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <form
@@ -216,7 +237,7 @@ export function CardEditor({ card, present, runJob, notify, onClose }: Props) {
         <p className="hint">
           {present
             ? "This card is on the reader."
-            : "Lay this card on the reader for the two actions on the left."}
+            : "Lay this card on the reader to write its label or wipe it."}
         </p>
         <button
           type="button"
@@ -243,6 +264,32 @@ export function CardEditor({ card, present, runJob, notify, onClose }: Props) {
             onClick={() => setConfirm("wipe")}
           >
             Wipe card data
+          </button>
+        )}
+        {confirm === "replace" ? (
+          <button
+            type="button"
+            className="btn danger"
+            disabled={busy || waiting}
+            onClick={() =>
+              act(async () => {
+                const r = await runJob(() => api.replace(card.uid));
+                notify(r.message, r.ok);
+                if (r.ok) onClose();
+              })
+            }
+          >
+            Confirm: block this card, then tap the new one
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn"
+            disabled={busy || waiting}
+            title="Lost or broken: a new card takes over this card's name and rules; this one is blocked"
+            onClick={() => setConfirm("replace")}
+          >
+            Replace with a new card
           </button>
         )}
         {confirm === "remove" ? (

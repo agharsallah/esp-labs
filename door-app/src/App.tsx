@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { CardDataPanel } from "./components/CardDataPanel.tsx";
 import { CardList } from "./components/CardList.tsx";
 import { DoorPanel } from "./components/DoorPanel.tsx";
 import { EnrollPanel } from "./components/EnrollPanel.tsx";
@@ -12,7 +13,7 @@ interface Toast {
 }
 
 export function App() {
-  const { status, cards, events, connected, runJob } = useDoor();
+  const { status, cards, snapshots, events, connected, runJob } = useDoor();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const notify = useCallback((text: string, ok: boolean) => {
     const id = Date.now() + Math.random();
@@ -40,6 +41,7 @@ export function App() {
           <CardList
             cards={cards}
             present={status?.present ?? null}
+            waiting={!!status?.waiting}
             runJob={runJob}
             notify={notify}
           />
@@ -48,6 +50,13 @@ export function App() {
           <h2 id="log-title">Access log</h2>
           <EventLog events={events} />
         </section>
+        <CardDataPanel
+          status={status}
+          connected={connected}
+          snapshots={snapshots}
+          runJob={runJob}
+          notify={notify}
+        />
       </main>
 
       <div className="toasts" role="status">

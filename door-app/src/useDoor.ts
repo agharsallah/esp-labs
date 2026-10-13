@@ -1,15 +1,24 @@
-// Live state from the board: one WebSocket (status every second, the card list when it changes,
-// each access event, job results), plus a first fetch so the page isn't empty while it connects.
-// Jobs (enroll, label, wipe, inspect, open) answer 202 {job: id}; runJob() waits for the "job"
-// message with that id.
+// Live state from the board: one WebSocket (status every second, the card list and the saved
+// card data when they change, each access event, job results), plus a first fetch so the page
+// isn't empty while it connects. Jobs (enroll, replace, label, wipe, inspect, save, restore, copy,
+// open) answer 202 {job: id}; runJob() waits for the "job" message with that id.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, type Card, type DoorEvent, type JobResult, Message, type Status } from "./api.ts";
+import {
+  api,
+  type Card,
+  type DoorEvent,
+  type JobResult,
+  Message,
+  type Snapshot,
+  type Status,
+} from "./api.ts";
 
 const JOB_TIMEOUT_MS = 30_000;
 
 export function useDoor() {
   const [status, setStatus] = useState<Status | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [events, setEvents] = useState<DoorEvent[]>([]);
   const [connected, setConnected] = useState(false);
   const waiting = useRef(new Map<number, (r: JobResult) => void>());
@@ -35,6 +44,7 @@ export function useDoor() {
         const m = parsed.data;
         if (m.type === "status") setStatus(m.data);
         else if (m.type === "cards") setCards(m.data);
+        else if (m.type === "snapshots") setSnapshots(m.data);
         else if (m.type === "event")
           setEvents((list) =>
             list.some((x) => x.seq === m.data.seq) ? list : [...list, m.data].slice(-100),
@@ -77,5 +87,5 @@ export function useDoor() {
     });
   }, []);
 
-  return { status, cards, events, connected, runJob };
+  return { status, cards, snapshots, events, connected, runJob };
 }

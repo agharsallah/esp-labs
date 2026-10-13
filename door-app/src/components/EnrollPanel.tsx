@@ -8,11 +8,12 @@ interface Props {
   notify: (text: string, ok: boolean) => void;
 }
 
-// Add a card: name it, pick a role, then tap the new card on the reader within 20 s.
+// Add a card: name it, pick a role, then tap the new card on the reader within 20 s. While the
+// board waits for a new card (adding or replacing one), this shows the countdown instead.
 export function EnrollPanel({ status, connected, runJob, notify }: Props) {
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("resident");
-  const waiting = status?.enrolling;
+  const waiting = status?.waiting;
 
   const start = async () => {
     try {
@@ -24,20 +25,25 @@ export function EnrollPanel({ status, connected, runJob, notify }: Props) {
     }
   };
 
-  if (waiting) {
+  if (waiting && waiting.for !== "copy") {
     return (
       <div className="enroll waiting" aria-live="polite">
         <div className="pulse" aria-hidden="true" />
         <div>
-          <strong>Tap the new card for “{waiting.name}”</strong>
+          <strong>
+            Tap the {waiting.for === "replace" ? "replacement" : "new"} card for “{waiting.name}”
+          </strong>
           <span>
-            {Math.ceil(waiting.msLeft / 1000)} s left · the board adds the first card it hasn't seen
+            {Math.ceil(waiting.msLeft / 1000)} s left ·{" "}
+            {waiting.for === "replace"
+              ? `it takes over the rules, ${waiting.uid} gets blocked`
+              : "the board adds the first card it hasn't seen"}
           </span>
         </div>
         <button
           type="button"
           className="btn"
-          onClick={() => api.cancelEnroll().catch((e) => notify(String(e), false))}
+          onClick={() => api.cancel().catch((e) => notify(String(e), false))}
         >
           Cancel
         </button>
@@ -71,7 +77,12 @@ export function EnrollPanel({ status, connected, runJob, notify }: Props) {
           <option value="maintenance">maintenance (opens in lockdown)</option>
         </select>
       </label>
-      <button type="submit" className="btn primary" disabled={!connected || !name.trim()}>
+      <button
+        type="submit"
+        className="btn primary"
+        disabled={!connected || !name.trim() || !!waiting}
+        title={waiting ? "the board is waiting for a card to copy onto" : undefined}
+      >
         Add card
       </button>
     </form>

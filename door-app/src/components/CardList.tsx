@@ -6,11 +6,12 @@ import { CardEditor } from "./CardEditor.tsx";
 interface Props {
   cards: Card[];
   present: string | null;
+  waiting: boolean;
   runJob: (start: () => Promise<number>) => Promise<JobResult>;
   notify: (text: string, ok: boolean) => void;
 }
 
-export function CardList({ cards, present, runJob, notify }: Props) {
+export function CardList({ cards, present, waiting, runJob, notify }: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const toggleBlock = async (c: Card) => {
     try {
@@ -60,6 +61,8 @@ export function CardList({ cards, present, runJob, notify }: Props) {
           {open === c.uid && (
             <CardEditor
               card={c}
+              others={cards.filter((o) => o.uid !== c.uid)}
+              waiting={waiting}
               present={present === c.uid}
               runJob={runJob}
               notify={notify}

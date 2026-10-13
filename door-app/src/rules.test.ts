@@ -5,6 +5,7 @@ import {
   fromLocalInput,
   hoursText,
   nextSundayEvening,
+  rulesOf,
   rulesText,
   toLocalInput,
   tone,
@@ -63,5 +64,22 @@ describe("dates", () => {
 describe("diff", () => {
   it("sends only what changed", () => {
     expect(diff(card, { name: "Anna", blocked: true, usesLeft: -1 })).toEqual({ blocked: true });
+  });
+  it("copies another card's rules, not its name or block", () => {
+    const guest = {
+      ...card,
+      name: "Key tag",
+      role: "guest" as const,
+      blocked: true,
+      usesLeft: 3,
+      fromHour: 8,
+      toHour: 18,
+    };
+    expect(diff(card, rulesOf(guest))).toEqual({
+      role: "guest",
+      usesLeft: 3,
+      fromHour: 8,
+      toHour: 18,
+    });
   });
 });

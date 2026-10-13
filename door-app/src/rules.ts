@@ -121,6 +121,18 @@ export const PRESETS: Preset[] = [
   },
 ];
 
+// Another card's rules (role, hours, end date, uses), for "Copy rules from": not its name, and
+// not blocked, so copying from a blocked card doesn't block this one by surprise.
+export function rulesOf(c: Card): CardPatch {
+  return {
+    role: c.role,
+    fromHour: c.fromHour,
+    toHour: c.toHour,
+    validUntil: c.validUntil,
+    usesLeft: c.usesLeft,
+  };
+}
+
 // Only the fields that differ from the card: what the PUT should send.
 export function diff(card: Card, draft: CardPatch): CardPatch {
   const out: CardPatch = {};

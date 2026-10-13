@@ -33,7 +33,15 @@ export const Status = z.object({
     why: z.string(),
   }),
   present: z.string().nullable(),
-  enrolling: z.object({ name: z.string(), msLeft: z.number() }).nullable(),
+  // Waiting for a card to be laid down: a new one, a replacement, or copy's second card.
+  waiting: z
+    .object({
+      for: z.enum(["enroll", "replace", "copy"]),
+      name: z.string(), // enroll, replace: the card's name; copy: where the data comes from
+      uid: z.string(), // replace: the card being replaced; copy: the source card
+      msLeft: z.number(),
+    })
+    .nullable(),
   lockdown: z.boolean(),
   cards: z.number(),
   busy: z.boolean(),
@@ -74,9 +82,22 @@ export const Inspect = z.object({
 });
 export type Inspect = z.infer<typeof Inspect>;
 
+// Saved card data: the lab blocks (4-6, 8-10) that were readable, 16 bytes each as 32 hex digits.
+export const SavedBlock = z.object({ block: z.number(), hex: z.string() });
+export type SavedBlock = z.infer<typeof SavedBlock>;
+export const Snapshot = z.object({
+  id: z.number(),
+  name: z.string(),
+  uid: z.string(), // "" when imported from a file
+  at: z.number(),
+  blocks: z.array(SavedBlock),
+});
+export type Snapshot = z.infer<typeof Snapshot>;
+
 export const Message = z.discriminatedUnion("type", [
   z.object({ type: z.literal("status"), data: Status }),
   z.object({ type: z.literal("cards"), data: z.array(Card) }),
+  z.object({ type: z.literal("snapshots"), data: z.array(Snapshot) }),
   z.object({ type: z.literal("event"), data: DoorEvent }),
   z.object({ type: z.literal("job"), data: JobResult }),
 ]);
@@ -134,13 +155,21 @@ export const api = {
     z.array(DoorEvent).parse(await call("GET", `/api/events?since=${since}`)),
   enroll: async (name: string, role: Role) =>
     Job.parse(await call("POST", "/api/enroll", { name, role })).job,
-  cancelEnroll: async () => Job.parse(await call("POST", "/api/cancel-enroll")).job,
+  replace: async (uid: string) => Job.parse(await call("POST", `/api/replace${q(uid)}`)).job,
+  cancel: async () => Job.parse(await call("POST", "/api/cancel")).job,
   update: async (uid: string, patch: CardPatch) =>
     z.object({ card: Card }).parse(await call("PUT", `/api/card${q(uid)}`, patch)).card,
   remove: async (uid: string) => void (await call("DELETE", `/api/card${q(uid)}`)),
   label: async (uid: string) => Job.parse(await call("POST", `/api/label${q(uid)}`)).job,
   wipe: async (uid: string) => Job.parse(await call("POST", `/api/wipe${q(uid)}`)).job,
   inspect: async () => Job.parse(await call("POST", "/api/inspect")).job,
+  snapshots: async () => z.array(Snapshot).parse(await call("GET", "/api/snapshots")),
+  save: async (name: string) => Job.parse(await call("POST", "/api/save", { name })).job,
+  importSnapshot: async (name: string, blocks: SavedBlock[]) =>
+    Snapshot.parse(await call("POST", "/api/import", { name, blocks })),
+  restore: async (id: number) => Job.parse(await call("POST", `/api/restore?id=${id}`)).job,
+  removeSnapshot: async (id: number) => void (await call("DELETE", `/api/snapshot?id=${id}`)),
+  copy: async () => Job.parse(await call("POST", "/api/copy")).job,
   open: async () => Job.parse(await call("POST", "/api/open")).job,
   lockdown: async (on: boolean) => void (await call("PUT", "/api/lockdown", { on })),
 };
