@@ -1,0 +1,7 @@
+{
+  "name": "ble-kit",
+  "version": "0.1.0",
+  "description": "What the Bluetooth LE labs B1-B8 share: the lab shell (screen, buttons, LED, serial commands, status bar), the live link state and activity log, the advertising decoder, and the Bench GATT service. Each lab's main.cpp picks its views and commands.",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}
