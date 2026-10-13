@@ -75,3 +75,39 @@
 #ifndef PIN_RFID_IRQ
 #define PIN_RFID_IRQ 13   // IRQ (optional: -1 = not wired, the lab then polls)
 #endif
+
+// Sound track: the KY-037 microphone module (electret capsule + LM393 comparator + a blue trim pot).
+// Power it from 3V3, never 5 V: its AO and DO outputs swing up to its supply, and the ESP32-S3 pins
+// take 3.3 V at most. Module label -> ESP32-S3 pin.
+//   AO must be an ADC1 pin (GPIO 1-10): ADC2 is busy while Wi-Fi is on. 6 = ADC1 channel 5.
+//   DO is the comparator's yes/no output: any digital pin.
+#ifndef PIN_MIC_AO
+#define PIN_MIC_AO 6   // AO (analog: the microphone's voltage)
+#endif
+#ifndef PIN_MIC_DO
+#define PIN_MIC_DO 21  // DO (digital: high = louder than the pot's threshold)
+#endif
+
+// Sound track, digital: the INMP441 MEMS microphone (I2S, 24-bit). VDD -> 3V3, GND -> GND,
+// L/R -> GND (we read the left slot). Three wires in a row on the right header.
+#ifndef PIN_I2S_MIC_SCK
+#define PIN_I2S_MIC_SCK 40  // SCK (bit clock)
+#endif
+#ifndef PIN_I2S_MIC_WS
+#define PIN_I2S_MIC_WS 41   // WS (word select: left/right)
+#endif
+#ifndef PIN_I2S_MIC_SD
+#define PIN_I2S_MIC_SD 42   // SD (the data)
+#endif
+
+// Sound track, out loud: the MAX98357A I2S amplifier + a 4 ohm speaker on its screw terminal.
+// VIN -> 5V (louder; 3V3 works, quieter), GND -> GND, GAIN and SD unconnected (9 dB, mono mix).
+#ifndef PIN_I2S_SPK_BCLK
+#define PIN_I2S_SPK_BCLK 39  // BCLK
+#endif
+#ifndef PIN_I2S_SPK_LRC
+#define PIN_I2S_SPK_LRC 38   // LRC (word select)
+#endif
+#ifndef PIN_I2S_SPK_DIN
+#define PIN_I2S_SPK_DIN 47   // DIN (the data)
+#endif
