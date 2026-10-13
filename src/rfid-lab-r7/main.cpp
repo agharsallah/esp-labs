@@ -18,6 +18,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
+#include <esp_system.h>
 
 #include "api_token.h"
 #include "button.h"
@@ -55,6 +56,23 @@ struct {
   bool apiStarted = false;
 } state;
 
+// Why the board last started: a crash or a brownout shows up here (and in the app).
+const char *resetReason() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON: return "power on";
+    case ESP_RST_SW: return "restart";
+    case ESP_RST_PANIC: return "crash (panic)";
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT: return "watchdog";
+    case ESP_RST_BROWNOUT: return "brownout (supply dipped)";
+    case ESP_RST_DEEPSLEEP: return "deep sleep";
+    case ESP_RST_EXT: return "reset button";
+    case ESP_RST_USB: return "USB";
+    default: return "other";
+  }
+}
+
 void printHelp() {
   Serial.println("\nRFID lab R7 Card manager  (rfid-lab-r7)");
   Serial.println("  status            Wi-Fi, address, reader chip, door, card count");
@@ -81,6 +99,10 @@ void printStatus() {
   Serial.printf("Reader chip 0x%02X (%s) | %d cards | lockdown %s | clock %s\n", state.door.chipVersion,
                 rc522::versionName(state.door.chipVersion), registry.count(), registry.lockdown() ? "ON" : "off",
                 connection.timeSynced() ? "synced" : "not yet (cards with dates or hours are refused until it is)");
+  Serial.printf("Reader: %s | settings restored %u x | chip lost %u x | last problem: %s\n",
+                state.door.irqMode ? "IRQ wire" : "polling", state.door.restores, state.door.lost,
+                state.door.problem[0] ? state.door.problem : "none");
+  Serial.printf("Board: up %lu s | last start: %s | free heap %u B\n", millis() / 1000, resetReason(), unsigned(ESP.getFreeHeap()));
 }
 
 void printCards() {
@@ -233,6 +255,16 @@ void publishStatus() {
   d["lockdown"] = registry.lockdown();
   d["cards"] = registry.count();
   d["busy"] = s.busy != nullptr;
+  JsonObject reader = d["reader"].to<JsonObject>();
+  reader["wait"] = s.irqMode ? "irq" : "poll";
+  reader["restores"] = s.restores;
+  reader["lost"] = s.lost;
+  reader["problem"] = s.problem;
+  reader["problemAgo"] = s.problem[0] ? (millis() - s.problemAt) / 1000 : 0;
+  JsonObject board = d["board"].to<JsonObject>();
+  board["uptime"] = millis() / 1000;
+  board["reset"] = resetReason();
+  board["heap"] = ESP.getFreeHeap();
   String out;
   serializeJson(d, out);
   api.publishStatus(out);
@@ -273,7 +305,7 @@ void setup() {
   snapshots.begin();
   connection.begin();
   doorTask.begin();
-  log_i("rfid-lab-r7: reader task on core 0. Type token for the app's .env, help for commands.");
+  log_i("rfid-lab-r7: reader task on core 0. Last start: %s. Type token for the app's .env, help for commands.", resetReason());
   printHelp();
 }
 

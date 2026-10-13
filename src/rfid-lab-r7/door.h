@@ -103,6 +103,12 @@ struct DoorState {
   char waitName[24] = "";  // enroll, replace: the card's name; copy: where the data comes from
   char waitUid[21] = "";   // replace: the card being replaced; copy: the source card
   const char *busy = nullptr;
+  // How the reader is doing, for the app's reader line.
+  bool irqMode = false;     // waiting on the IRQ wire (false: polling the chip)
+  uint16_t restores = 0;    // the chip reset itself (3.3 V dip) and its settings were put back
+  uint16_t lost = 0;        // the chip stopped answering on SPI
+  char problem[72] = "";    // the last thing that went wrong, in words
+  uint32_t problemAt = 0;   // millis()
 };
 
 class Door {
@@ -165,14 +171,16 @@ class Door {
     const uint8_t v = chip_.begin(*spi_, {PIN_RFID_SS, PIN_RFID_SCK, PIN_RFID_MOSI, PIN_RFID_MISO, PIN_RFID_RST, PIN_RFID_IRQ}, nullptr);
     if (chip_.hasIrqPin()) chip_.setWaitMode(rc522::Mfrc522::WaitMode::Irq);
     log_i("RC522: VersionReg 0x%02X (%s)", v, rc522::versionName(v));
-    publish([&](DoorState &s) { s.chipVersion = v; });
+    chipLost_ = v == 0x00 || v == 0xFF;
+    if (chipLost_) problem("reader chip not answering: check its 3.3V, GND and MISO wires");
+    publish([&](DoorState &s) { s.chipVersion = v, s.irqMode = chip_.waitMode() == rc522::Mfrc522::WaitMode::Irq; });
     for (;;) {
       Request r;
       if (xQueueReceive(mailbox_, &r, pdMS_TO_TICKS(80)) == pdTRUE) {
         publish([&](DoorState &s) { s.busy = "working"; });
         perform(r);
         chip_.stopCrypto1();
-        if (chip_.takeIrqMissed()) chip_.setWaitMode(rc522::Mfrc522::WaitMode::Poll);
+        checkIrq();
         publish([&](DoorState &s) { s.busy = nullptr; });
         continue;
       }
@@ -200,6 +208,35 @@ class Door {
     std::lock_guard<std::mutex> lock(mutex_);
     if (outbox_.size() >= 24) outbox_.erase(outbox_.begin());
     outbox_.push_back(std::move(text));
+  }
+
+  // The last thing that went wrong with the reader, for the app (and the serial log).
+  void problem(const char *what) {
+    log_w("reader: %s", what);
+    publish([&](DoorState &s) {
+      strlcpy(s.problem, what, sizeof(s.problem));
+      s.problemAt = millis();
+    });
+  }
+
+  // The IRQ wire stayed quiet although the chip finished: poll the chip instead (as R1-R6 do).
+  // Without this, every frame waits out the whole timeout and reading a card crawls.
+  void checkIrq() {
+    if (!chip_.takeIrqMissed() || chip_.waitMode() != rc522::Mfrc522::WaitMode::Irq) return;
+    chip_.setWaitMode(rc522::Mfrc522::WaitMode::Poll);
+    publish([](DoorState &s) { s.irqMode = false; });
+    char msg[72];
+    snprintf(msg, sizeof(msg), "IRQ wire on GPIO %d stays quiet: polling instead", PIN_RFID_IRQ);
+    problem(msg);
+  }
+
+  // Settings gone after a 3.3 V dip (VersionReg still fine, antenna off): put them back.
+  bool restoreIfReset() {
+    if (!chip_.settingsLost()) return false;
+    chip_.restoreSettings();
+    publish([](DoorState &s) { s.restores++; });
+    problem("the reader chip reset itself (3.3V dip?): settings restored");
+    return true;
   }
 
   void event(const char *uid, const char *name, const char *what, const char *decision = "") {
@@ -280,6 +317,7 @@ class Door {
     const bool found = iso14443a::wakeAndSelect(chip_, u) == rc522::Status::Ok;
     if (found) iso14443a::halt(chip_);
     chip_.stopCrypto1();
+    checkIrq();
     const bool isNew = found && (!present_ || !u.sameAs(current_));
     if (found) misses_ = 0;
     if (isNew) {
@@ -389,7 +427,7 @@ class Door {
     const uint32_t job = waitJob_;
     stopWait();
     iso14443a::Uid u;  // polling halted it: wake it again
-    if (iso14443a::wakeAndSelect(chip_, u) != rc522::Status::Ok || !u.sameAs(seen))
+    if (selectCard(u) != rc522::Status::Ok || !u.sameAs(seen))
       return finish(job, false, "the card moved away: keep it still and copy again");
     JsonDocument d;
     const int n = writeSnapshot(u, copySrc_, d);
@@ -465,14 +503,39 @@ class Door {
     }
   }
 
+  // Wake and select the card on the reader for a job. Three tries, with the field switched off
+  // for 5 ms in between (the card restarts): a card at the edge of the field often answers on
+  // the second try. If nothing answers, check the chip didn't lose its settings and try once more.
+  rc522::Status selectCard(iso14443a::Uid &u) {
+    rc522::Status s = rc522::Status::NoAnswer;
+    for (int i = 0; i < 3; i++) {
+      s = iso14443a::wakeAndSelect(chip_, u);
+      if (s == rc522::Status::Ok || s == rc522::Status::ChipSilent) break;
+      chip_.antenna(false);
+      delay(5);
+      chip_.antenna(true);
+      delay(5);
+    }
+    if (s != rc522::Status::Ok && restoreIfReset()) s = iso14443a::wakeAndSelect(chip_, u);
+    checkIrq();
+    return s;
+  }
+
+  // Why selectCard() failed, in words. `noCard` is the job's own "lay the card down" sentence.
+  static const char *whyNot(rc522::Status s, const char *noCard) {
+    if (s == rc522::Status::NoAnswer) return noCard;
+    if (s == rc522::Status::ChipSilent) return "the reader chip isn't answering: check its 3.3V, GND and MISO wires";
+    return "a card answered, but garbled: lay it flat and still, in the middle of the reader";
+  }
+
   // The card with this UID must be on the reader. Returns false (and finishes the job) if not.
   bool cardOnReader(const Request &r, iso14443a::Uid &u, door::Card &listed) {
     const bool inList = reg_.get(r.uid, r.uidLen, listed);
-    const rc522::Status s = iso14443a::wakeAndSelect(chip_, u);
-    char msg[80];
+    const rc522::Status s = selectCard(u);
+    char msg[96];
     if (s != rc522::Status::Ok) {
       snprintf(msg, sizeof(msg), "put %s on the reader first", inList ? listed.name : "the card");
-      finish(r.id, false, msg);
+      finish(r.id, false, whyNot(s, msg));
       return false;
     }
     if (u.size != r.uidLen || memcmp(u.bytes, r.uid, r.uidLen) != 0) {
@@ -549,7 +612,8 @@ class Door {
   // Whatever card is on the reader: its UID, type, whether it's in the list, blocks 4-6 and 8-10.
   void inspect(const Request &r) {
     iso14443a::Uid u;
-    if (iso14443a::wakeAndSelect(chip_, u) != rc522::Status::Ok) return finish(r.id, false, "no card on the reader");
+    const rc522::Status st = selectCard(u);
+    if (st != rc522::Status::Ok) return finish(r.id, false, whyNot(st, "no card on the reader"));
     char hex[21];
     door::uidToHex(u.bytes, u.size, hex, sizeof(hex));
     door::Card c;
@@ -634,7 +698,8 @@ class Door {
   // Whatever card is on the reader, listed or not: its lab blocks become a named snapshot.
   void save(const Request &r) {
     iso14443a::Uid u;
-    if (iso14443a::wakeAndSelect(chip_, u) != rc522::Status::Ok) return finish(r.id, false, "lay the card to save on the reader first");
+    const rc522::Status st = selectCard(u);
+    if (st != rc522::Status::Ok) return finish(r.id, false, whyNot(st, "lay the card to save on the reader first"));
     snap::Snapshot s;
     const int n = readSnapshot(u, s);
     iso14443a::halt(chip_);
@@ -658,7 +723,8 @@ class Door {
     snap::Snapshot s;
     if (!snaps_.get(r.snapshot, s)) return finish(r.id, false, "no saved data with this id");
     iso14443a::Uid u;
-    if (iso14443a::wakeAndSelect(chip_, u) != rc522::Status::Ok) return finish(r.id, false, "lay the card to write on the reader first");
+    const rc522::Status st = selectCard(u);
+    if (st != rc522::Status::Ok) return finish(r.id, false, whyNot(st, "lay the card to write on the reader first"));
     JsonDocument d;
     const int n = writeSnapshot(u, s, d);
     iso14443a::halt(chip_);
@@ -677,7 +743,8 @@ class Door {
   void copyStart(const Request &r) {
     if (!waitFree(r)) return;
     iso14443a::Uid u;
-    if (iso14443a::wakeAndSelect(chip_, u) != rc522::Status::Ok) return finish(r.id, false, "lay the card to copy from on the reader first");
+    const rc522::Status st = selectCard(u);
+    if (st != rc522::Status::Ok) return finish(r.id, false, whyNot(st, "lay the card to copy from on the reader first"));
     copySrc_ = snap::Snapshot{};
     const int n = readSnapshot(u, copySrc_);
     iso14443a::halt(chip_);
@@ -693,17 +760,24 @@ class Door {
 
   // ---- Is the chip still there? (as in the R1-R6 labs) -------------------------------------------
 
+  // Every 2 s: does the chip still answer, and does it still have our settings?
   void health() {
     lastHealth_ = millis();
     const uint8_t v = chip_.read(rc522::VersionReg);
     const bool alive = v != 0x00 && v != 0xFF;
+    if (alive && !chipLost_) {
+      restoreIfReset();
+      return;
+    }
     if (alive == !chipLost_) return;
     if (!alive) {
       chip_.hardReset();
       const uint8_t again = chip_.read(rc522::VersionReg);
       chipLost_ = again == 0x00 || again == 0xFF;
       log_w("RC522 stopped answering (0x%02X); after a hard reset: 0x%02X%s", v, again, chipLost_ ? " - check 3.3V, GND, MISO" : "");
-      publish([&](DoorState &s) { s.chipVersion = again; });
+      publish([&](DoorState &s) { s.chipVersion = again, s.lost++; });
+      problem(chipLost_ ? "reader chip stopped answering: check its 3.3V, GND and MISO wires"
+                        : "reader chip had hung: a hard reset brought it back");
     } else {
       chipLost_ = false;
       log_i("RC522 answering again: 0x%02X", v);

@@ -312,6 +312,14 @@ class Mfrc522 {
     return m;
   }
 
+  // A dip in its 3.3 V resets the chip to its defaults without a word: VersionReg still answers,
+  // but the timer prescaler is back to 00h and the antenna drivers are off, so no card is ever
+  // found. True when that happened; restoreSettings() puts our configuration back.
+  bool settingsLost() {
+    return read(TPrescalerReg) != 0xA9 || (read(TxControlReg) & 0x03) != (antennaOn_ ? 0x03 : 0x00);
+  }
+  void restoreSettings() { configure(); }
+
   bool traceOn() const { return traceOn_; }
   void setTraceOn(bool on) { traceOn_ = on; }
 
