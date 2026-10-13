@@ -6,19 +6,19 @@ Every command that installs software, talks to the board, or flashes it, with wh
 
 ## Overview
 
-| What                      | Value                                                                                                                                                                                                                                                        |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                                                                                                                 |
-| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                                                                                                              |
-| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                                                                                                                   |
-| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                                                                                                                   |
-| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                                                                                                            |
-| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                                                                                                                  |
-| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                                                                                       |
-| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                                                                                    |
-| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                                                                                        |
-| **Firmware on board now** | **`rfid-lab-r7`** with the entry 43 fixes, flashed by you: reads work, also with the card a little above the reader. Built, not flashed: entries 44-45 (names fix, loading states, admin room), `rfid-lab-r8` (entry 46), `rfid-lab-r1` … `r6`, `wifi-lab-*` |
-| Flashes so far            | 14 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab, rfid-lab-r7 twice by you)                                                                                                                    |
+| What                      | Value                                                                                                                                                                                                                                                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                                                                                                                                                                                   |
+| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                                                                                                                                                                                |
+| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                                                                                                                                                                                     |
+| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                                                                                                                                                                                     |
+| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                                                                                                                                                                              |
+| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                                                                                                                                                                                    |
+| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                                                                                                                                                         |
+| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                                                                                                                                                      |
+| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                                                                                                                                                          |
+| **Firmware on board now** | **`rfid-lab-r7`** with the entry 43 fixes, flashed by you: reads work, also with the card a little above the reader. Built, not flashed: `sound-lab-s1` … `s6` (entry 48), `ble-lab-b1` … `b8` (entry 47), entries 44-45 (names fix, loading states, admin room), `rfid-lab-r8` (entry 46), `rfid-lab-r1` … `r6`, `wifi-lab-*` |
+| Flashes so far            | 14 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab, rfid-lab-r7 twice by you)                                                                                                                                                                                      |
 
 ### What is installed on the Mac
 
@@ -1061,3 +1061,78 @@ headless: tap card 1 (Foxy spins out), drag Bolt onto card 2 at 390 and 1280 px,
 The first headless run found a real phone problem: at 390 px the friends sat below the screen, so a finger couldn't drag one onto a card. Fixed with a shorter stage on phones, smaller card tiles, the friends in one row that swipes sideways, and auto-scroll while dragging near the screen edge.
 
 **Next, by you:** `uv run pio run -e rfid-lab-r8 -t upload`, `token`, then `cp .env.example .env` in `test-esp/friends-app` (BENCH_TOKEN=…), `pnpm dev`, open `http://localhost:5175`. Tap the white card and the key tag once each, then drag a friend onto each. Nothing was sent to the board.
+
+### 47. Bluetooth LE track, labs B1-B8 and the ble-app · `install` + `build` (Mac) · no board
+
+You asked for a Bluetooth lab that goes from reading to pairing to controlling: connect a phone, peripherals like sound or a keyboard, and creative examples, one lab per step. The ESP32-S3 has **Bluetooth LE only**, so it can't stream audio to your JBL (Classic A2DP). Instead it controls the phone that does (B6), or plays MIDI notes that a synth turns into sound (B7).
+
+| Lab                 | Env          | What it does                                                                                        |
+| ------------------- | ------------ | --------------------------------------------------------------------------------------------------- |
+| B1 Listen           | `ble-lab-b1` | scanner: radar, list, byte-by-byte inspector, air statistics                                        |
+| B2 Be seen          | `ble-lab-b2` | beacon: live data in the advertisement, iBeacon, Eddystone-URL, interval and TX power               |
+| B3 Connect & talk   | `ble-lab-b3` | GATT server: LED, message, button, temperature from nRF Connect / LightBlue                         |
+| B4 Pair & trust     | `ble-lab-b4` | passkey on the TFT, numeric comparison on the button, bonds, filter accept list, an encrypted Vault |
+| B5 Phone app        | `ble-lab-b5` | sketch, live sensors and a speed test for `test-esp/ble-app` (Web Bluetooth, port 5177)             |
+| B6 Keyboard & media | `ble-lab-b6` | BLE keyboard + media keys (volume, play/pause), slides clicker, typer with US/DE layouts            |
+| B7 Music            | `ble-lab-b7` | BLE-MIDI instrument: button, touch wires, tunes, a drum machine; GarageBand or the app's synth      |
+| B8 Host             | `ble-lab-b8` | the board is the central: explore any device read-only, host your BLE keyboard and mouse            |
+
+```sh
+uv run pio run -e ble-lab-b1        # build only; the first build downloaded NimBLE-Arduino 2.5.1 (released 2026-07-30) into .pio/libdeps
+uv run pio run -e ble-lab-b2 … b8   # build only
+c++ … test/host/{ble_ad,ble_beacon,b5_canvas,ble_keymap,ble_midi,ble_hid}_test.cpp   # Mac only
+ble-app: tsc -p . · vitest run · vite build   # through door-app's node_modules (temporary link), no install
+```
+
+```text
+ble-lab-b1 SUCCESS · RAM 15.5% (50,728 B) · Flash 10.6% (693,206 B)
+ble-lab-b2 SUCCESS · RAM 11.8% (38,744 B) · Flash 10.4% (678,966 B)
+ble-lab-b3 SUCCESS · RAM 11.7% (38,416 B) · Flash 10.4% (682,162 B)
+ble-lab-b4 SUCCESS · RAM 11.8% (38,776 B) · Flash 10.5% (688,570 B)
+ble-lab-b5 SUCCESS · RAM 12.2% (40,048 B) · Flash 10.7% (704,410 B)
+ble-lab-b6 SUCCESS · RAM 12.5% (41,096 B) · Flash 10.8% (707,534 B)
+ble-lab-b7 SUCCESS · RAM 12.5% (41,064 B) · Flash 10.6% (696,686 B)
+ble-lab-b8 SUCCESS · RAM 21.5% (70,528 B) · Flash 11.1% (725,158 B)
+no warnings from our code · 6 host tests: all checks passed
+ble-app: typecheck clean · 9 tests passed · build ok
+guide: B1-B8 headless at 1280 / 380 px, no page errors, no sideways scroll
+```
+
+Not tested yet, because it needs the board and your devices: pairing with iOS, macOS or Android, media keys reaching apps, touch thresholds, real throughput, and the keyboard's passkey flow in B8.
+
+**Next, by you:** `uv run pio run -e ble-lab-b1 -t upload`, open the monitor, hold your phone next to the board, `list`. Then B3 with nRF Connect. Nothing was sent to the board.
+
+### 48. Sound track, labs S1-S6 for the KY-037 · `build` (Mac) · no board
+
+You asked for labs with the KY-037 microphone: getting sound, controlling with sound, recording with sound, and something creative. One firmware per lab, all on the new `lib/sound-kit` (the ADC in continuous mode with DMA, a sampler task on core 0, a 4 s ring in PSRAM, decibels and the noise floor, clap/knock/beat detectors, our own FFT, WAV).
+
+Wiring for every lab: KY-037 **+ → 3V3** (never 5 V), **G → GND**, **AO → GPIO 6** (ADC1), **DO → GPIO 21**. The screen stays; button on GPIO 5 and the LED on GPIO 4 optional.
+
+| Lab             | Env            | What it does                                                                                |
+| --------------- | -------------- | ------------------------------------------------------------------------------------------- |
+| S1 Hear         | `sound-lab-s1` | oscilloscope, bias and ADC range (attenuation), the comparator and its trim pot             |
+| S2 Loudness     | `sound-lab-s2` | dB above the quiet, fast/slow, a minute graph, a 10-minute diary, a too-loud alarm          |
+| S3 Clap control | `sound-lab-s3` | claps (not voices) in groups of 1-4 switch the LED, the RGB colour, the screen, a party     |
+| S4 Recorder     | `sound-lab-s4` | voice-activated clips with 0.5 s pre-roll; phone page on `bench.local` (token), or USB pull |
+| S5 Spectrum     | `sound-lab-s5` | FFT bars, waterfall, whistle tuner, steering by pitch                                       |
+| S6 Sound games  | `sound-lab-s6` | knock lock (secret rhythm), Clap Bird, beat party                                           |
+
+```sh
+uv run pio run -e sound-lab-s1      # … through -e sound-lab-s6, build only; no new downloads (S4 reuses W2's web libraries)
+c++ -std=c++17 -Wall -I lib/sound-kit/src -I src/sound-lab-s{3,4,5,6} test/host/sound_{dsp,games,clips,spectrum}_test.cpp   # Mac only
+uv run python -m py_compile tools/sound_pull.py
+```
+
+```text
+sound-lab-s1 SUCCESS · RAM 14.5% (47,524 B) · Flash  6.4% (417,079 B)
+sound-lab-s2 SUCCESS · RAM  8.3% (27,340 B) · Flash  6.8% (445,111 B)
+sound-lab-s3 SUCCESS · RAM  8.6% (28,236 B) · Flash  6.7% (439,747 B)
+sound-lab-s4 SUCCESS · RAM 17.6% (57,628 B) · Flash 18.0% (1,176,934 B)
+sound-lab-s5 SUCCESS · RAM 15.0% (49,036 B) · Flash  6.8% (443,747 B)
+sound-lab-s6 SUCCESS · RAM  8.4% (27,396 B) · Flash  6.9% (450,395 B)
+no warnings · sound dsp / games / clips / spectrum: all checks pass · sound_pull.py compiles
+```
+
+Not tested yet, because it needs the board and the module: the real bias voltage on AO (S1 shows it), whether 12 dB attenuation is the best fit, the pot's direction, clap and knock thresholds in your room, recording quality, and the phone page in a browser.
+
+**Next, by you:** wire the KY-037, `uv run pio run -e sound-lab-s1 -t upload`, open the monitor, stay quiet for a second, then clap. Tell me the bias in mV from the **bias** view and whether DO lights with claps. Nothing was sent to the board.

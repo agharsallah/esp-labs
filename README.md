@@ -15,6 +15,7 @@ This folder is a standalone sandbox. It is not part of the pnpm workspace, and t
 | ESP32-S3-N16R8 DevKitC      | 16 MB flash, 8 MB octal PSRAM, dual-core 240 MHz, Wi-Fi + BLE, on-board RGB LED                                                      |
 | 1.9" IPS TFT, 170 × 320     | ST7789 driver, SPI, 8 pins: GND VCC SCL SDA RES DC CS BLK                                                                            |
 | RC522 RFID reader           | NXP MFRC522, 13.56 MHz, SPI, **3.3 V only**; comes with a white MIFARE Classic 1K card and a key tag                                 |
+| KY-037 microphone module    | electret capsule + LM393 comparator + trim pot; **AO** (analog) and **DO** (digital). Power it from **3.3 V**, never 5 V             |
 | Breadboard, jumper cables   | male-to-male for the breadboard, female-to-male for the display header                                                               |
 | LEDs                        | long leg = **+** (anode), short leg = **−** (cathode)                                                                                |
 | 220–330 Ω resistor (needed) | Protects the LED and the pin. Not in the kit list yet: most LED kits include some. Lesson 02 lowers the pin's drive as a safety net. |
@@ -65,6 +66,9 @@ flowchart LR
   subgraph RFID["RFID & NFC"]
     R1["R1 · Wire & talk"] --> R2["R2 · Wake a card"] --> R3["R3 · Who's there"] --> R4["R4 · Inside the card"] --> R5["R5 · Write & count"] --> R6["R6 · Edge lab"]
   end
+  subgraph Sound["Sound (KY-037)"]
+    S1["S1 · Hear"] --> S2["S2 · Loudness"] --> S3["S3 · Clap control"] --> S4["S4 · Recorder"] --> S5["S5 · Spectrum"] --> S6["S6 · Sound games"]
+  end
   subgraph Planned["Planned themes"]
     S["Sensors"]
     B["Bluetooth LE"]
@@ -74,22 +78,24 @@ flowchart LR
   W1 -.-> S
   W1 -.-> B
   L3b --> R1
+  L3b --> S1
 ```
 
-| Theme           | #     | Lesson                | Environment            | Status   | You learn                                                                            |
-| --------------- | ----- | --------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------ |
-| Intro           | 00    | Setup                 | none                   | works    | USB ports, drivers, flashing, the serial monitor                                     |
-| Intro           | 01    | Hello                 | `01-hello`             | works    | `setup()`/`loop()`, logging, `millis()`, the RGB LED                                 |
-| Intro           | 02    | First circuit         | `02-led`               | works    | breadboards, resistors, GPIO, PWM, a state machine                                   |
-| Display & input | 03    | Display               | `03-display`           | works    | SPI, RGB565 colours, frame buffers in PSRAM                                          |
-| Display & input | 03b   | Showcase, variation 1 | `03b-showcase`         | works    | 3D projection, lookup tables, particles, internal RAM vs PSRAM, timing               |
-| Display & input | 03b   | Showcase, variation 2 | `03b-showcase-button`  | on board | inputs vs outputs, pull-ups, interrupts, debouncing, gestures                        |
-| Wi-Fi           | W1    | Scan & join           | `wifi-lab-w1`          | built    | station mode, channels, RSSI in dBm, security types, NVS, NTP, mDNS                  |
-| Wi-Fi           | W2    | Phone control         | `wifi-lab-w2(-remote)` | on board | REST, WebSocket, captive portal, OTA, relay through a tunnel                         |
-| Wi-Fi           | W3    | Internet & AI         | `wifi-lab-w3`          | built    | HTTPS, JSON filters, worker tasks, AI function calling via LiteLLM                   |
-| RFID & NFC      | R1–R8 | RFID labs             | `rfid-lab-r1` … `r8`   | R1 works | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing |
-| Sensors         |       |                       |                        | planned  | I2C sensors (BME280), data over Wi-Fi                                                |
-| Bluetooth LE    |       |                       |                        | planned  | BLE advertising, talking to a phone                                                  |
+| Theme           | #     | Lesson                | Environment            | Status   | You learn                                                                              |
+| --------------- | ----- | --------------------- | ---------------------- | -------- | -------------------------------------------------------------------------------------- |
+| Intro           | 00    | Setup                 | none                   | works    | USB ports, drivers, flashing, the serial monitor                                       |
+| Intro           | 01    | Hello                 | `01-hello`             | works    | `setup()`/`loop()`, logging, `millis()`, the RGB LED                                   |
+| Intro           | 02    | First circuit         | `02-led`               | works    | breadboards, resistors, GPIO, PWM, a state machine                                     |
+| Display & input | 03    | Display               | `03-display`           | works    | SPI, RGB565 colours, frame buffers in PSRAM                                            |
+| Display & input | 03b   | Showcase, variation 1 | `03b-showcase`         | works    | 3D projection, lookup tables, particles, internal RAM vs PSRAM, timing                 |
+| Display & input | 03b   | Showcase, variation 2 | `03b-showcase-button`  | on board | inputs vs outputs, pull-ups, interrupts, debouncing, gestures                          |
+| Wi-Fi           | W1    | Scan & join           | `wifi-lab-w1`          | built    | station mode, channels, RSSI in dBm, security types, NVS, NTP, mDNS                    |
+| Wi-Fi           | W2    | Phone control         | `wifi-lab-w2(-remote)` | on board | REST, WebSocket, captive portal, OTA, relay through a tunnel                           |
+| Wi-Fi           | W3    | Internet & AI         | `wifi-lab-w3`          | built    | HTTPS, JSON filters, worker tasks, AI function calling via LiteLLM                     |
+| RFID & NFC      | R1–R8 | RFID labs             | `rfid-lab-r1` … `r8`   | R1 works | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing   |
+| Sensors         |       |                       |                        | planned  | I2C sensors (BME280), data over Wi-Fi                                                  |
+| Bluetooth LE    | B1–B8 | Bluetooth labs        | `ble-lab-b1` … `b8`    | built    | advertising, GATT, pairing & bonds, Web Bluetooth, HID, BLE-MIDI, the central role     |
+| Sound           | S1–S6 | Sound labs            | `sound-lab-s1` … `s6`  | built    | ADC + DMA sampling, bias & attenuation, decibels, onset detection, FFT, WAV over Wi-Fi |
 
 ## Lesson 00: setup
 
@@ -320,6 +326,165 @@ flowchart LR
 
 The guide has the interactive side: a 3D model of the field and the card (with a range chart), a 3D memory map you open sector by sector, bit-level SPI and anticollision walk-throughs, access-bit and value-block decoders, step-by-step frame diagrams, and edge charts that plot the tables you paste from the monitor.
 
+## Bluetooth LE track
+
+The ESP32-S3 has **Bluetooth LE 5 only**. There's no Classic Bluetooth, so it can't stream audio to a speaker or headphones (A2DP), and Classic-only keyboards are invisible to it. The labs go from listening to pairing to controlling, and end with the board hosting your own keyboard. Each lab is its own firmware with its own command. They share `lib/ble-kit` (NimBLE-Arduino 2.5.1):
+
+- the lab shell, with a status bar on every view: radio glyph, encryption lock, bond key, signal bars
+- the link state and activity log, written from NimBLE's task and drawn by `loop()`
+- the advertising decoder (`ad_format.h`) and the scan table
+- the Bench GATT service and the shared touch-pad helper
+- the BLE-MIDI codec and the HID Report Map parser
+
+Wiring is the screen from lesson 03; the push button on GPIO 5 stays optional.
+
+| Lab                 | Command                                  | Views                                                       | The board is          |
+| ------------------- | ---------------------------------------- | ----------------------------------------------------------- | --------------------- |
+| B1 Listen           | `uv run pio run -e ble-lab-b1 -t upload` | radar · list · inspect · air                                | scanner               |
+| B2 Be seen          | `uv run pio run -e ble-lab-b2 -t upload` | packet · air · budget · log                                 | broadcaster (beacon)  |
+| B3 Connect & talk   | `uv run pio run -e ble-lab-b3 -t upload` | gatt · message · link · log                                 | GATT server           |
+| B4 Pair & trust     | `uv run pio run -e ble-lab-b4 -t upload` | ceremony · bonds · gatt · link · log                        | GATT server with keys |
+| B5 Phone app        | `uv run pio run -e ble-lab-b5 -t upload` | sketch · live · speed · gatt · link · log                   | server for `ble-app`  |
+| B6 Keyboard & media | `uv run pio run -e ble-lab-b6 -t upload` | media · slides · typer · keys · link · log                  | BLE keyboard          |
+| B7 Music            | `uv run pio run -e ble-lab-b7 -t upload` | keys · sequencer · roll · link · log                        | BLE-MIDI instrument   |
+| B8 Host             | `uv run pio run -e ble-lab-b8 -t upload` | devices · explore · keyboard · mouse · reports · link · log | central (HID host)    |
+
+```mermaid
+flowchart LR
+  B1["B1 Listen<br/>scanner"] --> B2["B2 Be seen<br/>beacon"] --> B3["B3 Connect & talk<br/>GATT"] --> B4["B4 Pair & trust<br/>keys"]
+  B4 --> B5["B5 Phone app<br/>Web Bluetooth"] --> B6["B6 Keyboard & media<br/>HID"] --> B7["B7 Music<br/>BLE-MIDI"] --> B8["B8 Host<br/>central"]
+  B6 -. "media keys" .-> Phone["phone / Mac"] -. "Classic A2DP audio" .-> JBL["JBL speaker"]
+```
+
+Phone apps: nRF Connect for Mobile (Nordic) or LightBlue for B1-B4; the `ble-app` for B5 and B7 (Chrome on Mac or Android, Bluefy on iPhone); GarageBand for B7.
+
+**B1 · Listen** (`uv run pio run -e ble-lab-b1 -t upload`, `src/ble-lab-b1`): a continuous scan. NimBLE keeps nothing; `scan_table.h` keeps up to 48 devices with a smoothed RSSI, their advertisement and their scan response. Four views:
+
+- **radar:** distance from RSSI on a log scale; the colour is a guess at the kind, from appearance, maker data and services
+- **list:** the strongest devices
+- **inspect:** 31 cells per packet, coloured by AD structure and decoded
+- **air:** packets per second for a minute, and address types
+
+Commands: `scan`, `mode active|passive`, `timing <interval> <window>`, `near <dBm>`, `list`, `pick`, `next`, `bytes`, `watch` (one line per packet, which shows the advertising interval), `calib` (1 m reference), `clear`. The decoder is checked on the Mac by `test/host/ble_ad_test.cpp`. Everything you hear belongs to someone: keep neighbours' addresses out of logs.
+
+**B2 · Be seen** (`uv run pio run -e ble-lab-b2 -t upload`, `src/ble-lab-b2`): the board turns broadcaster. In `bench` mode its advertisement carries live values as manufacturer data under the SIG's test company ID 0xFFFF (version, button presses, chip temperature in °C × 100, uptime), refreshed every second, so a phone reads them without connecting. `mode ibeacon` (Apple 4C 00 02 15, UUID = the Bench service, big-endian major/minor, −59 dBm at 1 m), `mode url` (Eddystone-URL in service data FEAA) and `mode name` fill the same 31 bytes differently; what doesn't fit goes to the scan response. `connectable` and `scanresp` switch between ADV_IND, ADV_SCAN_IND and ADV_NONCONN_IND (non-connectable keeps the old 100 ms floor). Views: packet (31 cells per packet, changed bytes flash), air (channel 37/38/39 hops with the random advDelay, drawn from the settings), budget (an estimate for a coin-cell beacon chip, not this board), log. The packets are built in `beacon_payload.h`, checked on the Mac by `test/host/ble_beacon_test.cpp`. iPhone apps can't see iBeacon frames (iOS filters them): test that mode on Android.
+
+- Watch the uptime bytes change in nRF Connect without connecting; double-click and see the press counter follow.
+- `connectable off`, `scanresp off`: the Connect button disappears on the phone.
+- `interval 1000` and `power -12`, then the budget view.
+
+**B3 · Connect & talk** (`uv run pio run -e ble-lab-b3 -t upload`, `src/ble-lab-b3`): the Bench service from `lib/ble-kit/src/bench_service.h`, plus the standard Device Information and Battery services:
+
+- LED `0001`: read/write, 3 bytes
+- Message `0002`: text
+- Button `0003`: notify
+- Temperature `0004`: notify, with a 2904 format descriptor
+- Uptime `0005`
+
+The phone connects from nRF Connect or LightBlue. Every operation lights its row on the gatt view and shows up in the activity log. Commands: `adv`, `message`, `press`, `params fast|slow`, `phy 1m|2m`, `disconnect`, `led auto`.
+
+**B4 · Pair & trust** (`uv run pio run -e ble-lab-b4 -t upload`, `src/ble-lab-b4`): B3's Bench service plus a **Vault** characteristic that needs an encrypted, authenticated (MITM-protected) link. Reading it from the phone starts pairing with LE Secure Connections; `pair passkey|compare|justworks` sets the board's IO capabilities (DisplayOnly, DisplayYesNo, NoInputNoOutput) and is saved in NVS (namespace `b4`). The passkey is drawn over any view; for numeric comparison a click says yes and a long press no (or serial `yes`/`no`). Bonds (LTK + IRK) are stored by NimBLE; `bonds`, `forget <n>|all`, `allow bonded|anyone` (filter accept list with the bonded identities; the controller resolves private addresses with the stored IRKs), `lock on|off` (LED and Message need encryption too; the GATT table is built at start-up, so it saves and restarts), `secure` (Security Request). Views: ceremony (eight phases, inferred ones drawn as rings, failures in coral with the SMP/HCI reason), bonds (identity addresses + an animation of the IRK resolving changing private addresses), gatt, link, log. After `forget` on the board, forget "Bench B4" on the phone too, or the next connection fails with "key missing".
+
+- `pair passkey`, read the Vault, type the TFT's six digits: the secret appears.
+- `pair justworks` (forget on both sides first): encrypted, yet the Vault is refused. Why?
+- `allow bonded`: only your phone gets in.
+
+**B5 · Phone app** (`uv run pio run -e ble-lab-b5 -t upload`, app in [`ble-app`](ble-app/README.md)): B3's Bench service plus four characteristics of its own (`src/ble-lab-b5/extras.h`): **Canvas** `ba5e0010` (writes without response in a small binary drawing protocol: clear, stroke, rect, text, dot on a 320 × 128 area, documented in `canvas_protocol.h` and checked on the Mac by `test/host/b5_canvas_test.cpp`), **Sensors** `ba5e0011` (12 bytes every 200 ms: temperature, touch on GPIO 1, free heap, link RSSI, sequence), **Speed** `ba5e0012` (notifies N bytes in MTU − 3 packets from its own FreeRTOS task, retrying when the stack's buffers are full, then a summary) and **Link** `ba5e0013` (asks for a fast or slow interval, the 2M PHY or 251-byte radio packets). The NimBLE task only queues; loop() draws the sketch into its own frame buffer. Views: sketch, live, speed, gatt, link, log. The app is `test-esp/ble-app`, a static React + Vite app (own pnpm project, door-app's exact versions, no server) that talks to the board with **Web Bluetooth**: Connect (chooser, GATT explorer, byte log), Control (colour wheel, message, button feed, temperature), Sketch, Live, Speed and Music (BLE-MIDI piano + WebAudio synth for B7). It runs at `http://localhost:5177` in Chrome/Edge on the Mac; phones need https, so `pnpm tunnel` (cloudflared) and Chrome on Android or the Bluefy browser on iPhone (Safari and Firefox have no Web Bluetooth). Optional hardware: one jumper wire on GPIO 1 as a touch sensor.
+
+- Draw in the Sketch tab and watch the strokes land on the board.
+- Touch the GPIO 1 wire with the Live tab open.
+- Run 50 kB in Speed, then Fast interval + 2M PHY + Long packets and run again: compare Mac vs phone.
+
+**B6 · Keyboard & media** (`uv run pio run -e ble-lab-b6 -t upload`, `src/ble-lab-b6`): the board is a Bluetooth LE keyboard with media keys (HID over GATT, NimBLE's `NimBLEHIDDevice`). `hid_keyboard.h` holds the Report Map, commented byte by byte: report 1 = keyboard (modifier bits, a reserved byte, six key numbers, plus an output report for the computer's Caps/Num Lock lights), report 2 = consumer control (play/pause CD, next B5, previous B6, volume E9/EA, mute E2). Pairing is Just Works + Secure Connections with bonding, because HID hosts only read input reports over an encrypted link. The media and slides views are modes where the button is the remote (click / double-click / hold, hold 2 s = next view); two optional touch wires on GPIO 1/2 are volume down/up (`touch on`, `touch_pads.h`). `type` and `key` go through `keymap.h`: a keyboard sends key numbers, never letters, and the computer applies its own layout, so `layout de` makes the board pick German keys (y/z swap, moved punctuation; AltGr/Option characters are skipped). Checked on the Mac by `test/host/ble_keymap_test.cpp`. The ESP32-S3 has no Classic Bluetooth, so it can't stream audio to a speaker: it controls the phone, and the phone plays to the speaker (your JBL included).
+
+- Pair "Bench B6" in your phone's or Mac's Bluetooth settings, play music, click = play/pause, double-click = next track.
+- `touch on`, then touch the GPIO 2 wire: volume up.
+- `layout de` (or `us`), then `type yes, this is the bench` into Notes.
+- `key cmd+space` (Spotlight), `snippet <text>` + double-click on the typer view.
+- Hold 2 s to the slides view and click through a presentation. `forget` unpairs (forget it on the phone too).
+
+Host test (no board): `c++ -std=c++17 -Wall -I src/ble-lab-b6 test/host/ble_keymap_test.cpp -o /tmp/ble_keymap_test && /tmp/ble_keymap_test`.
+
+**B7 · Music** (`uv run pio run -e ble-lab-b7 -t upload`, `src/ble-lab-b7`): the board is a Bluetooth MIDI instrument with the standard BLE-MIDI service (`03B80E5A-…`, one characteristic `7772E5DB-…`: read, write without response, notify), so GarageBand (Mac via Audio MIDI Setup → MIDI Studio → Bluetooth, or iPhone/iPad → Advanced → Bluetooth MIDI Devices), Android BLE-MIDI apps and the ble-app Music tab treat it as a MIDI keyboard. The packet format (header + 13-bit millisecond timestamps, running status, SysEx skipped across packets) lives in `lib/ble-kit/src/midi_ble.h`, checked by `test/host/ble_midi_test.cpp`. `music.h` has scales, three public-domain tunes, a 16-step drum machine on channel 10 and a scheduler that sends whatever is due in one packet. Inputs: the button (click = next note, double-click = chord, hold = all notes off, hold 2 s = next view), five optional touch wires on GPIO 1, 2, 6, 13, 14 (13/14 belong to the RC522 when it's wired), and serial commands. Notes from the synth side light the piano strip in blue and the on-board LED in the note's colour. On connect the board asks for a 7.5-15 ms interval; the link view shows why every note waits up to one interval and how timestamps keep the rhythm. MIDI is notes, not audio: the synth makes the sound, and can play it on your JBL.
+
+- Connect from GarageBand / Audio MIDI Setup / the ble-app Music tab; click the button.
+- `tune twinkle`, `tune ode`, `tune frere`; `play C4 E4 G4 C5`, chords `C4+E4+G4`.
+- `beat house` + `seq on`, `bpm 120`; `scale blues`, `octave 3`.
+- `touch on` with five jumper wires, then play them.
+
+Host test (no board): `c++ -std=c++17 -Wall -I lib/ble-kit/src test/host/ble_midi_test.cpp -o /tmp/ble_midi_test && /tmp/ble_midi_test`.
+
+**B8 · Host** (`uv run pio run -e ble-lab-b8 -t upload`, `src/ble-lab-b8`): the roles swap and the board becomes the central, the way a laptop is. It scans for connectable devices (B1's `scan_table.h`; keyboards and mice marked HID, bonded ones with a key), connects (`connect <n>`), and explores the device's GATT tree. Explore is read-only and only reads the public basics: name, appearance, maker, model, firmware, battery and PnP ID. It never touches vendor characteristics, which is why your JBL shows just "the JBL app's own service". The audio goes over Classic Bluetooth, which the S3 doesn't have. `host` pairs as the central with bond, MITM and Secure Connections, using display-only IO: a keyboard gets passkey entry (the board shows 6 digits, you type them on the keyboard plus Enter), and a mouse falls back to Just Works. It then reads the Report Map (2A4B) and parses it with `lib/ble-kit/src/hid_report.h`: items, usage pages, report IDs, bit offsets, and the keyboard and mouse layouts. Each input Report is matched to its ID through descriptor 2908 and subscribed to (CCCD 01 00). Key codes become text on the TFT with `layout us|de` (CP437 font, so ä ö ü ß show). The mouse is a paint toy: left button draws, right changes colour, middle clears, the wheel sets the brush. `boot on` switches to the fixed boot-protocol formats. Connecting, discovery and pairing run in their own FreeRTOS task, so the screen and the passkey overlay never freeze. A bonded keyboard that advertises again (by public or static address) is reconnected and hosted by itself. Gotchas: many keyboards only advertise in pairing mode, and one paired to the Mac must be moved to another channel or unpaired there first. Apple Magic Keyboards are Classic Bluetooth and never show up. After `forget`, remove the board on the keyboard side too. Host test: `c++ -std=c++17 -Wall -I lib/ble-kit/src test/host/ble_hid_test.cpp -o /tmp/ble_hid_test && /tmp/ble_hid_test` (boot keyboard, 12-bit mouse with report IDs, keyboard + media keys, US/DE).
+
+What to try: `list` → `connect 1` → long press (host) and type the passkey · type, hold Shift, `layout de` · the reports view, then `boot on` + `host` · pair your mouse and paint · power-cycle the board and watch it reconnect · `connect <n>` on the JBL.
+
+Host tests (no board), from `test-esp`:
+
+```sh
+for t in ble_ad ble_beacon b5_canvas ble_keymap ble_midi ble_hid; do
+  c++ -std=c++17 -Wall -I lib/ble-kit/src -I src/ble-lab-b2 -I src/ble-lab-b5 -I src/ble-lab-b6 test/host/${t}_test.cpp -o /tmp/$t && /tmp/$t
+done
+```
+
+## Sound track
+
+The **KY-037** is a microphone module: an electret capsule, an **LM393 comparator** and a blue trim pot. It has two outputs. **AO** is the microphone's voltage, a small wave riding on a steady bias. **DO** is the comparator's yes/no: louder than the pot's threshold or not. There is no amplifier on the board, so it is a good _loudness_ sensor and a modest _recorder_: claps, knocks, whistles and music work well; a voice across the room sits close to the hiss.
+
+| Module pin | ESP32-S3 | Why this pin                                                                 |
+| ---------- | -------- | ---------------------------------------------------------------------------- |
+| +          | 3V3      | **never 5 V**: AO and DO swing up to the supply, and the pins take 3.3 V max |
+| G          | GND      |                                                                              |
+| AO         | GPIO 6   | must be an **ADC1** pin (GPIO 1–10): ADC2 is busy while Wi-Fi is on          |
+| DO         | GPIO 21  | any digital pin                                                              |
+
+The screen from lesson 03 stays as it is; the push button on GPIO 5 and lesson 02's LED on GPIO 4 are optional (S2, S3 and S6 use the LED as a light).
+
+Each lab is its own firmware with its own command. They share [`lib/sound-kit`](lib/sound-kit/src):
+
+- `mic.h`: the sampler. The ADC runs in **continuous mode**: its own timer starts 16 000 conversions a second and the **DMA** moves them into RAM. A task on core 0 removes the bias, keeps the last 4 s in a ring in PSRAM (each sample has a running number), and hands 4 ms "frames" (RMS + peak) to `loop()`.
+- `level.h`: decibels, fast (125 ms) and slow (1 s) like a real meter, and the **noise floor** that follows your room's quiet. Most numbers are "dB above the quiet".
+- `onsets.h` (claps vs voices, grouping), `rhythm.h` (knock patterns, beats), `spectrum.h` (our own FFT, notes), `trigger.h` (the voice-activated recorder), `wav.h`.
+- `sound_lab.h` + `sound_views.h`: the lab shell. Every lab's header shows the **ear**: a level bar, the DO lamp and a red **REC** dot whenever anything records. Shared commands: `quiet` (re-learn the quiet), `plot`, `status`, `rate <Hz>`, `atten <0|2.5|6|12>`, `view <n>`, `help`.
+
+```mermaid
+flowchart LR
+  air["air pressure"] --> cap["electret capsule"] --> AO["AO: bias + wave"]
+  AO --> adc["ADC1 continuous<br/>16 kHz, DMA"] --> task["sampler task (core 0)<br/>remove bias, x16"]
+  task --> ring["4 s ring in PSRAM"]
+  task --> frames["4 ms frames<br/>RMS + peak"]
+  ring --> scope["scope, FFT,<br/>recorder"]
+  frames --> level["level, claps,<br/>knocks, beats"]
+  cap --> cmp["LM393 vs trim pot"] --> DO["DO: high/low"]
+```
+
+| Lab             | Command                                    | Views                               | You learn                                                      |
+| --------------- | ------------------------------------------ | ----------------------------------- | -------------------------------------------------------------- |
+| S1 Hear         | `uv run pio run -e sound-lab-s1 -t upload` | scope · bias · comparator · numbers | ADC + DMA, bias and attenuation, mV per step, tuning the pot   |
+| S2 Loudness     | `uv run pio run -e sound-lab-s2 -t upload` | meter · minute · diary · alarm      | decibels, fast/slow smoothing, noise floor, hysteresis         |
+| S3 Clap control | `uv run pio run -e sound-lab-s3 -t upload` | timeline · lamp · patterns · tune   | onset detection, clap vs voice by shape, patterns, calibration |
+| S4 Recorder     | `uv run pio run -e sound-lab-s4 -t upload` | recorder · clips · web              | pre-roll, triggers, WAV, streaming, a guarded networked mic    |
+| S5 Spectrum     | `uv run pio run -e sound-lab-s5 -t upload` | bars · waterfall · tuner · steer    | FFT, windows, Nyquist, notes and cents, control by pitch       |
+| S6 Sound games  | `uv run pio run -e sound-lab-s6 -t upload` | knock · bird · party                | tempo-free rhythm match, game physics, latency, beat detection |
+
+**S1 · Hear:** the raw signal. **scope** (a triggered oscilloscope, mV scale; double-click freezes), **bias** (a 0–3.3 V ruler: the bias line, the wave's swing, the ADC's range for the current attenuation, clipping and "try atten 6" hints; double-click steps the attenuation), **comparator** (DO's lamp and a 6 s strip of loudness above DO, with tuning advice), **numbers** (measured rate, lost samples, dBFS, floor, PSRAM). Serial: `freeze`, `span <ms>`, `trigger`, `pot` (how to tune it), `dump [n]` (samples as numbers).
+
+**S2 · Loudness:** a sound level meter. **meter** (big dB above the quiet, peak hold, limit line), **minute** (the loudest of every ¼ s), **diary** (10 minutes as 10 s candles: quietest, average, loudest, alarms), **alarm** (over the limit for `hold` ms: the screen pulses and the LED on GPIO 4 lights; any button silences it). Serial: `speed fast|slow`, `limit <dB>` (35), `hold <ms>` (1000), `alarm on|off`, `diary`. Settings in NVS (`loud`).
+
+**S3 · Clap control:** a clap is a _shape_, not just loudness: a jump of 18 dB and quiet again within 160 ms. Longer sounds (a word, a whistle) are shown as "long" and ignored. Claps close together form a group; a 650 ms pause ends it. Defaults: **1 clap = LED on GPIO 4, 2 = next RGB colour, 3 = screen sleep, 4 = party**. Serial: `map <1-4> <led|colour|dark|screen|view|party|none>`, `maps`, `sens <dB>`, `gap <ms>`, `learn` (clap 5 times: the sensitivity becomes 60 % of your softest), `test` (every event on serial), `do <action>`. Mappings in NVS (`claps`).
+
+**S4 · Recorder:** a voice-activated recorder into PSRAM: up to 12 clips, 6 MB, **lost on reset**. `arm` listens; a sound 15 dB above the quiet starts a clip **half a second earlier** (the ring already holds it), and 1.2 s of quiet ends it; bangs shorter than 0.4 s are dropped. `rec`/`stop` record by hand (long press toggles). Listen and download:
+
+- **Phone:** with the Wi-Fi network W1 saved, open `http://bench.local`, paste the admin token from serial `token` (the same token as W2/R7/R8, kept in the page's sessionStorage only): live meter, arm/record/stop, every clip as a waveform you can play, download and delete. Every audio route needs the token.
+- **USB:** close the serial monitor, then `uv run python tools/sound_pull.py /dev/cu.usbserial-A5069RR4 <n> [clip.wav]` (base64 over serial with a CRC-32 check).
+
+Clips are normalised (up to ×64) when sent, so the hiss gets louder with the voice. Whoever starts a recording, the board always shows **REC** on its screen and a red RGB LED. Serial: `arm`, `rec`, `stop`, `trigger <dB>`, `hold <ms>`, `max <s>`, `clips`, `next`, `del <n>`, `clear`, `send <n>`, `token [new]`, `wifi`.
+
+**S5 · Spectrum:** our own 512-point FFT (31 Hz per bin at 16 kHz; nothing above 8 kHz, the Nyquist limit). **bars** (24 octave-spaced bands, 100 Hz–8 kHz), **waterfall** (6 s spectrogram), **tuner** (whistle or hum: note, Hz, a cents needle), **steer** (whistle higher or lower to move a dot and the RGB hue; hold it in the moving ring for 1 s to score). Serial: `fft <256|512|1024>`, `range <low> <high>`, `hold`, `peaks`, `a4 <Hz>`, `target`, `limits`.
+
+**S6 · Sound games:** each view listens only while it is on screen. **knock**: `knock set`, then knock your secret rhythm on the table (2–12 knocks); later knocks open the lock (LED + green for 5 s) if the rhythm matches, faster or slower (`tol <percent>`, default 12). **bird**: Clap Bird, every clap flaps; best score in NVS. **party**: play music near the mic; every beat flashes the RGB LED in the next colour, with the BPM. Serial: `knock [set|clear|show]`, `tol`, `bird [reset]`, `party [sens <ratio>|reset]`.
+
+Host tests (Mac only, no board): `c++ -std=c++17 -Wall -I lib/sound-kit/src -I src/sound-lab-s3 -I src/sound-lab-s4 -I src/sound-lab-s5 -I src/sound-lab-s6 test/host/sound_<dsp|games|clips|spectrum>_test.cpp -o /tmp/t && /tmp/t`.
+
 ## Between lessons
 
 1. `Ctrl+C` closes the serial monitor on the Mac (frees the port). The program on the ESP32 keeps running and the screen stays on.
@@ -344,10 +509,11 @@ Safe for experiments: 1, 2, 4–18, 21, 38–42, 47, 48 (48 is the RGB LED).
 
 ## Session log
 
-| Date       | Step | What happened                                                                                                                                               |
-| ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-11 | 00   | Project created, lessons 01–03 compile. Waiting for first flash.                                                                                            |
-| 2026-10-11 | 00   | Board found on `/dev/cu.usbserial-A5069RR4` (FT232R). esptool: ESP32-S3 rev v0.2, 8 MB embedded PSRAM, 16 MB quad flash.                                    |
-| 2026-10-11 | 01   | Flashed `01-hello`. Identity card: 16 MB flash, 8 MB PSRAM, 337 KB free heap, SDK v5.5.5. Heartbeat every 5 s. RGB LED cycles colours, so GPIO 48 is right. |
-| 2026-10-11 | 02   | You flashed `02-led`. The breadboard LED lights up: circuit wired correctly.                                                                                |
-| 2026-10-11 | 03   | You flashed `03-display`. Screen works: colour check OK, bench scope at 22 fps.                                                                             |
+| Date       | Step  | What happened                                                                                                                                                 |
+| ---------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-11 | 00    | Project created, lessons 01–03 compile. Waiting for first flash.                                                                                              |
+| 2026-10-11 | 00    | Board found on `/dev/cu.usbserial-A5069RR4` (FT232R). esptool: ESP32-S3 rev v0.2, 8 MB embedded PSRAM, 16 MB quad flash.                                      |
+| 2026-10-11 | 01    | Flashed `01-hello`. Identity card: 16 MB flash, 8 MB PSRAM, 337 KB free heap, SDK v5.5.5. Heartbeat every 5 s. RGB LED cycles colours, so GPIO 48 is right.   |
+| 2026-10-11 | 02    | You flashed `02-led`. The breadboard LED lights up: circuit wired correctly.                                                                                  |
+| 2026-10-11 | 03    | You flashed `03-display`. Screen works: colour check OK, bench scope at 22 fps.                                                                               |
+| 2026-10-14 | S1–S6 | Sound track for the KY-037 built: six firmwares (`sound-lab-s1` … `s6`) on `lib/sound-kit`, all compile with no warnings, 4 host tests pass. Not flashed yet. |
