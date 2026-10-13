@@ -1,4 +1,8 @@
 import type { Status } from "../api.ts";
+import { Spinner } from "./Busy.tsx";
+
+// Where a value will be once the first status arrives.
+const Pending = () => <span className="ph" aria-label="loading" />;
 
 interface Props {
   status: Status | null;
@@ -26,19 +30,27 @@ export function BenchBar({ status, connected }: Props) {
     <dl className="bench-bar" aria-label="Bench status">
       <div className={connected ? "ok" : "bad"}>
         <dt>App ↔ board</dt>
-        <dd>{connected ? "live" : "connecting…"}</dd>
+        <dd>
+          {connected ? (
+            "live"
+          ) : (
+            <>
+              <Spinner /> connecting…
+            </>
+          )}
+        </dd>
       </div>
       <div className={badStart ? "warn" : ""}>
         <dt>Board</dt>
         <dd>
-          {board ? `up ${ago(board.uptime)}` : status ? "running" : "–"}
+          {board ? `up ${ago(board.uptime)}` : status ? "running" : <Pending />}
           {board && <small>last start: {board.reset}</small>}
         </dd>
       </div>
       <div className={!chipOk ? "bad" : reader?.problem && reader.problemAgo < 300 ? "warn" : ""}>
         <dt>Reader chip</dt>
         <dd>
-          {status ? `${status.chip.version}h · ${status.chip.name}` : "–"}
+          {status ? `${status.chip.version}h · ${status.chip.name}` : <Pending />}
           {reader && (
             <small>
               {reader.wait === "irq" ? "IRQ wire" : "polling"}
@@ -51,18 +63,22 @@ export function BenchBar({ status, connected }: Props) {
       <div>
         <dt>Wi-Fi</dt>
         <dd className="mono">
-          {status ? `${status.wifi.rssi} dBm` : "–"}
+          {status ? `${status.wifi.rssi} dBm` : <Pending />}
           {status && <small>{status.wifi.ip}</small>}
         </dd>
       </div>
       <div className={status && !status.clock.synced ? "warn" : ""}>
         <dt>Clock</dt>
         <dd className="mono">
-          {status
-            ? status.clock.synced
-              ? new Date(status.clock.now * 1000).toLocaleTimeString()
-              : "not set"
-            : "–"}
+          {status ? (
+            status.clock.synced ? (
+              new Date(status.clock.now * 1000).toLocaleTimeString()
+            ) : (
+              "not set"
+            )
+          ) : (
+            <Pending />
+          )}
           {status && !status.clock.synced && <small>dated cards are refused</small>}
         </dd>
       </div>

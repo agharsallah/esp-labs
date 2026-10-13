@@ -21,6 +21,10 @@ export function useDoor() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [events, setEvents] = useState<DoorEvent[]>([]);
   const [connected, setConnected] = useState(false);
+  // What has arrived at least once, so the panels show placeholders until then, not "nothing yet".
+  const [loaded, setLoaded] = useState({ cards: false, snapshots: false, events: false });
+  const arrived = (part: keyof typeof loaded) =>
+    setLoaded((l) => (l[part] ? l : { ...l, [part]: true }));
   const waiting = useRef(new Map<number, (r: JobResult) => void>());
   const early = useRef(new Map<number, JobResult>()); // results that beat their POST's answer
 
@@ -43,9 +47,13 @@ export function useDoor() {
           return console.warn("message the app doesn't understand", parsed.error.issues);
         const m = parsed.data;
         if (m.type === "status") setStatus(m.data);
-        else if (m.type === "cards") setCards(m.data);
-        else if (m.type === "snapshots") setSnapshots(m.data);
-        else if (m.type === "event")
+        else if (m.type === "cards") {
+          setCards(m.data);
+          arrived("cards");
+        } else if (m.type === "snapshots") {
+          setSnapshots(m.data);
+          arrived("snapshots");
+        } else if (m.type === "event")
           setEvents((list) =>
             list.some((x) => x.seq === m.data.seq) ? list : [...list, m.data].slice(-100),
           );
@@ -62,7 +70,8 @@ export function useDoor() {
     api
       .events()
       .then(setEvents)
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => arrived("events"));
     return () => {
       stopped = true;
       clearTimeout(retry);
@@ -94,5 +103,5 @@ export function useDoor() {
     });
   }, []);
 
-  return { status, cards, snapshots, events, connected, runJob };
+  return { status, cards, snapshots, events, connected, loaded, runJob };
 }

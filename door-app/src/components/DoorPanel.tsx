@@ -8,10 +8,12 @@ import {
   type Status,
 } from "../api.ts";
 import { tone } from "../rules.ts";
+import { BusyText, Spinner } from "./Busy.tsx";
 
 interface Props {
   status: Status | null;
   cards: Card[];
+  cardsLoaded: boolean; // until the list arrives, a card on the reader can't be named
   connected: boolean;
   runJob: (start: () => Promise<number>) => Promise<JobResult>;
   notify: (text: string, ok: boolean) => void;
@@ -19,7 +21,7 @@ interface Props {
 
 // The door as a lamp ring around a padlock (grey locked, green open with a countdown, red
 // denied), then what lies on the reader right now, with what you can do with it.
-export function DoorPanel({ status, cards, connected, runJob, notify }: Props) {
+export function DoorPanel({ status, cards, cardsLoaded, connected, runJob, notify }: Props) {
   const [inspect, setInspect] = useState<InspectData | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -84,9 +86,10 @@ export function DoorPanel({ status, cards, connected, runJob, notify }: Props) {
           type="button"
           className="btn primary"
           disabled={!connected || !!busy}
+          aria-busy={busy === "open"}
           onClick={() => act("open", async () => notify((await runJob(api.open)).message, true))}
         >
-          Open for 5 s
+          <BusyText busy={busy === "open"} idle="Open for 5 s" active="Opening…" />
         </button>
         <label className="switch">
           <input
@@ -96,6 +99,7 @@ export function DoorPanel({ status, cards, connected, runJob, notify }: Props) {
             onChange={(e) => act("lockdown", () => api.lockdown(e.target.checked))}
           />
           <span>Lockdown</span>
+          {busy === "lockdown" && <Spinner />}
         </label>
       </div>
 
@@ -104,10 +108,19 @@ export function DoorPanel({ status, cards, connected, runJob, notify }: Props) {
           <span className="chip" />
         </span>
         <div className="slot-text">
-          <span className="slot-label">On the reader</span>
+          <span className="slot-label">
+            On the reader
+            {status?.busy && (
+              <span className="slot-busy">
+                <Spinner /> the reader is busy with a job
+              </span>
+            )}
+          </span>
           {present ? (
             <>
-              <strong>{listed ? listed.name : "a card not in the list"}</strong>
+              <strong>
+                {listed ? listed.name : cardsLoaded ? "a card not in the list" : "a card…"}
+              </strong>
               <span className="slot-meta">
                 <span className="mono">{present}</span>
                 {listed && (
@@ -129,17 +142,19 @@ export function DoorPanel({ status, cards, connected, runJob, notify }: Props) {
             type="button"
             className="btn"
             disabled={!connected || !!busy || !present}
+            aria-busy={busy === "read"}
             onClick={read}
           >
-            {busy === "read" ? "Reading…" : "Read it"}
+            <BusyText busy={busy === "read"} idle="Read it" active="Reading…" />
           </button>
           <button
             type="button"
             className="btn"
             disabled={!connected || !!busy || !present}
+            aria-busy={busy === "save"}
             onClick={save}
           >
-            {busy === "save" ? "Saving…" : "Save its data"}
+            <BusyText busy={busy === "save"} idle="Save its data" active="Saving…" />
           </button>
         </div>
         {failed && (

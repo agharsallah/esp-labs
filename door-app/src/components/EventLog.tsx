@@ -1,8 +1,10 @@
 import type { DoorEvent } from "../api.ts";
 import { tone } from "../rules.ts";
+import { Skeleton } from "./Busy.tsx";
 
 // The access log, newest first: every tap with its decision, and every change made from the app.
-export function EventLog({ events }: { events: DoorEvent[] }) {
+export function EventLog({ events, loaded }: { events: DoorEvent[]; loaded: boolean }) {
+  if (!loaded && !events.length) return <Skeleton rows={4} label="Loading the access log" />;
   if (!events.length) return <p className="empty">Nothing yet. Tap a card on the reader.</p>;
   return (
     <ol className="log" aria-live="polite">

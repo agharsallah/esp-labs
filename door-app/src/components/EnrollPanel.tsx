@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, type JobResult, type Role, type Status } from "../api.ts";
+import { BusyText } from "./Busy.tsx";
 
 interface Props {
   status: Status | null;
@@ -13,16 +14,28 @@ interface Props {
 export function EnrollPanel({ status, connected, runJob, notify }: Props) {
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("resident");
+  const [busy, setBusy] = useState(false); // from the click until the board answers
+  const [cancelling, setCancelling] = useState(false);
   const waiting = status?.waiting;
 
   const start = async () => {
+    setBusy(true);
     try {
       const r = await runJob(() => api.enroll(name.trim(), role));
       notify(r.ok ? `${name.trim()} added` : r.message, r.ok);
       if (r.ok) setName("");
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e), false);
+    } finally {
+      setBusy(false);
     }
+  };
+  const cancel = () => {
+    setCancelling(true);
+    api
+      .cancel()
+      .catch((e) => notify(String(e), false))
+      .finally(() => setCancelling(false));
   };
 
   if (waiting && waiting.for !== "copy") {
@@ -43,9 +56,11 @@ export function EnrollPanel({ status, connected, runJob, notify }: Props) {
         <button
           type="button"
           className="btn"
-          onClick={() => api.cancel().catch((e) => notify(String(e), false))}
+          disabled={cancelling}
+          aria-busy={cancelling}
+          onClick={cancel}
         >
-          Cancel
+          <BusyText busy={cancelling} idle="Cancel" active="Cancelling…" />
         </button>
       </div>
     );
@@ -80,10 +95,11 @@ export function EnrollPanel({ status, connected, runJob, notify }: Props) {
       <button
         type="submit"
         className="btn primary"
-        disabled={!connected || !name.trim() || !!waiting}
+        disabled={!connected || !name.trim() || !!waiting || busy}
+        aria-busy={busy}
         title={waiting ? "the board is waiting for a card to copy onto" : undefined}
       >
-        Add card
+        <BusyText busy={busy} idle="Add card" active="Starting…" />
       </button>
     </form>
   );

@@ -1128,6 +1128,73 @@ select {
   border-left-color: var(--critical);
 }
 
+/* Loading: a turning ring inside buttons and labels, grey bars until the first data arrives */
+.spinner {
+  display: inline-block;
+  width: 0.95em;
+  height: 0.95em;
+  margin-right: 0.15em;
+  vertical-align: -0.12em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+.btn[aria-busy="true"] {
+  cursor: progress;
+}
+.btn[aria-busy="true"]:disabled {
+  opacity: 0.85;
+}
+.snap[aria-busy="true"] .strip {
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+.slot-busy {
+  margin-left: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--accent);
+}
+.switch .spinner {
+  color: var(--muted);
+}
+.skeleton {
+  display: grid;
+  gap: 10px;
+}
+.skeleton span,
+.ph {
+  display: block;
+  height: 54px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--line) 0%, var(--surface) 50%, var(--line) 100%);
+  background-size: 200% 100%;
+  opacity: 0.6;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+.ph {
+  display: inline-block;
+  width: 9ch;
+  height: 1em;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before {

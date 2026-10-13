@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { api, type Card, type CardPatch, type JobResult, type Role } from "../api.ts";
 import { anyTime, diff, fromLocalInput, PRESETS, rulesOf, toLocalInput } from "../rules.ts";
+import { BusyText } from "./Busy.tsx";
+
+type Doing = "save" | "label" | "wipe" | "replace" | "remove";
 
 interface Props {
   card: Card;
@@ -27,24 +30,25 @@ export function CardEditor({ card, others, waiting, present, runJob, notify, onC
     usesLeft: card.usesLeft,
   });
   const [confirm, setConfirm] = useState<"wipe" | "remove" | "replace" | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [doing, setDoing] = useState<Doing | null>(null);
+  const busy = doing !== null;
   const set = (p: CardPatch) => setDraft((d) => ({ ...d, ...p }));
   const changes = diff(card, draft);
   const hours = { fromHour: draft.fromHour ?? 0, toHour: draft.toHour ?? 0 };
 
-  const act = async (what: () => Promise<void>) => {
-    setBusy(true);
+  const act = async (kind: Doing, what: () => Promise<void>) => {
+    setDoing(kind);
     try {
       await what();
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e), false);
     } finally {
-      setBusy(false);
+      setDoing(null);
       setConfirm(null);
     }
   };
-  const job = (start: () => Promise<number>) =>
-    act(async () => {
+  const job = (kind: Doing, start: () => Promise<number>) =>
+    act(kind, async () => {
       const r = await runJob(start);
       notify(r.message, r.ok);
     });
@@ -88,7 +92,7 @@ export function CardEditor({ card, others, waiting, present, runJob, notify, onC
         className="fields"
         onSubmit={(e) => {
           e.preventDefault();
-          act(async () => {
+          act("save", async () => {
             await api.update(card.uid, changes);
             notify(`${draft.name}: saved`, true);
           });
@@ -224,8 +228,9 @@ export function CardEditor({ card, others, waiting, present, runJob, notify, onC
             type="submit"
             className="btn primary"
             disabled={busy || Object.keys(changes).length === 0}
+            aria-busy={doing === "save"}
           >
-            Save
+            <BusyText busy={doing === "save"} idle="Save" active="Saving…" />
           </button>
           <button type="button" className="btn ghost" onClick={onClose}>
             Close
@@ -243,18 +248,24 @@ export function CardEditor({ card, others, waiting, present, runJob, notify, onC
           type="button"
           className="btn"
           disabled={busy || !present}
-          onClick={() => job(() => api.label(card.uid))}
+          aria-busy={doing === "label"}
+          onClick={() => job("label", () => api.label(card.uid))}
         >
-          Write name label
+          <BusyText busy={doing === "label"} idle="Write name label" active="Writing…" />
         </button>
         {confirm === "wipe" ? (
           <button
             type="button"
             className="btn danger"
             disabled={busy || !present}
-            onClick={() => job(() => api.wipe(card.uid))}
+            aria-busy={doing === "wipe"}
+            onClick={() => job("wipe", () => api.wipe(card.uid))}
           >
-            Confirm: blocks 4-6 and 8-10 to zeros
+            <BusyText
+              busy={doing === "wipe"}
+              idle="Confirm: blocks 4-6 and 8-10 to zeros"
+              active="Wiping…"
+            />
           </button>
         ) : (
           <button
@@ -271,15 +282,20 @@ export function CardEditor({ card, others, waiting, present, runJob, notify, onC
             type="button"
             className="btn danger"
             disabled={busy || waiting}
+            aria-busy={doing === "replace"}
             onClick={() =>
-              act(async () => {
+              act("replace", async () => {
                 const r = await runJob(() => api.replace(card.uid));
                 notify(r.message, r.ok);
                 if (r.ok) onClose();
               })
             }
           >
-            Confirm: block this card, then tap the new one
+            <BusyText
+              busy={doing === "replace"}
+              idle="Confirm: block this card, then tap the new one"
+              active="Waiting for the new card…"
+            />
           </button>
         ) : (
           <button
@@ -297,15 +313,20 @@ export function CardEditor({ card, others, waiting, present, runJob, notify, onC
             type="button"
             className="btn danger"
             disabled={busy}
+            aria-busy={doing === "remove"}
             onClick={() =>
-              act(async () => {
+              act("remove", async () => {
                 await api.remove(card.uid);
                 notify(`${card.name} removed from the list`, true);
                 onClose();
               })
             }
           >
-            Confirm: remove {card.name}
+            <BusyText
+              busy={doing === "remove"}
+              idle={`Confirm: remove ${card.name}`}
+              active="Removing…"
+            />
           </button>
         ) : (
           <button

@@ -14,7 +14,7 @@ interface Toast {
 }
 
 export function App() {
-  const { status, cards, snapshots, events, connected, runJob } = useDoor();
+  const { status, cards, snapshots, events, connected, loaded, runJob } = useDoor();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const notify = useCallback((text: string, ok: boolean) => {
     const id = Date.now() + Math.random();
@@ -38,17 +38,19 @@ export function App() {
         <DoorPanel
           status={status}
           cards={cards}
+          cardsLoaded={loaded.cards}
           connected={connected}
           runJob={runJob}
           notify={notify}
         />
         <section className="panel cards-panel" aria-labelledby="cards-title">
           <h2 id="cards-title">
-            Cards <span className="count">{cards.length} / 20</span>
+            Cards <span className="count">{loaded.cards ? `${cards.length} / 20` : "…"}</span>
           </h2>
           <EnrollPanel status={status} connected={connected} runJob={runJob} notify={notify} />
           <CardList
             cards={cards}
+            loaded={loaded.cards}
             present={status?.present ?? null}
             waiting={!!status?.waiting}
             runJob={runJob}
@@ -57,12 +59,13 @@ export function App() {
         </section>
         <section className="panel log-panel" aria-labelledby="log-title">
           <h2 id="log-title">Access log</h2>
-          <EventLog events={events} />
+          <EventLog events={events} loaded={loaded.events} />
         </section>
         <CardDataPanel
           status={status}
           connected={connected}
           snapshots={snapshots}
+          loaded={loaded.snapshots}
           runJob={runJob}
           notify={notify}
         />

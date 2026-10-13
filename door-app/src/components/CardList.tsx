@@ -1,27 +1,34 @@
 import { useState } from "react";
 import { api, type Card, type JobResult } from "../api.ts";
 import { rulesText, tone } from "../rules.ts";
+import { BusyText, Skeleton } from "./Busy.tsx";
 import { CardEditor } from "./CardEditor.tsx";
 
 interface Props {
   cards: Card[];
+  loaded: boolean; // the board has sent its list at least once
   present: string | null;
   waiting: boolean;
   runJob: (start: () => Promise<number>) => Promise<JobResult>;
   notify: (text: string, ok: boolean) => void;
 }
 
-export function CardList({ cards, present, waiting, runJob, notify }: Props) {
+export function CardList({ cards, loaded, present, waiting, runJob, notify }: Props) {
   const [open, setOpen] = useState<string | null>(null);
+  const [blocking, setBlocking] = useState<string | null>(null); // uid whose Block is on its way
   const toggleBlock = async (c: Card) => {
+    setBlocking(c.uid);
     try {
       await api.update(c.uid, { blocked: !c.blocked });
       notify(`${c.name}: ${c.blocked ? "unblocked" : "blocked"}`, true);
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e), false);
+    } finally {
+      setBlocking(null);
     }
   };
 
+  if (!loaded) return <Skeleton rows={3} label="Loading the card list" />;
   if (!cards.length)
     return <p className="empty">No cards yet. Add one: name it, then tap it on the reader.</p>;
   return (
@@ -48,8 +55,18 @@ export function CardList({ cards, present, waiting, runJob, notify }: Props) {
               </span>
             </p>
             <div className="row-actions">
-              <button type="button" className="btn" onClick={() => toggleBlock(c)}>
-                {c.blocked ? "Unblock" : "Block"}
+              <button
+                type="button"
+                className="btn"
+                disabled={blocking === c.uid}
+                aria-busy={blocking === c.uid}
+                onClick={() => toggleBlock(c)}
+              >
+                <BusyText
+                  busy={blocking === c.uid}
+                  idle={c.blocked ? "Unblock" : "Block"}
+                  active={c.blocked ? "Unblocking…" : "Blocking…"}
+                />
               </button>
               <button
                 type="button"

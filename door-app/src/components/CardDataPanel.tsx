@@ -10,6 +10,7 @@ import {
   SECTORS,
   toFile,
 } from "../cardData.ts";
+import { BusyText, Skeleton } from "./Busy.tsx";
 
 type RunJob = (start: () => Promise<number>) => Promise<JobResult>;
 type Notify = (text: string, ok: boolean) => void;
@@ -18,41 +19,45 @@ interface Props {
   status: Status | null;
   connected: boolean;
   snapshots: Snapshot[];
+  loaded: boolean; // the board has sent its saved data at least once
   runJob: RunJob;
   notify: Notify;
 }
+
+type Doing = "save" | "copy" | "import" | "cancel";
 
 const MAX = 8;
 
 // What the labs wrote onto a card (blocks 4-6 and 8-10): save it on the board, write it back,
 // copy it onto another card, compare it, or keep it as a file. The UID never moves.
-export function CardDataPanel({ status, connected, snapshots, runJob, notify }: Props) {
+export function CardDataPanel({ status, connected, snapshots, loaded, runJob, notify }: Props) {
   const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [doing, setDoing] = useState<Doing | null>(null);
+  const busy = doing !== null;
   const present = status?.present ?? null;
   const waiting = status?.waiting ?? null;
   const copying = waiting?.for === "copy" ? waiting : null;
   const full = snapshots.length >= MAX;
 
-  const act = async (what: () => Promise<void>) => {
-    setBusy(true);
+  const act = async (kind: Doing, what: () => Promise<void>) => {
+    setDoing(kind);
     try {
       await what();
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e), false);
     } finally {
-      setBusy(false);
+      setDoing(null);
     }
   };
-  const job = (start: () => Promise<number>, then?: () => void) =>
-    act(async () => {
+  const job = (kind: Doing, start: () => Promise<number>, then?: () => void) =>
+    act(kind, async () => {
       const r = await runJob(start);
       notify(r.message, r.ok);
       if (r.ok) then?.();
     });
 
   const importFile = (file: File) =>
-    act(async () => {
+    act("import", async () => {
       const parsed = fromFile(await file.text());
       if ("error" in parsed) return notify(`${file.name}: ${parsed.error}`, false);
       const s = await api.importSnapshot(parsed.name, parsed.blocks);
@@ -63,9 +68,7 @@ export function CardDataPanel({ status, connected, snapshots, runJob, notify }: 
     <section className="panel data-panel" aria-labelledby="data-title">
       <h2 id="data-title">
         Card data{" "}
-        <span className="count">
-          {snapshots.length} / {MAX} saved
-        </span>
+        <span className="count">{loaded ? `${snapshots.length} / ${MAX} saved` : "…"}</span>
       </h2>
       <p className="hint data-intro">
         The blocks the labs write: 4-6 and 8-10 (the name label, R5's credits). Block 0, the UID,
@@ -80,7 +83,12 @@ export function CardDataPanel({ status, connected, snapshots, runJob, notify }: 
               from={copying.name}
               uid={copying.uid}
               seconds={Math.ceil(copying.msLeft / 1000)}
-              onCancel={() => api.cancel().catch((e) => notify(String(e), false))}
+              cancelling={doing === "cancel"}
+              onCancel={() =>
+                act("cancel", async () => {
+                  await api.cancel();
+                })
+              }
             />
           ) : (
             <>
@@ -89,6 +97,7 @@ export function CardDataPanel({ status, connected, snapshots, runJob, notify }: 
                 onSubmit={(e) => {
                   e.preventDefault();
                   job(
+                    "save",
                     () => api.save(name.trim()),
                     () => setName(""),
                   );
@@ -108,20 +117,38 @@ export function CardDataPanel({ status, connected, snapshots, runJob, notify }: 
                   type="submit"
                   className="btn primary"
                   disabled={!connected || busy || !present || full}
+                  aria-busy={doing === "save"}
                 >
-                  Save the card on the reader
+                  <BusyText
+                    busy={doing === "save"}
+                    idle="Save the card on the reader"
+                    active="Reading and saving…"
+                  />
                 </button>
               </form>
               <button
                 type="button"
                 className="btn copy-btn"
                 disabled={!connected || busy || !present || !!waiting}
-                onClick={() => job(api.copy)}
+                aria-busy={doing === "copy"}
+                onClick={() => job("copy", api.copy)}
               >
-                <CopyGlyph /> Copy this card onto another
+                <BusyText
+                  busy={doing === "copy"}
+                  idle={
+                    <>
+                      <CopyGlyph /> Copy this card onto another
+                    </>
+                  }
+                  active="Reading the first card…"
+                />
               </button>
               <label className={`btn file-btn ${!connected || busy || full ? "off" : ""}`}>
-                Import a saved file
+                <BusyText
+                  busy={doing === "import"}
+                  idle="Import a saved file"
+                  active="Importing…"
+                />
                 <input
                   type="file"
                   accept="application/json,.json"
@@ -147,7 +174,9 @@ export function CardDataPanel({ status, connected, snapshots, runJob, notify }: 
           </p>
         </div>
 
-        {snapshots.length === 0 ? (
+        {!loaded ? (
+          <Skeleton rows={2} label="Loading the saved card data" />
+        ) : snapshots.length === 0 ? (
           <p className="empty">
             Nothing saved yet. Lay a card on the reader and save it, or import a file.
           </p>
@@ -171,7 +200,13 @@ export function CardDataPanel({ status, connected, snapshots, runJob, notify }: 
 }
 
 // Copy, while the board waits for the second card: step 1 done, step 2 counting down.
-function CopySteps(props: { from: string; uid: string; seconds: number; onCancel: () => void }) {
+function CopySteps(props: {
+  from: string;
+  uid: string;
+  seconds: number;
+  cancelling: boolean;
+  onCancel: () => void;
+}) {
   return (
     <div className="copy-steps" aria-live="polite">
       <div className="copy-cards" aria-hidden="true">
@@ -201,8 +236,14 @@ function CopySteps(props: { from: string; uid: string; seconds: number; onCancel
           <span>The board writes each block and reads it back</span>
         </li>
       </ol>
-      <button type="button" className="btn" onClick={props.onCancel}>
-        Cancel (nothing is written)
+      <button
+        type="button"
+        className="btn"
+        disabled={props.cancelling}
+        aria-busy={props.cancelling}
+        onClick={props.onCancel}
+      >
+        <BusyText busy={props.cancelling} idle="Cancel (nothing is written)" active="Cancelling…" />
       </button>
     </div>
   );
@@ -229,29 +270,30 @@ interface ItemProps {
 function SnapshotItem({ snap, present, disabled, runJob, notify }: ItemProps) {
   const [confirm, setConfirm] = useState<"write" | "delete" | null>(null);
   const [rows, setRows] = useState<CompareRow[] | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [doing, setDoing] = useState<"write" | "check" | "delete" | null>(null);
+  const busy = doing !== null;
   const saved = new Map(snap.blocks.map((b) => [b.block, b.hex]));
   const same = present !== null && present === snap.uid;
 
-  const act = async (what: () => Promise<void>) => {
-    setBusy(true);
+  const act = async (kind: "write" | "check" | "delete", what: () => Promise<void>) => {
+    setDoing(kind);
     try {
       await what();
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e), false);
     } finally {
-      setBusy(false);
+      setDoing(null);
       setConfirm(null);
     }
   };
   const write = () =>
-    act(async () => {
+    act("write", async () => {
       const r = await runJob(() => api.restore(snap.id));
       notify(r.message, r.ok);
       setRows(null);
     });
   const check = () =>
-    act(async () => {
+    act("check", async () => {
       const r = await runJob(api.inspect);
       if (!r.ok) return notify(r.message, false);
       const card = Inspect.safeParse(r.data);
@@ -269,7 +311,7 @@ function SnapshotItem({ snap, present, disabled, runJob, notify }: ItemProps) {
   };
 
   return (
-    <li className="snap">
+    <li className="snap" aria-busy={busy}>
       <div className="snap-head">
         <strong>{snap.name}</strong>
         <span className="snap-from">
@@ -317,9 +359,14 @@ function SnapshotItem({ snap, present, disabled, runJob, notify }: ItemProps) {
             type="button"
             className="btn danger"
             disabled={busy || disabled || !present}
+            aria-busy={doing === "write"}
             onClick={write}
           >
-            Confirm: overwrite {snap.blocks.map((b) => b.block).join(", ")} on {present}
+            <BusyText
+              busy={doing === "write"}
+              idle={`Confirm: overwrite ${snap.blocks.map((b) => b.block).join(", ")} on ${present}`}
+              active="Writing and reading back…"
+            />
           </button>
         ) : (
           <button
@@ -336,9 +383,14 @@ function SnapshotItem({ snap, present, disabled, runJob, notify }: ItemProps) {
           type="button"
           className="btn"
           disabled={busy || disabled || !present}
+          aria-busy={doing === "check"}
           onClick={check}
         >
-          Compare with the reader
+          <BusyText
+            busy={doing === "check"}
+            idle="Compare with the reader"
+            active="Reading the card…"
+          />
         </button>
         <button type="button" className="btn" onClick={download}>
           Download
@@ -348,14 +400,15 @@ function SnapshotItem({ snap, present, disabled, runJob, notify }: ItemProps) {
             type="button"
             className="btn danger"
             disabled={busy || disabled}
+            aria-busy={doing === "delete"}
             onClick={() =>
-              act(async () => {
+              act("delete", async () => {
                 await api.removeSnapshot(snap.id);
                 notify(`“${snap.name}” deleted from the board (cards keep their data)`, true);
               })
             }
           >
-            Confirm: delete
+            <BusyText busy={doing === "delete"} idle="Confirm: delete" active="Deleting…" />
           </button>
         ) : (
           <button
