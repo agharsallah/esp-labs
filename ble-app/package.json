@@ -1,0 +1,32 @@
+{
+  "name": "bench-ble-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "B5 Phone app: a static React app that talks to the bench's Bluetooth LE labs (B3-B7) straight from the browser with Web Bluetooth. No server, no Wi-Fi.",
+  "type": "module",
+  "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": ">=24.14"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tunnel": "cloudflared tunnel --url http://localhost:5177",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  }
+}

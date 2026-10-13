@@ -1,0 +1,93 @@
+/* Every colour of the app lives here, as tokens. Two themes: light (paper) and dark (night console).
+   The operation colours match the board's own screen: blue = write, violet = notify, teal = read,
+   amber = subscribe, coral = refused or lost. All text pairs pass WCAG AA (most AAA). */
+:root {
+  color-scheme: light;
+  --paper: #f4f1ea;
+  --paper-2: #ebe6db;
+  --card: #fffdf8;
+  --ink: #141824;
+  --ink-2: #3d4456;
+  --muted: #5d6475;
+  --line: #d6d0c2;
+  --line-strong: #b8b0a0;
+  --radio: #1d4fd8;
+  --radio-soft: #dde6ff;
+  --notify: #6b3fc9;
+  --notify-soft: #ece4ff;
+  --read: #0b7a68;
+  --read-soft: #d8f2ec;
+  --sub: #9a5b00;
+  --sub-soft: #fbecd0;
+  --bad: #b3261e;
+  --bad-soft: #fde2df;
+  --on-accent: #ffffff;
+  --glass: rgb(244 241 234 / 0.82);
+  --shadow: 0 1px 0 rgb(20 24 36 / 0.06), 0 8px 24px -12px rgb(20 24 36 / 0.25);
+  --key-white: #fffdf8;
+  --key-black: #1b1f2b;
+  --key-lit: #1d4fd8;
+  --grid: rgb(20 24 36 / 0.07);
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0b1020;
+  --paper-2: #10172b;
+  --card: #141c33;
+  --ink: #e8edf8;
+  --ink-2: #c4cce0;
+  --muted: #98a3bd;
+  --line: #26304a;
+  --line-strong: #3a4766;
+  --radio: #7aa7ff;
+  --radio-soft: #1a2850;
+  --notify: #b99cff;
+  --notify-soft: #2a2050;
+  --read: #5ae6be;
+  --read-soft: #133a35;
+  --sub: #ffc069;
+  --sub-soft: #3d2c12;
+  --bad: #ff8a80;
+  --bad-soft: #3d1a1a;
+  --on-accent: #0b1020;
+  --glass: rgb(11 16 32 / 0.8);
+  --shadow: 0 1px 0 rgb(0 0 0 / 0.3), 0 10px 30px -12px rgb(0 0 0 / 0.7);
+  --key-white: #dfe5f3;
+  --key-black: #070a14;
+  --key-lit: #7aa7ff;
+  --grid: rgb(232 237 248 / 0.07);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0b1020;
+    --paper-2: #10172b;
+    --card: #141c33;
+    --ink: #e8edf8;
+    --ink-2: #c4cce0;
+    --muted: #98a3bd;
+    --line: #26304a;
+    --line-strong: #3a4766;
+    --radio: #7aa7ff;
+    --radio-soft: #1a2850;
+    --notify: #b99cff;
+    --notify-soft: #2a2050;
+    --read: #5ae6be;
+    --read-soft: #133a35;
+    --sub: #ffc069;
+    --sub-soft: #3d2c12;
+    --bad: #ff8a80;
+    --bad-soft: #3d1a1a;
+    --on-accent: #0b1020;
+    --glass: rgb(11 16 32 / 0.8);
+    --shadow: 0 1px 0 rgb(0 0 0 / 0.3), 0 10px 30px -12px rgb(0 0 0 / 0.7);
+    --key-white: #dfe5f3;
+    --key-black: #070a14;
+    --key-lit: #7aa7ff;
+    --grid: rgb(232 237 248 / 0.07);
+  }
+}
