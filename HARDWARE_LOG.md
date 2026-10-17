@@ -6,19 +6,19 @@ Every command that installs software, talks to the board, or flashes it, with wh
 
 ## Overview
 
-| What                      | Value                                                                                                                                                                                                                                                                                                                          |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                                                                                                                                                                                   |
-| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                                                                                                                                                                                |
-| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                                                                                                                                                                                     |
-| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                                                                                                                                                                                     |
-| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                                                                                                                                                                              |
-| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                                                                                                                                                                                    |
-| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                                                                                                                                                         |
-| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                                                                                                                                                      |
-| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                                                                                                                                                          |
-| **Firmware on board now** | **`rfid-lab-r7`** with the entry 43 fixes, flashed by you: reads work, also with the card a little above the reader. Built, not flashed: `sound-lab-s1` … `s6` (entry 48), `ble-lab-b1` … `b8` (entry 47), entries 44-45 (names fix, loading states, admin room), `rfid-lab-r8` (entry 46), `rfid-lab-r1` … `r6`, `wifi-lab-*` |
-| Flashes so far            | 14 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab, rfid-lab-r7 twice by you)                                                                                                                                                                                      |
+| What                      | Value                                                                                                                                                                                                                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Board                     | ESP32-S3-N16R8 DevKitC clone                                                                                                                                                                                                                                                                                                        |
+| Chip                      | ESP32-S3 (QFN56) revision v0.2, dual core + LP core, 240 MHz, Wi-Fi + BT 5 (LE), 40 MHz crystal                                                                                                                                                                                                                                     |
+| Flash                     | 16 MB, quad mode, 3.3 V (manufacturer 0x68, device 0x4018)                                                                                                                                                                                                                                                                          |
+| PSRAM                     | 8 MB, embedded in the chip                                                                                                                                                                                                                                                                                                          |
+| MAC                       | 28:84:85:9E:3B:E4                                                                                                                                                                                                                                                                                                                   |
+| USB connection            | `/dev/cu.usbserial-A5069RR4`, FTDI FT232R USB-to-serial (VID:PID 0403:6001)                                                                                                                                                                                                                                                         |
+| On-board RGB LED          | GPIO 48 (confirmed: it cycles colours)                                                                                                                                                                                                                                                                                              |
+| RFID reader               | RC522 board with an **FM17522 clone** chip (VersionReg B2h), not an NXP MFRC522; SPI3 on GPIO 15/16/17/18, RST 14, IRQ 13                                                                                                                                                                                                           |
+| Display                   | 1.9" ST7789 170 × 320 on SPI (GPIO 12/11/10/9/8/7), working at 22 fps                                                                                                                                                                                                                                                               |
+| **Firmware on board now** | **`rfid-lab-r7`** with the entry 43 fixes, flashed by you: reads work, also with the card a little above the reader. Built, not flashed: `sound-lab-s1` … `s8` (entries 48-49), `ble-lab-b1` … `b8` (entry 47), entries 44-45 (names fix, loading states, admin room), `rfid-lab-r8` (entry 46), `rfid-lab-r1` … `r6`, `wifi-lab-*` |
+| Flashes so far            | 14 (01-hello by Claude; 02-led, 03-display, 03b v1, 03b v2, wifi-lab W2 five times, 03-display again, rfid-lab, rfid-lab-r7 twice by you)                                                                                                                                                                                           |
 
 ### What is installed on the Mac
 
@@ -1136,3 +1136,62 @@ no warnings · sound dsp / games / clips / spectrum: all checks pass · sound_pu
 Not tested yet, because it needs the board and the module: the real bias voltage on AO (S1 shows it), whether 12 dB attenuation is the best fit, the pot's direction, clap and knock thresholds in your room, recording quality, and the phone page in a browser.
 
 **Next, by you:** wire the KY-037, `uv run pio run -e sound-lab-s1 -t upload`, open the monitor, stay quiet for a second, then clap. Tell me the bias in mV from the **bias** view and whether DO lights with claps. Nothing was sent to the board.
+
+### 49. Sound track, round 2: INMP441 microphone, MAX98357A speaker, labs S7-S8 · `build` (Mac) · no board
+
+You added an **INMP441** (I2S MEMS microphone, 24-bit) and a **MAX98357A** I2S amplifier with a 3 W 4 Ω speaker. The kit now runs either microphone and always drives the speaker:
+
+- `mic auto` (default) listens for the INMP441 on the I2S pins for ~0.3 s at start-up and uses it when it answers, the KY-037 otherwise; `mic ky037|inmp441` forces one (NVS `sound`, then a restart).
+- The INMP441 has a datasheet sensitivity, so the labs show **dB SPL** (RMS dBFS + 111, unweighted, about ±2 dB).
+- The speaker runs on I2S1 (the microphone on I2S0) with a small synth (`synth.h`): tones, tunes, sample playback at any speed, a live stream. Shared commands `vol`, `beep`, `tune`; every lab chimes at start.
+- **Echo guard:** while the speaker was loud in the last 200 ms, the labs' detectors get no frames, so the board never hears its own beeps as claps.
+
+Wiring: INMP441 VDD → 3V3, GND → GND, L/R → GND, SCK → 40, WS → 41, SD → 42. MAX98357A VIN → 5V, GND → GND, BCLK → 39, LRC → 38, DIN → 47, GAIN and SD unconnected, speaker on its screw terminal. KY-037 unchanged.
+
+| Lab             | New this round                                                                                        |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| S1 Hear         | **mics** view: both microphones side by side; 24-bit ladder and a software comparator for the INMP441 |
+| S2 Loudness     | dB SPL with the INMP441 (85 dB risk line), `units`, `limit … spl`, an alarm tune                      |
+| S3 Clap control | a sound for every action, new action `tune`, `sound on                                                | off` |
+| S4 Recorder     | `play [n] [speed]` on the board, "Play on board" on the phone page (`POST /api/play`)                 |
+| S5 Spectrum     | `ref` (reference note for the tuner), `sweep` (100 Hz → 8 kHz)                                        |
+| S6 Sound games  | flap, ding, crash, unlock tune, `knock play`, `party click`                                           |
+| S7 Speaker      | new: waveforms and harmonics, keyboard, ADSR, tunes, sound effects                                    |
+| S8 Voice FX     | new: the parrot (chipmunk, giant, robot, echo, reverse), live echo and robot with a howl guard        |
+
+```sh
+uv run pio run -e sound-lab-s1      # … through -e sound-lab-s8, build only; no new downloads
+c++ -std=c++17 -Wall -I lib/sound-kit/src -I src/sound-lab-s{3,4,5,6,8} test/host/sound_{dsp,games,clips,spectrum,synth,fx}_test.cpp   # Mac only
+```
+
+```text
+sound-lab-s1 SUCCESS · RAM 16.9% (55,396 B) · Flash  7.1% (466,067 B)
+sound-lab-s2 SUCCESS · RAM  9.7% (31,636 B) · Flash  7.2% (474,743 B)
+sound-lab-s3 SUCCESS · RAM  9.9% (32,532 B) · Flash  7.1% (467,127 B)
+sound-lab-s4 SUCCESS · RAM 18.9% (61,948 B) · Flash 18.5% (1,211,038 B)
+sound-lab-s5 SUCCESS · RAM 16.3% (53,412 B) · Flash  7.4% (483,459 B)
+sound-lab-s6 SUCCESS · RAM  9.7% (31,756 B) · Flash  7.3% (478,415 B)
+sound-lab-s7 SUCCESS · RAM 17.0% (55,692 B) · Flash  7.2% (468,823 B)
+sound-lab-s8 SUCCESS · RAM 10.9% (35,860 B) · Flash  7.1% (467,271 B)
+no warnings · host tests sound dsp / games / clips / spectrum / synth / fx: all checks pass
+```
+
+Not tested yet, because it needs the board: the INMP441 probe and its left-slot data, the real dB SPL against a phone meter, the speaker's loudness at `vol 40`, the echo guard's 200 ms, the howl guard, and S8's latency.
+
+**Next, by you:** wire the INMP441 and the amplifier, `uv run pio run -e sound-lab-s1 -t upload`, open the monitor: the first lines say which microphone was found and the speaker chimes. Then `vol 20`, `beep`, and the **mics** view with a clap. Nothing was sent to the board.
+
+### 50. B1 floods the monitor with NimBLE scan logs · `build` (Mac) · no board
+
+The first B1 run filled the serial monitor with `I NimBLEScan: New advertiser / Scan response from / Duplicate; updated` lines, hundreds a second. The scan running nonstop is how B1 is meant to work: the radar never stops listening (`scan off` or a long press pauses it). The noise came from NimBLE's own logger, which copies `CORE_DEBUG_LEVEL` (3, info, set for every lab) and prints a line for every advertisement it hears.
+
+Fix in `platformio.ini`: the `[ble]` section adds `-DCONFIG_NIMBLE_CPP_LOG_LEVEL=1` (errors only) to the shared flags, and all eight `ble-lab-b*` envs use `${ble.build_flags}`. The other labs keep info logs.
+
+```sh
+uv run pio run -e ble-lab-b1      # build only
+```
+
+```text
+ble-lab-b1 SUCCESS
+```
+
+**Next, by you:** `uv run pio run -e ble-lab-b1 -t upload -t monitor`. Now only the lab's own lines show up, and the devices appear on the screen.

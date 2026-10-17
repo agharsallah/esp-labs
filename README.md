@@ -15,6 +15,8 @@ This folder is a standalone sandbox. It is not part of the pnpm workspace, and t
 | ESP32-S3-N16R8 DevKitC      | 16 MB flash, 8 MB octal PSRAM, dual-core 240 MHz, Wi-Fi + BLE, on-board RGB LED                                                      |
 | 1.9" IPS TFT, 170 × 320     | ST7789 driver, SPI, 8 pins: GND VCC SCL SDA RES DC CS BLK                                                                            |
 | RC522 RFID reader           | NXP MFRC522, 13.56 MHz, SPI, **3.3 V only**; comes with a white MIFARE Classic 1K card and a key tag                                 |
+| INMP441 microphone          | MEMS microphone with its own amplifier and 24-bit converter, **I2S** digital output; 3.3 V                                           |
+| MAX98357A + 3 W 4 Ω speaker | **I2S** class-D amplifier (3 W into 4 Ω at 5 V); the speaker's JST-PH2.0 leads go to the amp's screw terminal                        |
 | KY-037 microphone module    | electret capsule + LM393 comparator + trim pot; **AO** (analog) and **DO** (digital). Power it from **3.3 V**, never 5 V             |
 | Breadboard, jumper cables   | male-to-male for the breadboard, female-to-male for the display header                                                               |
 | LEDs                        | long leg = **+** (anode), short leg = **−** (cathode)                                                                                |
@@ -67,7 +69,7 @@ flowchart LR
     R1["R1 · Wire & talk"] --> R2["R2 · Wake a card"] --> R3["R3 · Who's there"] --> R4["R4 · Inside the card"] --> R5["R5 · Write & count"] --> R6["R6 · Edge lab"]
   end
   subgraph Sound["Sound (KY-037)"]
-    S1["S1 · Hear"] --> S2["S2 · Loudness"] --> S3["S3 · Clap control"] --> S4["S4 · Recorder"] --> S5["S5 · Spectrum"] --> S6["S6 · Sound games"]
+    S1["S1 · Hear"] --> S2["S2 · Loudness"] --> S3["S3 · Clap control"] --> S4["S4 · Recorder"] --> S5["S5 · Spectrum"] --> S6["S6 · Sound games"] --> S7["S7 · Speaker"] --> S8["S8 · Voice FX"]
   end
   subgraph Planned["Planned themes"]
     S["Sensors"]
@@ -81,21 +83,21 @@ flowchart LR
   L3b --> S1
 ```
 
-| Theme           | #     | Lesson                | Environment            | Status   | You learn                                                                              |
-| --------------- | ----- | --------------------- | ---------------------- | -------- | -------------------------------------------------------------------------------------- |
-| Intro           | 00    | Setup                 | none                   | works    | USB ports, drivers, flashing, the serial monitor                                       |
-| Intro           | 01    | Hello                 | `01-hello`             | works    | `setup()`/`loop()`, logging, `millis()`, the RGB LED                                   |
-| Intro           | 02    | First circuit         | `02-led`               | works    | breadboards, resistors, GPIO, PWM, a state machine                                     |
-| Display & input | 03    | Display               | `03-display`           | works    | SPI, RGB565 colours, frame buffers in PSRAM                                            |
-| Display & input | 03b   | Showcase, variation 1 | `03b-showcase`         | works    | 3D projection, lookup tables, particles, internal RAM vs PSRAM, timing                 |
-| Display & input | 03b   | Showcase, variation 2 | `03b-showcase-button`  | on board | inputs vs outputs, pull-ups, interrupts, debouncing, gestures                          |
-| Wi-Fi           | W1    | Scan & join           | `wifi-lab-w1`          | built    | station mode, channels, RSSI in dBm, security types, NVS, NTP, mDNS                    |
-| Wi-Fi           | W2    | Phone control         | `wifi-lab-w2(-remote)` | on board | REST, WebSocket, captive portal, OTA, relay through a tunnel                           |
-| Wi-Fi           | W3    | Internet & AI         | `wifi-lab-w3`          | built    | HTTPS, JSON filters, worker tasks, AI function calling via LiteLLM                     |
-| RFID & NFC      | R1–R8 | RFID labs             | `rfid-lab-r1` … `r8`   | R1 works | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing   |
-| Sensors         |       |                       |                        | planned  | I2C sensors (BME280), data over Wi-Fi                                                  |
-| Bluetooth LE    | B1–B8 | Bluetooth labs        | `ble-lab-b1` … `b8`    | built    | advertising, GATT, pairing & bonds, Web Bluetooth, HID, BLE-MIDI, the central role     |
-| Sound           | S1–S6 | Sound labs            | `sound-lab-s1` … `s6`  | built    | ADC + DMA sampling, bias & attenuation, decibels, onset detection, FFT, WAV over Wi-Fi |
+| Theme           | #     | Lesson                | Environment            | Status   | You learn                                                                            |
+| --------------- | ----- | --------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------ |
+| Intro           | 00    | Setup                 | none                   | works    | USB ports, drivers, flashing, the serial monitor                                     |
+| Intro           | 01    | Hello                 | `01-hello`             | works    | `setup()`/`loop()`, logging, `millis()`, the RGB LED                                 |
+| Intro           | 02    | First circuit         | `02-led`               | works    | breadboards, resistors, GPIO, PWM, a state machine                                   |
+| Display & input | 03    | Display               | `03-display`           | works    | SPI, RGB565 colours, frame buffers in PSRAM                                          |
+| Display & input | 03b   | Showcase, variation 1 | `03b-showcase`         | works    | 3D projection, lookup tables, particles, internal RAM vs PSRAM, timing               |
+| Display & input | 03b   | Showcase, variation 2 | `03b-showcase-button`  | on board | inputs vs outputs, pull-ups, interrupts, debouncing, gestures                        |
+| Wi-Fi           | W1    | Scan & join           | `wifi-lab-w1`          | built    | station mode, channels, RSSI in dBm, security types, NVS, NTP, mDNS                  |
+| Wi-Fi           | W2    | Phone control         | `wifi-lab-w2(-remote)` | on board | REST, WebSocket, captive portal, OTA, relay through a tunnel                         |
+| Wi-Fi           | W3    | Internet & AI         | `wifi-lab-w3`          | built    | HTTPS, JSON filters, worker tasks, AI function calling via LiteLLM                   |
+| RFID & NFC      | R1–R8 | RFID labs             | `rfid-lab-r1` … `r8`   | R1 works | SPI registers, ISO 14443-A, anticollision, MIFARE memory, value blocks, edge testing |
+| Sensors         |       |                       |                        | planned  | I2C sensors (BME280), data over Wi-Fi                                                |
+| Bluetooth LE    | B1–B8 | Bluetooth labs        | `ble-lab-b1` … `b8`    | built    | advertising, GATT, pairing & bonds, Web Bluetooth, HID, BLE-MIDI, the central role   |
+| Sound           | S1–S8 | Sound labs            | `sound-lab-s1` … `s8`  | built    | ADC/I2S + DMA sampling, decibels & dB SPL, onsets, FFT, WAV, synth, voice effects    |
 
 ## Lesson 00: setup
 
@@ -428,7 +430,13 @@ done
 
 ## Sound track
 
-The **KY-037** is a microphone module: an electret capsule, an **LM393 comparator** and a blue trim pot. It has two outputs. **AO** is the microphone's voltage, a small wave riding on a steady bias. **DO** is the comparator's yes/no: louder than the pot's threshold or not. There is no amplifier on the board, so it is a good _loudness_ sensor and a modest _recorder_: claps, knocks, whistles and music work well; a voice across the room sits close to the hiss.
+Three sound parts, all optional except one microphone:
+
+- **KY-037** (analog): an electret capsule, an **LM393 comparator** and a blue trim pot. **AO** is the microphone's voltage, a small wave on a steady bias, measured by the ESP32's ADC. **DO** is the comparator's yes/no against the pot. No amplifier: a good _loudness_ sensor; voices across the room sit close to the hiss.
+- **INMP441** (digital): a MEMS microphone with its own amplifier and 24-bit converter, sending numbers over **I2S**. Far cleaner, and its sensitivity is specified (−26 dBFS at 94 dB SPL), so the labs can show **real dB SPL**.
+- **MAX98357A + speaker**: an I2S class-D amplifier. The board sends 16-bit samples, the amp drives the speaker. Every lab can beep and chime; S4 plays clips back, S7 is a synth, S8 changes your voice.
+
+Every lab picks the microphone at start-up: `mic auto` (default) uses the INMP441 when it answers on the I2S pins, the KY-037 otherwise; `mic ky037` / `mic inmp441` force one (saved, then a restart). The speaker is always driven; with nothing wired it is simply silent. An **echo guard** keeps the board's own sounds out of the clap, knock and voice detectors.
 
 | Module pin | ESP32-S3 | Why this pin                                                                 |
 | ---------- | -------- | ---------------------------------------------------------------------------- |
@@ -436,6 +444,17 @@ The **KY-037** is a microphone module: an electret capsule, an **LM393 comparato
 | G          | GND      |                                                                              |
 | AO         | GPIO 6   | must be an **ADC1** pin (GPIO 1–10): ADC2 is busy while Wi-Fi is on          |
 | DO         | GPIO 21  | any digital pin                                                              |
+
+| INMP441 pin | ESP32-S3 |     | MAX98357A pin | ESP32-S3                     |
+| ----------- | -------- | --- | ------------- | ---------------------------- |
+| VDD         | 3V3      |     | VIN           | 5V (louder) or 3V3           |
+| GND         | GND      |     | GND           | GND                          |
+| L/R         | GND      |     | BCLK          | GPIO 39                      |
+| SCK         | GPIO 40  |     | LRC           | GPIO 38                      |
+| WS          | GPIO 41  |     | DIN           | GPIO 47                      |
+| SD          | GPIO 42  |     | GAIN, SD      | unconnected (9 dB, mono mix) |
+
+The microphone uses the S3's I2S0 peripheral and the amplifier I2S1, so both run at once. Start with `vol 20`: a 3 W speaker next to the microphone is loud.
 
 The screen from lesson 03 stays as it is; the push button on GPIO 5 and lesson 02's LED on GPIO 4 are optional (S2, S3 and S6 use the LED as a light).
 
@@ -457,33 +476,41 @@ flowchart LR
   cap --> cmp["LM393 vs trim pot"] --> DO["DO: high/low"]
 ```
 
-| Lab             | Command                                    | Views                               | You learn                                                      |
-| --------------- | ------------------------------------------ | ----------------------------------- | -------------------------------------------------------------- |
-| S1 Hear         | `uv run pio run -e sound-lab-s1 -t upload` | scope · bias · comparator · numbers | ADC + DMA, bias and attenuation, mV per step, tuning the pot   |
-| S2 Loudness     | `uv run pio run -e sound-lab-s2 -t upload` | meter · minute · diary · alarm      | decibels, fast/slow smoothing, noise floor, hysteresis         |
-| S3 Clap control | `uv run pio run -e sound-lab-s3 -t upload` | timeline · lamp · patterns · tune   | onset detection, clap vs voice by shape, patterns, calibration |
-| S4 Recorder     | `uv run pio run -e sound-lab-s4 -t upload` | recorder · clips · web              | pre-roll, triggers, WAV, streaming, a guarded networked mic    |
-| S5 Spectrum     | `uv run pio run -e sound-lab-s5 -t upload` | bars · waterfall · tuner · steer    | FFT, windows, Nyquist, notes and cents, control by pitch       |
-| S6 Sound games  | `uv run pio run -e sound-lab-s6 -t upload` | knock · bird · party                | tempo-free rhythm match, game physics, latency, beat detection |
+| Lab             | Command                                    | Views                               | You learn                                                              |
+| --------------- | ------------------------------------------ | ----------------------------------- | ---------------------------------------------------------------------- |
+| S1 Hear         | `uv run pio run -e sound-lab-s1 -t upload` | scope · bias · comparator · numbers | ADC + DMA, bias and attenuation, mV per step, tuning the pot           |
+| S2 Loudness     | `uv run pio run -e sound-lab-s2 -t upload` | meter · minute · diary · alarm      | decibels, fast/slow smoothing, noise floor, hysteresis                 |
+| S3 Clap control | `uv run pio run -e sound-lab-s3 -t upload` | timeline · lamp · patterns · tune   | onset detection, clap vs voice by shape, patterns, calibration         |
+| S4 Recorder     | `uv run pio run -e sound-lab-s4 -t upload` | recorder · clips · web              | pre-roll, triggers, WAV, streaming, a guarded networked mic            |
+| S5 Spectrum     | `uv run pio run -e sound-lab-s5 -t upload` | bars · waterfall · tuner · steer    | FFT, windows, Nyquist, notes and cents, control by pitch               |
+| S6 Sound games  | `uv run pio run -e sound-lab-s6 -t upload` | knock · bird · party                | tempo-free rhythm match, game physics, latency, beat detection         |
+| S7 Speaker      | `uv run pio run -e sound-lab-s7 -t upload` | wave · keys · envelope · tunes · fx | I2S out, class D, timbre and harmonics, ADSR, chords, procedural sound |
+| S8 Voice FX     | `uv run pio run -e sound-lab-s8 -t upload` | parrot · echo · robot · scope       | resampling, ring modulation, delay + feedback, howl, latency           |
 
-**S1 · Hear:** the raw signal. **scope** (a triggered oscilloscope, mV scale; double-click freezes), **bias** (a 0–3.3 V ruler: the bias line, the wave's swing, the ADC's range for the current attenuation, clipping and "try atten 6" hints; double-click steps the attenuation), **comparator** (DO's lamp and a 6 s strip of loudness above DO, with tuning advice), **numbers** (measured rate, lost samples, dBFS, floor, PSRAM). Serial: `freeze`, `span <ms>`, `trigger`, `pot` (how to tune it), `dump [n]` (samples as numbers).
+**S1 · Hear:** the raw signal. **scope** (a triggered oscilloscope: mV with the KY-037, % of full scale with the INMP441; double-click freezes), **mics** (both microphones at once, stacked, each with its own quiet: how many dB more clearly the INMP441 hears the same clap; with one mic it shows how to wire the other), **bias** (KY-037: a 0–3.3 V ruler with the bias, the swing, the ADC's range, clipping and "try atten 6" hints, double-click steps the attenuation; INMP441: a 24-bit ladder, bits in use and headroom), **comparator** (KY-037: DO's lamp and a 6 s strip of loudness above DO, with pot advice; INMP441: the same in software, `thresh <dB>`), **numbers** (source, measured rate, lost samples, dBFS, floor, dB SPL). Serial: `freeze`, `span <ms>`, `trigger`, `thresh <dB>`, `pot`, `dump [n]`.
 
-**S2 · Loudness:** a sound level meter. **meter** (big dB above the quiet, peak hold, limit line), **minute** (the loudest of every ¼ s), **diary** (10 minutes as 10 s candles: quietest, average, loudest, alarms), **alarm** (over the limit for `hold` ms: the screen pulses and the LED on GPIO 4 lights; any button silences it). Serial: `speed fast|slow`, `limit <dB>` (35), `hold <ms>` (1000), `alarm on|off`, `diary`. Settings in NVS (`loud`).
+**S2 · Loudness:** a sound level meter. With the INMP441 it shows **real dB SPL** (unweighted, about ±2 dB) on a 30–110 scale with whisper, talk, the 85 dB hearing-risk line and loud; with the KY-037, dB above the quiet. **meter**, **minute** (the loudest of every ¼ s), **diary** (10 minutes as 10 s candles), **alarm** (over the limit for `hold` ms: the screen pulses, the LED on GPIO 4 lights and the speaker plays the alarm tune once; any button silences it). Serial: `units spl|quiet`, `speed fast|slow`, `limit <dB> [spl|quiet]` (80 dB SPL or 35 above quiet), `hold <ms>`, `alarm on|off`, `alarm sound on|off`, `diary`. Settings in NVS (`loud`).
 
-**S3 · Clap control:** a clap is a _shape_, not just loudness: a jump of 18 dB and quiet again within 160 ms. Longer sounds (a word, a whistle) are shown as "long" and ignored. Claps close together form a group; a 650 ms pause ends it. Defaults: **1 clap = LED on GPIO 4, 2 = next RGB colour, 3 = screen sleep, 4 = party**. Serial: `map <1-4> <led|colour|dark|screen|view|party|none>`, `maps`, `sens <dB>`, `gap <ms>`, `learn` (clap 5 times: the sensitivity becomes 60 % of your softest), `test` (every event on serial), `do <action>`. Mappings in NVS (`claps`).
+**S3 · Clap control:** a clap is a _shape_, not just loudness: a jump of 18 dB and quiet again within 160 ms. Longer sounds (a word, a whistle) are shown as "long" and ignored. Claps close together form a group; a 650 ms pause ends it. Defaults: **1 clap = LED on GPIO 4, 2 = next RGB colour, 3 = screen sleep, 4 = party**. Serial: `map <1-4> <led|colour|dark|screen|view|party|tune|none>`, `maps`, `sens <dB>`, `gap <ms>`, `learn` (clap 5 times: the sensitivity becomes 60 % of your softest), `test` (every event on serial), `do <action>`, `sound on|off`. Every action answers with its own little sound (an unknown pattern buzzes); the echo guard keeps the board from clapping for itself. Mappings in NVS (`claps`).
 
-**S4 · Recorder:** a voice-activated recorder into PSRAM: up to 12 clips, 6 MB, **lost on reset**. `arm` listens; a sound 15 dB above the quiet starts a clip **half a second earlier** (the ring already holds it), and 1.2 s of quiet ends it; bangs shorter than 0.4 s are dropped. `rec`/`stop` record by hand (long press toggles). Listen and download:
+**S4 · Recorder:** a voice-activated recorder into PSRAM: up to 12 clips, 6 MB, **lost on reset**. `arm` listens; a sound 15 dB above the quiet starts a clip **half a second earlier** (the ring already holds it), and 1.2 s of quiet ends it; bangs shorter than 0.4 s are dropped. `rec`/`stop` record by hand (long press toggles). With the INMP441 the clips are pleasant to listen to; with the KY-037 they are hissy. Listen and download:
+
+- **Board:** `play [n] [speed]` on the speaker (0.5 = a giant, 2 = a chipmunk); on the clips view double-click plays the picked clip, long press picks the next. While it plays, the voice trigger is paused.
 
 - **Phone:** with the Wi-Fi network W1 saved, open `http://bench.local`, paste the admin token from serial `token` (the same token as W2/R7/R8, kept in the page's sessionStorage only): live meter, arm/record/stop, every clip as a waveform you can play, download and delete. Every audio route needs the token.
 - **USB:** close the serial monitor, then `uv run python tools/sound_pull.py /dev/cu.usbserial-A5069RR4 <n> [clip.wav]` (base64 over serial with a CRC-32 check).
 
 Clips are normalised (up to ×64) when sent, so the hiss gets louder with the voice. Whoever starts a recording, the board always shows **REC** on its screen and a red RGB LED. Serial: `arm`, `rec`, `stop`, `trigger <dB>`, `hold <ms>`, `max <s>`, `clips`, `next`, `del <n>`, `clear`, `send <n>`, `token [new]`, `wifi`.
 
-**S5 · Spectrum:** our own 512-point FFT (31 Hz per bin at 16 kHz; nothing above 8 kHz, the Nyquist limit). **bars** (24 octave-spaced bands, 100 Hz–8 kHz), **waterfall** (6 s spectrogram), **tuner** (whistle or hum: note, Hz, a cents needle), **steer** (whistle higher or lower to move a dot and the RGB hue; hold it in the moving ring for 1 s to score). Serial: `fft <256|512|1024>`, `range <low> <high>`, `hold`, `peaks`, `a4 <Hz>`, `target`, `limits`.
+**S5 · Spectrum:** our own 512-point FFT (31 Hz per bin at 16 kHz; nothing above 8 kHz, the Nyquist limit). **bars** (24 octave-spaced bands, 100 Hz–8 kHz), **waterfall** (6 s spectrogram), **tuner** (whistle or hum: note, Hz, a cents needle), **steer** (whistle higher or lower to move a dot and the RGB hue; hold it in the moving ring for 1 s to score). Serial: `fft <256|512|1024>`, `range <low> <high>`, `hold`, `peaks`, `a4 <Hz>`, `target`, `limits`, and on the speaker `ref [note|Hz]` (a reference note to check the tuner; the tuner's double-click) and `sweep` (100 Hz → 8 kHz in 4 s: watch it climb the waterfall).
 
-**S6 · Sound games:** each view listens only while it is on screen. **knock**: `knock set`, then knock your secret rhythm on the table (2–12 knocks); later knocks open the lock (LED + green for 5 s) if the rhythm matches, faster or slower (`tol <percent>`, default 12). **bird**: Clap Bird, every clap flaps; best score in NVS. **party**: play music near the mic; every beat flashes the RGB LED in the next colour, with the BPM. Serial: `knock [set|clear|show]`, `tol`, `bird [reset]`, `party [sens <ratio>|reset]`.
+**S6 · Sound games:** each view listens only while it is on screen. **knock**: `knock set`, then knock your secret rhythm on the table (2–12 knocks); later knocks open the lock (LED + green for 5 s) if the rhythm matches, faster or slower (`tol <percent>`, default 12). **bird**: Clap Bird, every clap flaps; best score in NVS. **party**: play music near the mic; every beat flashes the RGB LED in the next colour, with the BPM. With the speaker: flap blips, dings and a crash, the secret played back as clicks (`knock play`), an unlock tune, an optional beat click (`party click on`). Serial: `knock [set|clear|show|play]`, `tol`, `bird [reset]`, `party [sens <ratio>|click on|off|reset]`, `sound on|off`.
 
-Host tests (Mac only, no board): `c++ -std=c++17 -Wall -I lib/sound-kit/src -I src/sound-lab-s3 -I src/sound-lab-s4 -I src/sound-lab-s5 -I src/sound-lab-s6 test/host/sound_<dsp|games|clips|spectrum>_test.cpp -o /tmp/t && /tmp/t`.
+**S7 · Speaker:** the board makes sound (MAX98357A + speaker; no microphone needed). **wave** (four periods of the note and its spectrum: a sine is one line, a square has the odd harmonics, a saw all of them), **keys** (C4–B5; double-click plays the next scale note, long press the next chord), **envelope** (the ADSR curve with a dot riding it), **tunes** (twinkle, ode, happy, korobeiniki, scale, arpeggio, with a piano roll), **fx** (laser, coin, jump, power-up, explosion, siren, modem, made from sweeps and noise). Serial: `wave <sine|square|triangle|saw|noise>`, `play C4 E4 G4/2`, `chord Am`, `note A4 500`, `adsr <a> <d> <s%> <r>`, `tune <name>`, `bpm <n>`, `fx <name>`, `stop`.
+
+**S8 · Voice FX:** microphone in, speaker out (best with the INMP441). **parrot**: say something, the parrot repeats it as a chipmunk, a giant, a robot, with an echo, backwards or plain (`fx …`, double-click = next voice, `again` replays). **echo** and **robot**: live effects (`echo on`, `delay <ms>`, `feedback <%>`, `robot on`, `carrier <Hz>`), off by default. Keep the speaker away from the microphone and the volume low: a howl guard stops a live effect when the sound starts feeding itself. **scope**: the chain mic → effect → speaker with both waves.
+
+Host tests (Mac only, no board): `c++ -std=c++17 -Wall -I lib/sound-kit/src -I src/sound-lab-s3 -I src/sound-lab-s4 -I src/sound-lab-s5 -I src/sound-lab-s6 -I src/sound-lab-s8 test/host/sound_<dsp|games|clips|spectrum|synth|fx>_test.cpp -o /tmp/t && /tmp/t`.
 
 ## Between lessons
 
@@ -509,11 +536,12 @@ Safe for experiments: 1, 2, 4–18, 21, 38–42, 47, 48 (48 is the RGB LED).
 
 ## Session log
 
-| Date       | Step  | What happened                                                                                                                                                 |
-| ---------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-11 | 00    | Project created, lessons 01–03 compile. Waiting for first flash.                                                                                              |
-| 2026-10-11 | 00    | Board found on `/dev/cu.usbserial-A5069RR4` (FT232R). esptool: ESP32-S3 rev v0.2, 8 MB embedded PSRAM, 16 MB quad flash.                                      |
-| 2026-10-11 | 01    | Flashed `01-hello`. Identity card: 16 MB flash, 8 MB PSRAM, 337 KB free heap, SDK v5.5.5. Heartbeat every 5 s. RGB LED cycles colours, so GPIO 48 is right.   |
-| 2026-10-11 | 02    | You flashed `02-led`. The breadboard LED lights up: circuit wired correctly.                                                                                  |
-| 2026-10-11 | 03    | You flashed `03-display`. Screen works: colour check OK, bench scope at 22 fps.                                                                               |
-| 2026-10-14 | S1–S6 | Sound track for the KY-037 built: six firmwares (`sound-lab-s1` … `s6`) on `lib/sound-kit`, all compile with no warnings, 4 host tests pass. Not flashed yet. |
+| Date       | Step  | What happened                                                                                                                                                                                                            |
+| ---------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-10-11 | 00    | Project created, lessons 01–03 compile. Waiting for first flash.                                                                                                                                                         |
+| 2026-10-11 | 00    | Board found on `/dev/cu.usbserial-A5069RR4` (FT232R). esptool: ESP32-S3 rev v0.2, 8 MB embedded PSRAM, 16 MB quad flash.                                                                                                 |
+| 2026-10-11 | 01    | Flashed `01-hello`. Identity card: 16 MB flash, 8 MB PSRAM, 337 KB free heap, SDK v5.5.5. Heartbeat every 5 s. RGB LED cycles colours, so GPIO 48 is right.                                                              |
+| 2026-10-11 | 02    | You flashed `02-led`. The breadboard LED lights up: circuit wired correctly.                                                                                                                                             |
+| 2026-10-11 | 03    | You flashed `03-display`. Screen works: colour check OK, bench scope at 22 fps.                                                                                                                                          |
+| 2026-10-14 | S1–S6 | Sound track for the KY-037 built: six firmwares (`sound-lab-s1` … `s6`) on `lib/sound-kit`, all compile with no warnings, 4 host tests pass. Not flashed yet.                                                            |
+| 2026-10-14 | S1–S8 | INMP441 (I2S mic) and MAX98357A (I2S speaker) added to the kit: mic auto-detect, echo guard, chimes; S1–S6 upgraded, new S7 Speaker and S8 Voice FX. All 8 compile with no warnings, 6 host tests pass. Not flashed yet. |

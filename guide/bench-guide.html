@@ -390,15 +390,23 @@ details.e-out pre { margin: 8px 0 0; background: var(--term-bg); color: var(--te
 .cs-bnone { --cs: var(--line); color: var(--muted); } .cs-bscan { --cs: var(--ble); }
 .cs-bconn { --cs: var(--ble); --cs-fill: var(--ble); } .cs-bpair, .cs-bhost { --cs: var(--scope-violet); --cs-fill: var(--scope-violet); } .cs-bperiph { --cs: var(--copper); --cs-fill: var(--copper); }
 /* Sound track */
-:root { --sound: #a3195b; --scope-pink: #ff80c8; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sound: #ff8fcf; } }
-:root[data-theme="dark"] { --sound: #ff8fcf; }
+:root { --sound: #a3195b; --scope-pink: #ff80c8; --snd-mic: #0d6b63; --snd-amp: #6b3fc0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sound: #ff8fcf; --snd-mic: #5fd3c3; --snd-amp: #c4a5ff; } }
+:root[data-theme="dark"] { --sound: #ff8fcf; --snd-mic: #5fd3c3; --snd-amp: #c4a5ff; }
 .cs-squiet { --cs: var(--line); color: var(--muted); } .cs-sany { --cs: var(--sound); } .cs-ssound { --cs: var(--sound); --cs-fill: var(--sound); } .cs-smusic { --cs: var(--scope-violet); --cs-fill: var(--scope-violet); }
 .snd-journey { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .snd-stop { width: 100%; height: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
 .snd-stop b { font-family: var(--font-mono); color: var(--sound); } .snd-stop .t { font-weight: 700; } .snd-stop .w, .snd-stop .o { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
 .snd-stop[aria-pressed="true"] { border-color: var(--sound); box-shadow: inset 0 0 0 1px var(--sound); }
 .snd-stop:focus-visible, .snd-wav .bf:focus-visible { outline: 2px solid var(--sound); outline-offset: 2px; }
+.snd-parts { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 2px 0 8px; }
+.snd-parts span { font: 600 11px var(--font-mono); border-radius: 999px; padding: 1px 8px; border: 1px solid var(--sound); color: var(--ink); }
+.snd-parts .opt { border-style: dashed; border-color: var(--line); color: var(--muted); }
+.snd-stop .snd-parts { margin: 4px 0 0; }
+.snd-keys { display: flex; flex-wrap: wrap; gap: 4px; }
+.snd-keys .btn { min-width: 40px; }
+.snd-rec { font: 700 12px var(--font-mono); color: var(--danger); align-self: center; }
+.spi-ctl .btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
 .snd-wav { display: flex; flex-wrap: wrap; gap: 6px; }
 .snd-wav .bf { display: inline-flex; flex-direction: column; gap: 1px; border: 1.5px solid var(--line); border-radius: 7px; padding: 4px 7px; font-size: 12px; }
 .snd-wav .bf b { font: 600 11px var(--font-mono); color: var(--sound); } .snd-wav .bf code { font-size: 11px; } .snd-wav .bf i { color: var(--muted); font-style: normal; font-size: 11px; }
@@ -611,7 +619,7 @@ ol.rules-list li.open b { color: var(--ok); }
 
 
   <dl class="overview" aria-label="On the bench now">
-    <div class="now"><dt>On the board now</dt><dd>rfid-lab-r7<small>R7 reads cards, also a little above the reader (by you) · reader chip FM17522 clone (B2h) · built, not flashed: ble-lab-b1 … b8 (entry 47), rfid-lab-r8 (entry 46), R7 names fix + admin room (entries 44-45), rfid-lab-r1 … r6, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
+    <div class="now"><dt>On the board now</dt><dd>rfid-lab-r7<small>R7 reads cards, also a little above the reader (by you) · reader chip FM17522 clone (B2h) · built, not flashed: sound-lab-s1 … s8 (entries 48-49), ble-lab-b1 … b8 (entry 47), rfid-lab-r8 (entry 46), R7 names fix + admin room (entries 44-45), rfid-lab-r1 … r6, wifi-lab-w1, w2, w2-remote, w3</small></dd></div>
     <div><dt>Connection</dt><dd>/dev/cu.usbserial-A5069RR4<small>FTDI FT232R · VID:PID 0403:6001</small></dd></div>
     <div><dt>Chip</dt><dd>ESP32-S3 rev v0.2<small>16 MB flash · 8 MB PSRAM · MAC 28:84:85:9E:3B:E4</small></dd></div>
     <div><dt>Verified</dt><dd class="flag">RGB · LED · screen · showcase<small>all seen working by you · display at 22 fps</small></dd></div>
@@ -3593,26 +3601,45 @@ ol.rules-list li.open b { color: var(--ok); }
   const SOUND_LESSONS = [], SOUND_PANELS = {}, SOUND_SCREENS = {};
   const SOUND_PINS = [
     { pin: "3V3", idx: 0, role: "VCC", side: "L", kind: "power" },
-    { pin: "3V3", idx: 1, role: "MIC +", side: "L", kind: "power" },
+    { pin: "3V3", idx: 1, role: "MICS +", side: "L", kind: "power" },
     { pin: "6", role: "AO", side: "L", kind: "sound" },
     { pin: "7", role: "BLK", side: "L" }, { pin: "8", role: "RES", side: "L" },
     { pin: "9", role: "DC", side: "L" }, { pin: "10", role: "CS", side: "L" },
     { pin: "11", role: "SDA", side: "L" }, { pin: "12", role: "SCL", side: "L" },
+    { pin: "5V", idx: 20, role: "AMP VIN", side: "L", kind: "power" },
     { pin: "GND", idx: 21, role: "GND", side: "L", kind: "gnd" },
     { pin: "5", role: "BTN", side: "L", kind: "btn" },
-    { pin: "GND", idx: 0, role: "MIC G", side: "R", kind: "gnd" },
-    { pin: "21", role: "DO", side: "R", kind: "sound" },
+    { pin: "GND", idx: 0, role: "MICS G", side: "R", kind: "gnd" },
+    { pin: "42", role: "SD", side: "R", kind: "snd-mic" }, { pin: "41", role: "WS", side: "R", kind: "snd-mic" },
+    { pin: "40", role: "SCK", side: "R", kind: "snd-mic" },
+    { pin: "39", role: "BCLK", side: "R", kind: "snd-amp" }, { pin: "38", role: "LRC", side: "R", kind: "snd-amp" },
     { pin: "0", role: "BOOT", side: "R" },
+    { pin: "47", role: "DIN", side: "R", kind: "snd-amp" },
+    { pin: "21", role: "DO", side: "R", kind: "sound" },
+    { pin: "GND", idx: 20, role: "AMP G", side: "R", kind: "gnd" },
   ];
   const SOUND_WIRING = [
-    ["KY-037 +", "3V3", "The second 3V3 pin (the screen has the first). <b>Never 5 V</b>: AO and DO swing up to the module's supply, and the ESP32-S3's pins take 3.3 V at most."],
-    ["KY-037 G", "GND", "Any GND pin; the one at the top of the right header is closest."],
+    ["KY-037 + · G", "3V3", "The analog mic. + on the second 3V3 pin (the screen has the first), G on GND. <b>Never 5 V</b>: AO and DO swing up to the module's supply, and the ESP32-S3's pins take 3.3 V at most."],
     ["KY-037 AO", "GPIO 6", "Analog out: the microphone's voltage. GPIO 6 is ADC1 channel 5: ADC1 keeps working while Wi-Fi is on, ADC2 doesn't."],
     ["KY-037 DO", "GPIO 21", "Digital out: the LM393 comparator says high when the sound is louder than the blue trim pot's setting."],
+    ["INMP441 VDD · GND", "3V3", "The digital mic (I2S). VDD on 3V3 (share the breadboard rail with the KY-037), GND on GND. 3.3 V only."],
+    ["INMP441 L/R", "GND", "Low = it talks in the left slot, the one the board reads."],
+    ["INMP441 SCK", "GPIO 40", "The bit clock. The ESP32 drives it: 16 000 × 64 = 1.024 MHz."],
+    ["INMP441 WS", "GPIO 41", "Word select: left slot / right slot, flips every 32 clock ticks."],
+    ["INMP441 SD", "GPIO 42", "The data, most significant bit first. Pulled down, so a missing mic reads as zeros."],
+    ["MAX98357A VIN · GND", "5V", "The speaker amplifier. 5V gives the most (about 3 W into 4 Ω); 3V3 works, quieter."],
+    ["MAX98357A BCLK", "GPIO 39", "Bit clock of the second I2S port (I2S1; the mic uses I2S0, so both run at once)."],
+    ["MAX98357A LRC", "GPIO 38", "Word select (left/right)."],
+    ["MAX98357A DIN", "GPIO 47", "The samples, 16-bit."],
+    ["MAX98357A GAIN · SD", "nothing", "Leave both unconnected: 9 dB gain, and it plays (left + right) / 2."],
+    ["speaker (4 Ω, 3 W)", "amp + / −", "On the amplifier's screw terminal: the JST-PH2.0 lead's two wires, red to +."],
     ["screen (8 wires)", "as lesson 03", "Unchanged. The push button on GPIO 5 is optional: it does what BOOT does."],
   ];
   const soundCommon = { track: "sound", status: "built, not flashed", pins: SOUND_PINS, boot: true, sim: "sound",
-    wiring: SOUND_WIRING, wiringTitle: "Wiring: the KY-037 (the screen stays as in lesson 03)", wiringHead: ["KY-037 pin", "ESP32-S3", "Notes"] };
+    wiring: SOUND_WIRING, wiringTitle: "Wiring: the microphones and the speaker (wire what the lab needs; the screen stays as in lesson 03)", wiringHead: ["Module pin", "ESP32-S3", "Notes"] };
+  // Which parts a lab needs, as chips at the top of its goal.
+  const SND_PART = { ky: "KY-037", inmp: "INMP441", mic: "KY-037 or INMP441", spk: "MAX98357A + speaker", wifi: "Wi-Fi (W1)" };
+  const sndParts = (need, opt = []) => `<span class="snd-parts">${need.map((k) => `<span class="need">${SND_PART[k]}</span>`).join("")}${opt.map((k) => `<span class="opt">${SND_PART[k]} (optional)</span>`).join("")}</span>`;
   function soundPalette() { return { ...rfidPalette(), pink: css("--scope-pink"), violet: css("--scope-violet") }; }
   const SND_TOP = { 0: 950, 2.5: 1250, 6: 1750, 12: 3100 };
   const sndAttenName = (a) => ({ 0: "0 dB (0-0.95 V)", 2.5: "2.5 dB (0-1.25 V)", 6: "6 dB (0-1.75 V)", 12: "12 dB (0-3.1 V)" })[a];
@@ -3621,6 +3648,56 @@ ol.rules-list li.open b { color: var(--ok); }
   const sndGauss = () => (Math.random() + Math.random() + Math.random() + Math.random() - 2) * 1.73;
   const sndLevelColour = (C, above) => (above < 25 ? C.teal : above < 40 ? C.amber : C.coral);
   const sndLike = (a) => (a < 3 ? "quiet" : a < 12 ? "rustle, whisper" : a < 25 ? "talking" : a < 38 ? "loud talk, music" : "shout, clap, bang");
+
+  // Sound in the browser, for the previews: off until you switch it on (a click), always quiet.
+  // Notes as the board writes them: "C5/16 E5/16 G5/8. r/4 Bb4/2" (/4 = quarter, . = dotted, r = rest).
+  const sndAudio = {
+    on: false, ctx: null, out: null,
+    start() {
+      if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false; this.ctx = new AC(); this.out = this.ctx.createGain(); this.out.gain.value = 0.12; this.out.connect(this.ctx.destination); }
+      if (this.ctx.state === "suspended") this.ctx.resume();
+      return true;
+    },
+    tone(hz, ms, wave = "triangle", at = 0, adsr = [6, 80, 0.65, 90], level = 1) {
+      if (!this.on || !this.start() || hz <= 0) return;
+      const c = this.ctx, t0 = c.currentTime + at, [a, d, s, r] = adsr.map((v, i) => (i === 2 ? v : v / 1000)), hold = Math.max(a + d, ms / 1000 - r);
+      const g = c.createGain(); g.connect(this.out);
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(level, t0 + a); g.gain.linearRampToValueAtTime(level * s, t0 + a + d);
+      g.gain.setValueAtTime(level * s, t0 + hold); g.gain.linearRampToValueAtTime(0, t0 + hold + r);
+      if (wave === "noise") { const b = c.createBuffer(1, c.sampleRate * (hold + r), c.sampleRate), ch = b.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; const n = c.createBufferSource(); n.buffer = b; n.connect(g); n.start(t0); return; }
+      const o = c.createOscillator(); o.type = wave === "saw" ? "sawtooth" : wave; o.frequency.value = hz; o.connect(g); o.start(t0); o.stop(t0 + hold + r + 0.05);
+    },
+    tune(notes, bpm = 120, wave = "triangle") { let at = 0; for (const n of sndParseTune(notes, bpm)) { if (n.hz) this.tone(n.hz, n.ms * 0.95, wave, at / 1000); at += n.ms; } return at; },
+    buffer(samples, rate, speed = 1) {
+      if (!this.on || !this.start()) return null;
+      const b = this.ctx.createBuffer(1, samples.length, rate); b.getChannelData(0).set(samples);
+      const src = this.ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = speed; src.connect(this.out); src.start(); return src;
+    },
+  };
+  function sndMidiHz(name) {
+    const m = /^([A-Ga-g])([#b]?)(-?\d)$/.exec(name); if (!m) return 0;
+    const semi = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1].toUpperCase()] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0);
+    return 440 * Math.pow(2, ((+m[3] + 1) * 12 + semi - 69) / 12);
+  }
+  function sndParseTune(notes, bpm) {
+    return notes.trim().split(/\s+/).map((tok) => {
+      const [name, frac = "4"] = tok.split("/"), dotted = frac.endsWith("."), d = parseFloat(frac);
+      return { hz: name === "r" ? 0 : sndMidiHz(name), ms: (4 / d) * (60000 / bpm) * (dotted ? 1.5 : 1), name };
+    });
+  }
+  // The board's speaker in the previews: what it plays (and whether you hear it in the browser).
+  function sndSpeaker() {
+    return {
+      until: 0, end: 0, hz: 0, vol: 40, label: "",
+      busy() { return performance.now() < this.until; },
+      // The echo guard: loud now, or in the last 200 ms.
+      recentlyLoud(ms = 200) { return performance.now() < this.until + ms; },
+      play(ms, hz = 0, label = "") { this.until = Math.max(this.until, performance.now() + ms); this.hz = hz; this.label = label; },
+      tune(notes, bpm = 220, wave = "triangle") { const ms = sndParseTune(notes, bpm).reduce((s, n) => s + n.ms, 0); this.play(ms, sndParseTune(notes, bpm)[0].hz); sndAudio.tune(notes, bpm, wave); return ms; },
+      beep(hz = 440, ms = 300, wave = "sine") { this.play(ms, hz); sndAudio.tone(hz, ms, wave); },
+    };
+  }
+  const SND_CHIME = { hello: "C5/16 E5/16 G5/8", ok: "E6/16 B6/8", no: "C4/16 r/32 C4/8", start: "G5/16 C6/16", stop: "C6/16 G5/16", score: "C6/32 E6/32 G6/32 C7/16" };
 
   // lib/sound-kit/src/level.h in JS: inst, fast (125 ms), slow (1 s), peak hold, the noise floor.
   function soundLevel(frameMs = 4) {
@@ -3653,7 +3730,7 @@ ol.rules-list li.open b { color: var(--ok); }
     const RING = 32768;
     const m = {
       rate: 16000, ring: new Float32Array(RING), w: 0, ms: 0, t: 0,
-      biasMv: o.biasMv ?? 1450, atten: 12, potMv: o.potMv ?? 30,
+      biasMv: o.biasMv ?? 1450, atten: 12, potMv: o.potMv ?? 30, digital: !!o.digital, spk: sndSpeaker(), hearSpeaker: !!o.hearSpeaker,
       mode: o.mode || "quiet", until: 0, claps: [], ph: 0, ph2: 0, ph3: 0,
       dc: null, rawLow: 0, rawHigh: 0, lo: 4095, hi: 0, n: 0, lastRaw: 0, lastMv: 0,
       doHigh: false, doRises: 0, doSeen: false, fDo: false,
@@ -3672,7 +3749,8 @@ ol.rules-list li.open b { color: var(--ok); }
       // The voltage on AO above the bias right now, in mV.
       signal() {
         const t = this.t, dt = 1 / this.rate;
-        let v = sndGauss() * 0.3;
+        this.hiss = sndGauss() * 0.3;
+        let v = this.hiss;
         const md = this.mode;
         if (md === "talk" || md === "shout") {
           const f0 = 150 + 25 * Math.sin(2 * Math.PI * 0.6 * t);
@@ -3686,9 +3764,11 @@ ol.rules-list li.open b { color: var(--ok); }
         } else if (md === "music") {
           const beat = (t * 2) % 1; // 120 BPM
           this.ph += 2 * Math.PI * 220 * dt; this.ph2 += 2 * Math.PI * 330 * dt; this.ph3 += 2 * Math.PI * 55 * dt;
-          v += 40 * (Math.sin(this.ph) * 0.6 + Math.sin(this.ph2) * 0.4) + 120 * Math.exp(-beat / 0.06) * Math.sin(this.ph3);
+          v += 60 * (Math.sin(this.ph) * 0.6 + Math.sin(this.ph2) * 0.4) + 160 * Math.exp(-beat / 0.06) * Math.sin(this.ph3);
         }
         for (const c of this.claps) { const d = t - c; if (d >= 0 && d < 0.15) v += sndGauss() * 220 * Math.exp(-d / 0.014); }
+        // The mic hears the board's own speaker (that's what the echo guard is for).
+        if (this.spk.busy() && this.spk.hz) { this.ph3 += 2 * Math.PI * this.spk.hz * dt; v += 25 * Math.sin(this.ph3) * (this.spk.vol / 40) ** 2; }
         return v;
       },
       step(dtSec) {
@@ -3698,16 +3778,18 @@ ol.rules-list li.open b { color: var(--ok); }
           this.t += 1 / this.rate;
           if (this.until && this.t > this.until) { this.mode = "quiet"; this.until = 0; }
           const sig = this.signal(), mv = this.biasMv + sig;
-          const raw = Math.max(0, Math.min(4095, Math.round((mv / top) * 4095)));
+          // KY-037: the ADC measures bias + wave in 4096 steps. INMP441: its own 24-bit converter
+          // sends the wave as numbers (>> 8, then >> 6 = int16), far below the ADC's hiss.
+          const raw = this.digital ? 2048 : Math.max(0, Math.min(4095, Math.round((mv / top) * 4095 + sndGauss() * 0.9))); // + the ADC's own noise, about a step
           if (this.dc === null) this.dc = raw;
           this.dc += (raw - this.dc) / 4096;
-          const s = Math.max(-32768, Math.min(32767, (raw - this.dc) * 16));
+          const s = this.digital ? Math.max(-32768, Math.min(32767, (sig - this.hiss) * 64 + sndGauss() * 1.5)) : Math.max(-32768, Math.min(32767, (raw - this.dc) * 16));
           this.ring[this.w % RING] = s; this.w++;
           this.lastRaw = raw; this.lastMv = mv;
           this.lo = Math.min(this.lo, raw); this.hi = Math.max(this.hi, raw);
           if (++this.n >= this.rate / 10) { this.rawLow = this.lo; this.rawHigh = this.hi; this.lo = 4095; this.hi = 0; this.n = 0; }
           // The LM393: AO against the pot's voltage. Each wave crest over the line is one rising edge.
-          const high = sig > this.potMv;
+          const high = !this.digital && sig > this.potMv;
           if (high && !this.doHigh) this.doRises++;
           this.doHigh = high; if (high) { this.doSeen = true; this.fDo = true; }
           this.sumSq += s * s; this.peak = Math.max(this.peak, Math.abs(s));
@@ -3715,13 +3797,15 @@ ol.rules-list li.open b { color: var(--ok); }
             const rms = Math.sqrt(this.sumSq / 64);
             this.ms += 64000 / this.rate;
             this.level.push(rms, this.ms);
-            if (this.onFrame) this.onFrame({ rms, peak: this.peak, end: this.w, do: this.fDo }, this.ms);
+            // The echo guard: no frames for the lab while the speaker is loud (and 200 ms after).
+            if (this.onFrame && (this.hearSpeaker || !this.spk.recentlyLoud(200))) this.onFrame({ rms, peak: this.peak, end: this.w, do: this.fDo }, this.ms);
             this.sumSq = 0; this.peak = 0; this.inChunk = 0; this.fDo = false;
           }
         }
         this.claps = this.claps.filter((c) => this.t - c < 0.2);
       },
       // The DO lamp: lit if DO was high at any time since the last look (the module's LED2 looks the same).
+      spl() { return this.level.fast + 111; },
       takeDo() { const s = this.doSeen || this.doHigh; this.doSeen = false; return s; },
     };
     return m;
@@ -3736,7 +3820,9 @@ ol.rules-list li.open b { color: var(--ok); }
     T(30, 18, S.views[view], C.muted, "12px Archivo, sans-serif");
     const L = st.mic.level, x = 246, lit = Math.round(Math.min(1, L.above() / 50) * 10);
     for (let i = 0; i < 10; i++) { g.fillStyle = i < lit ? sndLevelColour(C, i * 5) : C.dim; g.fillRect(x + i * 4, 10, 3, 10); }
-    g.fillStyle = st.doLamp ? C.amber : C.dim; g.beginPath(); g.arc(x + 48, 15, 3, 0, 7); g.fill();
+    if (st.mic.digital) T(x + 45, 19, "D", C.teal);
+    else { g.fillStyle = st.doLamp ? C.amber : C.dim; g.beginPath(); g.arc(x + 48, 15, 3, 0, 7); g.fill(); }
+    if (st.mic.spk.busy()) { g.strokeStyle = C.pink; for (let i = 0; i < 2; i++) { g.beginPath(); g.arc(x - 8 + i * 3, 15, 3 + i * 3, -Math.PI / 2, Math.PI / 2); g.stroke(); } }
     if (st.rec && t % 1 < 0.6) { g.fillStyle = C.coral; g.beginPath(); g.arc(x + 60, 15, 4, 0, 7); g.fill(); }
     const n = S.views.length, first = 320 - 84 - (n - 1) * 9;
     for (let i = 0; i < n; i++) { g.fillStyle = i === view ? C.ink : C.dim; g.beginPath(); g.arc(first + i * 9, 15, 3, 0, 7); g.fill(); }
@@ -3784,11 +3870,15 @@ ol.rules-list li.open b { color: var(--ok); }
   ];
 
   // The help text every lab prints (SoundLab::printHelp), with the lab's own commands first.
-  function soundHelp(lesson, S, term) {
-    term.line(`Sound lab ${lesson.id} ${lesson.title}  (sound-lab-${lesson.id.toLowerCase()})  ·  KY-037: AO on GPIO 6, DO on GPIO 21`);
+  function soundHelp(lesson, S, term, st) {
+    term.line(`Sound lab ${lesson.id} ${lesson.title}  (sound-lab-${lesson.id.toLowerCase()})  ·  mic: ${st.mic.digital ? "INMP441 (I2S, digital)" : "KY-037 (ADC, analog)"}`);
     const row = (u, w) => term.line(`  ${u.padEnd(28)} ${w}`);
     (S.commands || []).forEach(([u, w]) => row(u, w));
     row("quiet", "re-learn the quiet of your room (half a second: shh)");
+    row("mic [auto|ky037|inmp441]", "which microphone (saved; restarts)");
+    row("vol <0-100>", "speaker volume (saved, default 40)");
+    row("beep [Hz] [wave]", "a test tone on the speaker (sine square triangle saw noise)");
+    row("tune <name>", "play a tune: hello scale twinkle ode alarm");
     row("plot [off]", "print the level as a bar every 50 ms");
     row("status", "the sampler, the ADC and the level, in numbers");
     row("rate <Hz>", "sample rate, 2000-48000 (default 16000)");
@@ -3801,14 +3891,41 @@ ol.rules-list li.open b { color: var(--ok); }
   // Commands every lab shares (the shell's own), for the simulated monitor.
   function soundShellCommand(line, st, term, lesson, S) {
     const [cmd, ...rest] = line.split(/\s+/), arg = rest.join(" ").toLowerCase(), m = st.mic, L = m.level;
-    if (cmd === "help" || cmd === "?") { soundHelp(lesson, S, term); return true; }
+    if (cmd === "help" || cmd === "?") { soundHelp(lesson, S, term, st); return true; }
+    if (cmd === "mic") {
+      if (!["auto", "ky037", "inmp441"].includes(arg)) { term.line(`[W] mic auto | mic ky037 | mic inmp441   (now: ${m.digital ? "INMP441 (I2S, digital)" : "KY-037 (ADC, analog)"})`, "w"); return true; }
+      m.digital = arg === "inmp441" || (arg === "auto" && (st.wired ?? true));
+      term.line("  - mic setting saved: restarting...");
+      term.line(arg === "auto" ? "Listening for an INMP441 on the I2S pins..." : "", "");
+      term.line(`Microphone: ${m.digital ? "INMP441 (I2S, digital)" : "KY-037 (ADC, analog)"} (mic setting: ${arg})`);
+      term.line(m.digital ? "[I] Mic: INMP441 on I2S (SCK 40, WS 41, SD 42) at 16000 Hz, 24-bit" : "[I] Mic: AO on GPIO 6 (ADC1 channel 5) at 16000 Hz, attenuation 12 dB (0-3.1 V); DO on GPIO 21", "i");
+      m.level.relearn(); return true;
+    }
+    if (cmd === "vol") {
+      const v = +arg;
+      if (!arg || !(v >= 0 && v <= 100)) { term.line(`[W] vol <0-100>   (now ${m.spk.vol})`, "w"); return true; }
+      m.spk.vol = v; if (sndAudio.out) sndAudio.out.gain.value = Math.min(0.3, 0.12 * (v / 40) ** 2); // squared, like the board
+      soundNote(st, term, "-", `volume ${v}`); return true;
+    }
+    if (cmd === "beep") {
+      const [hzs, wave = "sine"] = arg.split(/\s+/), hz = hzs ? +hzs : 440;
+      if (!(hz >= 20 && hz <= 8000) || !["sine", "square", "triangle", "saw", "noise"].includes(wave)) { term.line("[W] beep [Hz 20-8000] [sine|square|triangle|saw|noise]", "w"); return true; }
+      m.spk.beep(hz, 400, wave); soundNote(st, term, "-", `beep ${hz} Hz ${wave}`); return true;
+    }
+    if (cmd === "tune") {
+      const T = { hello: ["C5/16 E5/16 G5/8", 220], scale: ["C5/8 D5/8 E5/8 F5/8 G5/8 A5/8 B5/8 C6/4", 200], twinkle: ["C5/4 C5/4 G5/4 G5/4 A5/4 A5/4 G5/2", 150], ode: ["E5/4 E5/4 F5/4 G5/4 G5/4 F5/4 E5/4 D5/4 C5/4 C5/4 D5/4 E5/4 E5/4. D5/8 D5/2", 150], alarm: ["A5/16 E5/16 A5/16 E5/16 A5/16 E5/16 A5/16 E5/16", 200] }[arg];
+      if (!T) { term.line("[W] tune hello | scale | twinkle | ode | alarm", "w"); return true; }
+      m.spk.tune(T[0], T[1]); soundNote(st, term, "-", `tune ${arg}`); return true;
+    }
     if (cmd === "quiet") { L.relearn(); soundNote(st, term, "-", "shh... learning the quiet"); return true; }
     if (cmd === "status") {
       term.line(`sampler: ${m.rate} Hz asked, ${m.rate} Hz measured · frames dropped 0 · DMA overruns 0`);
       const clip = m.rawLow <= 0 || m.rawHigh >= 4095;
       term.line(`ADC: attenuation ${sndAttenName(m.atten)} · bias ${m.toMv(m.dc)} mV (raw ${Math.round(m.dc)}) · last 100 ms raw ${m.rawLow}..${m.rawHigh}${clip ? " CLIPPING" : ""} · eFuse calibration`);
       term.line(`level: ${L.fast.toFixed(1)} dBFS fast, ${L.slow.toFixed(1)} slow, floor ${L.floor.toFixed(1)} dBFS · ${L.above().toFixed(1)} dB above the quiet · peak ${L.peak.toFixed(1)} dBFS`);
-      term.line(`comparator DO: ${m.doHigh ? "HIGH" : "low"} now, ${m.doRises} rising edges`);
+      if (!m.digital) term.line(`comparator DO: ${m.doHigh ? "HIGH" : "low"} now, ${m.doRises} rising edges`);
+      else term.line(`INMP441: about ${m.spl().toFixed(0)} dB SPL (RMS dBFS + 111)`);
+      term.line(`speaker: volume ${m.spk.vol}, ${m.spk.busy() ? "playing" : "quiet"}`);
       return true;
     }
     if (cmd === "atten") {
@@ -3843,23 +3960,27 @@ ol.rules-list li.open b { color: var(--ok); }
     const st = S.init();
     st.view = st.view ?? 0;
     const row = document.createElement("div"); row.className = "quick";
-    const actions = [{ label: "button: next view", run: () => { st.view = (st.view + 1) % S.views.length; } }, ...SOUND_HANDS, ...(S.actions || [])];
+    const actions = [{ label: "button: next view", run: () => { st.view = (st.view + 1) % S.views.length; } }, ...SOUND_HANDS, ...(S.actions || []),
+      { label: st.mic.digital ? "mic: INMP441 → KY-037" : "mic: KY-037 → INMP441", run(s2, term, b) { soundShellCommand(`mic ${s2.mic.digital ? "ky037" : "inmp441"}`, s2, term, lesson, S); b.textContent = s2.mic.digital ? "mic: INMP441 → KY-037" : "mic: KY-037 → INMP441"; } },
+      { label: "🔈 hear it in the browser: off", run(s2, term, b) { sndAudio.on = !sndAudio.on; if (sndAudio.on) sndAudio.start(); b.textContent = `🔈 hear it in the browser: ${sndAudio.on ? "on" : "off"}`; b.setAttribute("aria-pressed", String(sndAudio.on)); } }];
     row.innerHTML = actions.map((a, i) => `<button type="button" class="btn" data-i="${i}">${a.label}</button>`).join("");
     const frame = document.createElement("div"); frame.className = "screen-frame";
     frame.innerHTML = `<canvas width="320" height="170" role="img" aria-label="Simulated ${lesson.id} screen: ${S.views.join(", ")} views"></canvas>`;
     const cap = document.createElement("p"); cap.className = "sim-cap";
-    cap.textContent = "A pretend microphone, drawn like the board does. The buttons stand in for your hands, your voice, the push button and the serial monitor.";
+    cap.textContent = "A pretend microphone and speaker, drawn like the board does. The buttons stand in for your hands, your voice, the push button and the serial monitor; a click on the screen is a clap. Browser sound stays off until you switch it on.";
     parent.append(row, frame, cap);
     const term = terminal(parent, "$ uv run pio device monitor", true);
     st.term = term;
-    row.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => actions[+b.dataset.i].run(st, term)));
+    row.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => actions[+b.dataset.i].run(st, term, b)));
     const timers = [];
     const boot = [
-      [`[I] Mic: AO on GPIO 6 (ADC1 channel 5) at 16000 Hz, attenuation 12 dB (0-3.1 V); DO on GPIO 21`, "i"],
+      ["Listening for an INMP441 on the I2S pins...", ""],
+      [`Microphone: ${st.mic.digital ? "INMP441 (I2S, digital)" : "KY-037 (ADC, analog)"} (mic setting: auto)`, ""],
+      [st.mic.digital ? "[I] Mic: INMP441 on I2S (SCK 40, WS 41, SD 42) at 16000 Hz, 24-bit" : "[I] Mic: AO on GPIO 6 (ADC1 channel 5) at 16000 Hz, attenuation 12 dB (0-3.1 V); DO on GPIO 21", "i"],
       ...(S.boot || []).map((l) => [l, ""]),
     ];
     boot.forEach(([l, c], i) => timers.push(setTimeout(() => term.line(l, c), 160 * i)));
-    timers.push(setTimeout(() => { soundHelp(lesson, S, term); soundNote(st, term, "-", "learning the quiet..."); }, 160 * boot.length));
+    timers.push(setTimeout(() => { soundHelp(lesson, S, term, st); st.mic.spk.play(500, 523, "hello"); soundNote(st, term, "-", "learning the quiet..."); }, 160 * boot.length));
     term.form.addEventListener("submit", (e) => {
       e.preventDefault();
       const line = term.input.value.trim(); term.input.value = "";
@@ -3926,16 +4047,18 @@ ol.rules-list li.open b { color: var(--ok); }
   // ---------- S1: the whole track at a glance ----------
   function soundJourney(root) {
     const LABS = [
-      { id: "S1", t: "Hear", what: "the raw signal: oscilloscope, the bias, the comparator", out: "screen" },
-      { id: "S2", t: "Loudness", what: "a sound level meter, a 10-minute diary, a too-loud alarm", out: "LED" },
-      { id: "S3", t: "Clap control", what: "claps (not voices) in patterns of 1-4 switch things", out: "LED · RGB · screen" },
-      { id: "S4", t: "Recorder", what: "voice-activated recording; listen on your phone", out: "Wi-Fi · WAV" },
-      { id: "S5", t: "Spectrum", what: "our own FFT: bands, a waterfall, a whistle tuner", out: "pitch" },
-      { id: "S6", t: "Sound games", what: "a knock lock, Clap Bird, a beat-following party", out: "games" },
+      { id: "S1", t: "Hear", what: "the raw signal: scope, both mics side by side, bias or bits, the comparator", out: "screen", need: ["mic"] },
+      { id: "S2", t: "Loudness", what: "a level meter (dB SPL with the INMP441), a 10-minute diary, an alarm", out: "LED · tune", need: ["mic"], opt: ["spk"] },
+      { id: "S3", t: "Clap control", what: "claps (not voices) in patterns of 1-4 switch things", out: "LED · RGB · sounds", need: ["mic"], opt: ["spk"] },
+      { id: "S4", t: "Recorder", what: "voice-activated recording; listen on your phone or the board", out: "Wi-Fi · WAV · speaker", need: ["mic"], opt: ["wifi", "spk"] },
+      { id: "S5", t: "Spectrum", what: "our own FFT: bands, a waterfall, a tuner with a reference tone", out: "pitch", need: ["mic"], opt: ["spk"] },
+      { id: "S6", t: "Sound games", what: "a knock lock, Clap Bird, a beat-following party", out: "games · sounds", need: ["mic"], opt: ["spk"] },
+      { id: "S7", t: "Speaker", what: "a synth: waves, notes, chords, envelopes, tunes, game sounds", out: "the speaker", need: ["spk"] },
+      { id: "S8", t: "Voice FX", what: "a parrot that repeats you as a chipmunk or a robot; live echo", out: "the speaker", need: ["inmp", "spk"] },
     ];
     root.innerHTML = `<div class="wd"><ul class="snd-journey">${LABS.map((l, i) => `<li><button type="button" class="snd-stop" data-i="${i}" aria-pressed="${i === 0}">
-        <b>${l.id}</b><span class="t">${l.t}</span><span class="w">${l.what}</span><span class="o">→ ${l.out}</span></button></li>`).join("")}</ul>
-      <canvas width="680" height="120" role="img" aria-label="The signal path: a sound reaches the KY-037, its voltage goes to the ESP32-S3's ADC, and each lab turns the numbers into something else." style="width:100%;height:auto;display:block"></canvas></div>`;
+        <b>${l.id}</b><span class="t">${l.t}</span><span class="w">${l.what}</span><span class="o">→ ${l.out}</span>${sndParts(l.need, l.opt)}</button></li>`).join("")}</ul>
+      <canvas width="680" height="120" role="img" aria-label="The signal path: a sound reaches a microphone (the KY-037's voltage into the ADC, or the INMP441's numbers over I2S), the ESP32-S3 works on it, and the lab turns it into something else, often a sound on the speaker." style="width:100%;height:auto;display:block"></canvas></div>`;
     const cv = root.querySelector("canvas"), g = cv.getContext("2d"), C = soundPalette(), T = sndText(g);
     let pick = 0;
     root.querySelectorAll(".snd-stop").forEach((b) => b.addEventListener("click", () => { pick = +b.dataset.i; root.querySelectorAll(".snd-stop").forEach((x) => x.setAttribute("aria-pressed", String(+x.dataset.i === pick))); }));
@@ -3946,9 +4069,9 @@ ol.rules-list li.open b { color: var(--ok); }
       for (let k = 0; k < 4; k++) { const r = ((tt * 40 + k * 22) % 88) + 6; g.strokeStyle = C.pink; g.globalAlpha = 1 - r / 94; g.beginPath(); g.arc(30, 60, r, -0.6, 0.6); g.stroke(); }
       g.globalAlpha = 1;
       const box = (x, w, label, sub, col) => { g.strokeStyle = col; g.lineWidth = 1.5; g.beginPath(); g.roundRect(x, 34, w, 52, 8); g.stroke(); T(x + w / 2, 56, label, C.ink, "bold 12px Archivo, sans-serif", "center"); T(x + w / 2, 74, sub, C.muted, "10px 'IBM Plex Mono', monospace", "center"); };
-      box(130, 120, "KY-037", "AO · DO", C.pink);
-      box(300, 140, "ESP32-S3", "ADC · 16 000/s", C.teal);
       const L = LABS[pick];
+      box(130, 120, L.need.includes("spk") && !L.need.includes("inmp") ? "(no mic)" : L.need.includes("inmp") ? "INMP441" : "KY-037 / INMP441", L.need.includes("inmp") ? "I2S0" : "ADC or I2S0", C.pink);
+      box(300, 140, "ESP32-S3", L.need.includes("spk") || (L.opt || []).includes("spk") ? "16 000/s · I2S1 out" : "16 000/s", C.teal);
       box(500, 160, `${L.id} ${L.t}`, L.out, C.amber);
       g.lineWidth = 1;
       [[250, 300], [440, 500]].forEach(([a, b]) => { g.strokeStyle = C.dim; g.beginPath(); g.moveTo(a, 60); g.lineTo(b, 60); g.stroke(); const p = a + ((tt * 0.8) % 1) * (b - a); g.fillStyle = C.pink; g.beginPath(); g.arc(p, 60, 3.5, 0, 7); g.fill(); });
@@ -3990,9 +4113,9 @@ ol.rules-list li.open b { color: var(--ok); }
         <span style="flex:1"></span>${["talk", "whistle", "clap", "quiet"].map((m) => `<button type="button" class="btn" data-m="${m}">${{ talk: "🗣 talk", whistle: "〰 whistle", clap: "👏 clap", quiet: "🤫 quiet" }[m]}</button>`).join("")}`,
     });
     const { g, C, cap, q } = P, T = sndText(g);
-    const mic = soundMic({ mode: "talk" });
+    const mic = soundMic(); // quiet first, so the level meter learns the quiet; then it talks
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let at = 0, playing = !reduce, since = 0, dmaFill = 0, flying = -1;
+    let at = 0, playing = !reduce, since = 0, dmaFill = 0, flying = -1, talking = false;
     const show = () => { cap.innerHTML = `<b>${STEPS[at].title}</b><br>${STEPS[at].text}`; q('[data-o="n"]').textContent = `${at + 1} / ${STEPS.length}`; q('[data-a="play"]').textContent = playing ? "❚❚ Pause" : "▶ Play"; };
     q('[data-a="prev"]').addEventListener("click", () => { at = (at + STEPS.length - 1) % STEPS.length; since = 0; show(); });
     q('[data-a="next"]').addEventListener("click", () => { at = (at + 1) % STEPS.length; since = 0; show(); });
@@ -4001,6 +4124,7 @@ ol.rules-list li.open b { color: var(--ok); }
     show();
     return soundLoop((dt, t) => {
       mic.step(dt);
+      if (!talking && mic.t > 0.7) { talking = true; mic.say("talk"); }
       if (playing && (since += dt) > 9) { since = 0; at = (at + 1) % STEPS.length; show(); }
       g.fillStyle = C.paper; g.fillRect(0, 0, 680, 320);
       // The pipeline, with a dot travelling along it.
@@ -4172,18 +4296,18 @@ ol.rules-list li.open b { color: var(--ok); }
   function soundComparator(root) {
     const P = soundPanelCanvas(root, {
       h: 290, label: "The AO wave over the last two seconds with the pot's threshold line, and the DO output below it: high wherever the wave is above the line.",
-      controls: `<label>pot: threshold above the bias <input type="range" min="1" max="120" step="1" value="30" data-k="pot" aria-label="Comparator threshold in millivolts above the bias"></label><span class="mono" data-o="pot"></span>
+      controls: `<label>pot: threshold above the bias <input type="range" min="1" max="120" step="1" value="10" data-k="pot" aria-label="Comparator threshold in millivolts above the bias"></label><span class="mono" data-o="pot"></span>
         <span class="mono">drag the dashed line too</span>`,
     });
     const { g, C, cv, cap, q } = P, T = sndText(g);
     const pot = q('[data-k="pot"]');
-    const mic = soundMic({ potMv: 30 });
+    const mic = soundMic({ potMv: 10 });
     // A loop of 8 s: quiet, talk, a clap, quiet, two claps, a whistle.
     const SCRIPT = [[0.4, () => mic.say("quiet")], [1, () => mic.say("talk", 1.8)], [3.4, () => mic.clap()], [5, () => mic.clap()], [5.3, () => mic.clap()], [6, () => mic.say("whistle", 1.4)]];
     let loopT = 0, fired = new Set();
     const COLS = 560, mvCol = new Float32Array(COLS * 2), doCol = new Uint8Array(COLS);
     let head = 0, colAcc = 0, colLo = 0, colHi = 0, colDo = 0, colN = 0, rises = 0, risesAt = 0, rps = 0;
-    const perCol = 2000 / COLS; // ms of sound per column: the strip shows 2 s
+    const perCol = 4000 / COLS; // ms of sound per column: the strip shows 4 s
     mic.onFrame = (f) => {
       const ms64 = 4;
       const n = 64, s = mic.latest(n);
@@ -4192,9 +4316,10 @@ ol.rules-list li.open b { color: var(--ok); }
       if (colAcc >= perCol) { mvCol[head * 2] = colLo; mvCol[head * 2 + 1] = colHi; doCol[head] = colDo; head = (head + 1) % COLS; colAcc -= perCol; colLo = 1e9; colHi = -1e9; colDo = 0; }
     };
     colLo = 1e9; colHi = -1e9;
-    const yMv = (mv) => 120 - Math.max(-100, Math.min(100, mv)) * 0.95;
+    // A square-root scale: a 5 mV voice and a 200 mV clap both fit (the real wave is 40 times taller for the clap).
+    const yMv = (mv) => 120 - Math.sign(mv) * Math.sqrt(Math.min(200, Math.abs(mv)) / 200) * 95;
     let drag = false;
-    const setFromY = (clientY) => { const r = cv.getBoundingClientRect(), y = ((clientY - r.top) / r.height) * 290; pot.value = String(Math.round(Math.max(1, Math.min(120, (120 - y) / 0.95)))); };
+    const setFromY = (clientY) => { const r = cv.getBoundingClientRect(), y = ((clientY - r.top) / r.height) * 290, k = Math.max(0, (120 - y) / 95); pot.value = String(Math.round(Math.max(1, Math.min(120, k * k * 200)))); };
     cv.addEventListener("pointerdown", (e) => { drag = true; cv.setPointerCapture(e.pointerId); setFromY(e.clientY); });
     cv.addEventListener("pointermove", (e) => drag && setFromY(e.clientY));
     cv.addEventListener("pointerup", () => (drag = false));
@@ -4206,14 +4331,15 @@ ol.rules-list li.open b { color: var(--ok); }
       const before = mic.doRises; mic.step(dt); rises += mic.doRises - before;
       if (t - risesAt >= 1) { rps = rises; rises = 0; risesAt = t; }
       g.fillStyle = C.paper; g.fillRect(0, 0, 680, 290);
-      T(20, 18, "AO minus the bias (mV), last 2 s", C.muted);
+      T(20, 18, "AO minus the bias, last 4 s (square-root scale)", C.muted);
+      [5, 50, 200].forEach((v) => T(96, yMv(v) + 4, `${v} mV`, C.muted, "9px 'IBM Plex Mono', monospace", "right"));
       g.fillStyle = C.dim; g.fillRect(100, yMv(0), COLS, 1);
       for (let i = 0; i < COLS; i++) {
         const k = (head + i) % COLS, lo = mvCol[k * 2], hi = mvCol[k * 2 + 1];
         g.fillStyle = doCol[k] ? C.amber : C.pink; g.fillRect(100 + i, yMv(hi), 1, Math.max(1, yMv(lo) - yMv(hi)));
       }
       g.setLineDash([6, 4]); g.strokeStyle = C.ink; g.beginPath(); g.moveTo(100, yMv(mic.potMv)); g.lineTo(660, yMv(mic.potMv)); g.stroke(); g.setLineDash([]);
-      T(96, yMv(mic.potMv) + 4, "pot", C.ink, "bold 11px 'IBM Plex Mono', monospace", "right");
+      T(664, yMv(mic.potMv) - 6, `pot ${mic.potMv} mV`, C.ink, "bold 11px 'IBM Plex Mono', monospace", "right");
       T(20, 238, "DO", C.amber, "bold 12px 'IBM Plex Mono', monospace");
       g.strokeStyle = C.amber; g.beginPath();
       for (let i = 0; i < COLS; i++) { const k = (head + i) % COLS, y = doCol[k] ? 222 : 246; i ? g.lineTo(100 + i, y) : g.moveTo(100, y); }
@@ -4224,8 +4350,8 @@ ol.rules-list li.open b { color: var(--ok); }
       T(40, 150, "LED2", C.muted, undefined, "center");
       T(40, 166, `${rps}/s`, C.ink, undefined, "center");
       // The same advice as S1's comparator view.
-      let highCols = 0; for (let i = COLS - 250; i < COLS; i++) highCols += doCol[(head + i) % COLS];
-      const hint = mic.potMv < 2 ? "DO always on: turn the pot the other way" : highCols === 0 && mic.level.above() > 15 ? "loud but DO stays off: turn the pot back" : "DO follows the loud moments: tuned";
+      let highCols = 0, loudest = 0; for (let i = 0; i < COLS; i++) { highCols += doCol[i]; loudest = Math.max(loudest, mvCol[i * 2 + 1]); }
+      const hint = mic.potMv < 2 || highCols > COLS * 0.6 ? "DO always on: turn the pot the other way" : highCols === 0 && loudest > 40 ? "even the clap stays under the line: turn the pot back" : highCols === 0 ? "nothing loud yet: a clap is coming" : "DO follows the loud moments: tuned";
       T(100, 278, hint, hint.endsWith("tuned") ? C.teal : C.amber);
       cap.textContent = `Threshold ${mic.potMv} mV above the bias. Each wave crest above the dashed line is one rising edge on DO (amber); a clap makes dozens, which is why S3 listens to AO, not DO.`;
     });
@@ -4239,23 +4365,25 @@ ol.rules-list li.open b { color: var(--ok); }
     T(x, y + 24, value, col || C.ink, "bold 12px Archivo, sans-serif");
   }
   SOUND_SCREENS.S1 = {
-    views: ["scope", "bias", "comparator", "numbers"],
-    dbl: ["freeze", "atten next", "pot", "status"],
+    views: ["scope", "mics", "bias", "comparator", "numbers"],
+    dbl: ["freeze", "status", "atten next", "pot", "status"],
     commands: [
       ["freeze [off]", "hold the scope picture (double-click on scope)"],
       ["span <ms>", "time across the scope, 2-120 ms (default 20)"],
       ["trigger [on|off]", "line the wave up on a rising zero crossing"],
-      ["pot", "how to tune the comparator's trim pot"],
+      ["pot", "how to tune the comparator (trim pot, or thresh)"],
+      ["thresh <dB>", "the INMP441's software comparator line (default 15)"],
       ["dump [n]", "print the newest n samples as numbers"],
     ],
     captions: [
       "scope: the last 20 ms of sound, lined up on a rising zero crossing so a steady tone stands still. The scale follows the wave and is written in millivolts at the AO pin.",
-      "bias: a 0-3.3 V ruler. Shaded = the ADC's range at this attenuation, the line = the bias, the band = how far the wave swung in the last 0.1 s. The hint says whether a smaller range would fit.",
-      "comparator: the DO lamp (like LED2 on the module), rising edges per second, and 6 s of loudness (top) against DO (bottom). Tune the pot until DO lights only with the loud moments.",
-      "numbers: the sampler's real rate, lost samples, the level in dBFS, the quiet, dB above it, free PSRAM.",
+      "mics: both microphones, one above the other (INMP441 on top): each one's quiet in dBFS and how far above it the sound is now, and how many dB more clearly the INMP441 hears it. Only one wired? It shows how to wire the other (then press RST).",
+      "bias (KY-037): a 0-3.3 V ruler. Shaded = the ADC's range at this attenuation, the line = the bias, the band = how far the wave swung in the last 0.1 s. The hint says whether a smaller range would fit. With the INMP441 it becomes a ladder of its 24 bits: how many the sound uses (6 dB each) and the headroom left.",
+      "comparator: the DO lamp (like LED2 on the module), rising edges per second, and 6 s of loudness (top) against DO (bottom). Tune the pot until DO lights only with the loud moments. The INMP441 has no DO: the board compares in software (thresh, 3 dB of hysteresis).",
+      "numbers: the source, the sampler's real rate, lost samples, the level in dBFS (and dB SPL with the INMP441), the quiet, dB above it, free PSRAM.",
     ],
     actions: [
-      { label: "atten next", run(st) { const n = { 12: "6", 6: "2.5", 2.5: "0", 0: "12" }[st.mic.atten]; st.term.line(`> atten ${n}   (double-click)`); soundShellCommand(`atten ${n}`, st, st.term); } },
+      { label: "atten next", run(st) { if (st.mic.digital) return soundNote(st, st.term, "-", "INMP441: fixed 24-bit range, nothing to switch"); const n = { 12: "6", 6: "2.5", 2.5: "0", 0: "12" }[st.mic.atten]; st.term.line(`> atten ${n}   (double-click)`); soundShellCommand(`atten ${n}`, st, st.term); } },
       { label: "freeze", run(st) { SOUND_SCREENS.S1.onCommand("freeze", st, st.term); } },
       { label: "pot: more sensitive", run(st) { st.mic.potMv = Math.max(1, st.mic.potMv - 10); soundNote(st, st.term, "-", `(the pot: ${st.mic.potMv} mV above the bias)`); } },
       { label: "pot: less sensitive", run(st) { st.mic.potMv = Math.min(150, st.mic.potMv + 10); soundNote(st, st.term, "-", `(the pot: ${st.mic.potMv} mV above the bias)`); } },
@@ -4264,9 +4392,14 @@ ol.rules-list li.open b { color: var(--ok); }
       const st = { mic: soundMic(), spanMs: 20, trigger: true, frozen: false, shown: new Float32Array(0), scale: 256,
         strip: { loud: new Uint8Array(150), high: new Uint8Array(150), head: 0, slotPeak: 0, slotT: 0, risesSeen: 0, rps: 0, risesAt: 0, risesThen: 0 } };
       st.mic.onFrame = () => { st.strip.slotPeak = Math.max(st.strip.slotPeak, st.mic.level.instAbove()); };
+      // The other microphone, hearing the same room (the mics view). S1 opens it at start-up.
+      st.mic2 = soundMic({ digital: true }); st.thresh = 15; st.softHigh = false;
       return st;
     },
     tick(st, dt) {
+      const m2 = st.mic2; m2.digital = !st.mic.digital; m2.mode = st.mic.mode; m2.until = st.mic.until; m2.t = st.mic.t; m2.claps = st.mic.claps; m2.step(dt);
+      // The INMP441 has no DO: a software comparator with 3 dB of hysteresis stands in for it.
+      if (st.mic.digital) { const a = st.mic.level.instAbove(); if (!st.softHigh && a >= st.thresh) { st.softHigh = true; st.mic.doRises++; } else if (st.softHigh && a < st.thresh - 3) st.softHigh = false; st.doLamp = st.softHigh; }
       const s = st.strip, m = st.mic;
       if ((s.slotT += dt) >= 0.04) {
         s.slotT = 0;
@@ -4278,6 +4411,7 @@ ol.rules-list li.open b { color: var(--ok); }
     },
     onCommand(line, st, term) {
       const [cmd, a = ""] = line.toLowerCase().split(/\s+/);
+      if (cmd === "thresh") { const d = +a; if (!(d >= 3 && d <= 50)) term.line(`[W] thresh <dB>, 3-50: the software comparator's line above the quiet (now ${st.thresh})`, "w"); else { st.thresh = d; soundNote(st, term, "-", `software comparator at ${d} dB`); } return true; }
       if (cmd === "freeze") { st.frozen = a ? a !== "off" : !st.frozen; soundNote(st, term, "-", st.frozen ? "scope frozen (freeze again to go on)" : "scope running"); return true; }
       if (cmd === "span") { const ms = +a; if (!(ms >= 2 && ms <= 120)) term.line(`[W] span <ms>, 2-120 (now ${st.spanMs}). 20 ms = one cycle of 50 Hz`, "w"); else { st.spanMs = ms; st.frozen = false; } return true; }
       if (cmd === "trigger") { st.trigger = a ? a === "on" : !st.trigger; soundNote(st, term, "-", st.trigger ? "trigger on: a steady tone stands still" : "free-running"); return true; }
@@ -4287,7 +4421,7 @@ ol.rules-list li.open b { color: var(--ok); }
           "  2. Clap. DO should flash with each clap: the comparator view shows DO under the loudness.",
           "  3. Lit all the time: turn it back a little. Never lights: turn it further toward the edge.",
           "  Which way is 'more sensitive' differs between module makers: watch the lamp, not the direction."].forEach((l) => term.line(l));
-        st.view = 2; return true;
+        st.view = 3; return true;
       }
       if (cmd === "dump") {
         const n = a ? +a : 320;
@@ -4301,6 +4435,53 @@ ol.rules-list li.open b { color: var(--ok); }
       return false;
     },
     draw(g, C, view, t, st) {
+      const T = sndText(g), S8 = "8px 'IBM Plex Mono', monospace", m = st.mic;
+      if (view === 1) {
+        // Two lanes, the INMP441 on top.
+        const dig = m.digital ? m : st.mic2, ana = m.digital ? st.mic2 : m;
+        [[dig, "INMP441", C.teal, 36], [ana, "KY-037", C.pink, 86]].forEach(([mm, name, col, y]) => {
+          const L = mm.level, a = L.above();
+          T(8, y + 10, name, col, "bold 12px Archivo, sans-serif");
+          T(8, y + 24, `quiet ${L.floor.toFixed(0)} dBFS`, C.muted, S8); T(8, y + 36, `now +${a.toFixed(0)} dB`, C.ink, S8);
+          const s = mm.latest(640); sndWave(g, 100, y, 210, 42, s, 640, Math.max(64, ...Array.from(s, Math.abs)) * 1.1, col);
+        });
+        const d = dig.level.above() - ana.level.above();
+        T(8, 146, d > 3 ? `INMP441 hears it ${d.toFixed(0)} dB more clearly` : "clap or talk: compare the two", d > 3 ? C.teal : C.muted, S8);
+        return;
+      }
+      const v = view > 1 ? view - 1 : view;
+      if (v === 1 && m.digital) {
+        // The 24-bit ladder: how many bits the sound uses (6 dB each) and the headroom left.
+        const L = m.level, peakDb = Math.max(-96, L.peak), bitsUsed = Math.max(1, Math.min(24, Math.round((peakDb + 96 + 48) / 6.02))), head = Math.max(0, -peakDb);
+        for (let b = 0; b < 24; b++) { g.fillStyle = b < bitsUsed ? C.pink : C.dim; g.fillRect(14, 150 - b * 4.8, 60, 3.6); }
+        T(14, 38, "bit 23", C.muted, S8); T(80, 154, "bit 0", C.muted, S8);
+        sndStat(g, C, 104, 38, "bits the sound uses", `${bitsUsed} of 24`, C.pink);
+        sndStat(g, C, 216, 38, "headroom", `${head.toFixed(0)} dB`, head < 6 ? C.coral : C.ink);
+        sndStat(g, C, 104, 78, "offset (DC)", "tiny, removed");
+        T(104, 129, head < 1 ? "CLIPPING: at full scale" : "each bit = 6 dB; quiet uses few", head < 1 ? C.coral : C.muted, S8);
+        T(104, 143, "INMP441: fixed range, no atten", C.muted, S8);
+        return;
+      }
+      if (v === 2 && m.digital) {
+        const sstrip = st.strip;
+        g.fillStyle = st.softHigh ? C.amber : C.dim; g.beginPath(); g.arc(34, 60, 18, 0, 7); g.fill();
+        T(14, 91, st.softHigh ? "over" : "under", C.muted, S8);
+        sndStat(g, C, 68, 38, "crossings", `${sstrip.rps}/s`, sstrip.rps ? C.amber : C.ink);
+        sndStat(g, C, 168, 38, "threshold", `${st.thresh} dB`);
+        for (let i = 0; i < 150; i++) { const at = (sstrip.head + i) % 150, px = 10 + i * 2, hh = Math.min(30, (sstrip.loud[at] * 30) / 50); if (hh) { g.fillStyle = sndLevelColour(C, sstrip.loud[at]); g.fillRect(px, 126 - hh, 2, hh); } if (sstrip.high[at]) { g.fillStyle = C.amber; g.fillRect(px, 132, 2, 10); } }
+        g.fillStyle = C.ink; g.fillRect(10, 126 - Math.min(30, (st.thresh * 30) / 50), 300, 1);
+        T(10, 153, "software comparator: thresh, 3 dB hysteresis", C.muted, S8);
+        return;
+      }
+      if (v === 3 && m.digital) {
+        sndStat(g, C, 10, 36, "source", "INMP441 (I2S)", C.teal); sndStat(g, C, 170, 36, "level", `${m.spl().toFixed(0)} dB SPL`);
+        sndStat(g, C, 10, 76, "level (fast)", `${m.level.fast.toFixed(1)} dBFS`); sndStat(g, C, 170, 76, "quiet (floor)", `${m.level.floor.toFixed(1)} dBFS`);
+        sndStat(g, C, 10, 116, "above the quiet", `${m.level.above().toFixed(1)} dB`, sndLevelColour(C, m.level.above())); sndStat(g, C, 170, 116, "samples / second", "16000 Hz");
+        return;
+      }
+      this.drawKy(g, C, v, t, st);
+    },
+    drawKy(g, C, view, t, st) {
       const T = sndText(g), m = st.mic, L = m.level, S8 = "8px 'IBM Plex Mono', monospace";
       if (view === 0) {
         if (!st.frozen) {
@@ -4466,13 +4647,15 @@ ol.rules-list li.open b { color: var(--ok); }
     dbl: ["speed", "quiet", "diary", "alarm"],
     commands: [
       ["speed [fast|slow]", "smoothing: 125 ms or 1 s, like a real meter"],
-      ["limit <dB>", "the alarm line, dB above the quiet (default 35)"],
+      ["units [spl|quiet]", "dB SPL (INMP441) or dB above the quiet"],
+      ["limit <dB> [spl|quiet]", "the alarm line: 30-120 dB SPL (default 80) or 3-60 above the quiet (35)"],
       ["hold <ms>", "how long over the line before the alarm (default 1000)"],
       ["alarm [on|off]", "the too-loud alarm (LED on GPIO 4 + screen)"],
+      ["alarm sound [on|off]", "play the alarm tune once per alarm (button stops it)"],
       ["diary", "print the last 10 minutes, 10 s per row"],
     ],
     captions: [
-      "meter: the level in dB above your room's quiet, what that roughly sounds like, and a bar with the peak hold (white tick) and the alarm line (dotted red).",
+      "meter: with the INMP441, dB SPL big (unweighted, ±2 dB) on a 30-110 scale: 30 whisper, 60 talk, 85 hearing risk, 100 loud. With the KY-037, dB above your room's quiet, what that roughly sounds like, and a bar with the peak hold (white tick) and the alarm line (dotted red).",
       "minute: the loudest moment of every quarter second, for the last 60 s, coloured by loudness; the dotted line is the alarm limit.",
       "diary: ten minutes in 60 slots of 10 s: a thin line from the quietest to the loudest moment, a block at the average, a red cap where the alarm fired. Example history plus what you do now.",
       "alarm: armed or ringing, the fuse filling while it is too loud (1 s by default), how many alarms and the loudest. Any button press silences it.",
@@ -4483,7 +4666,7 @@ ol.rules-list li.open b { color: var(--ok); }
       { label: "button (silences)", run(st) { if (st.alarm.active) { st.alarm.active = false; st.alarm.overSince = 0; soundNote(st, st.term, "-", "alarm silenced"); } else st.view = (st.view + 1) % 4; } },
     ],
     init() {
-      const st = { mic: soundMic(), slow: false, limit: 35, holdMs: 1000, alarmOn: true,
+      const st = { mic: soundMic({ digital: true }), slow: false, limit: 35, splLimit: 80, holdMs: 1000, alarmOn: true, alarmSound: true, units: "spl",
         minute: new Uint8Array(240), mHead: 0, mFilled: 0, mMax: 0, mStart: 0,
         diary: [], dLo: 1e9, dHi: 0, dSum: 0, dN: 0, dStart: 0, dOver: false,
         alarm: { active: false, overSince: 0, count: 0, lastMs: 0, worst: 0 } };
@@ -4492,6 +4675,7 @@ ol.rules-list li.open b { color: var(--ok); }
       st.mFilled = 240;
       for (let i = 0; i < 54; i++) { const avg = Math.round(8 + 6 * Math.sin(i / 6) + Math.random() * 4); st.diary.push({ lo: Math.max(0, avg - 6), avg, hi: avg + 8 + (i % 17 === 3 ? 25 : 0), over: i === 20 }); }
       const v = () => (st.slow ? st.mic.level.slowAbove() : st.mic.level.above());
+      Object.defineProperty(st, "limitNow", { get: () => (st.units === "spl" && st.mic.digital ? Math.max(3, st.splLimit - 111 - st.mic.level.floor) : st.limit) });
       st.value = v;
       st.mic.onFrame = (f, ms) => {
         if (st.mic.level.learning()) return;
@@ -4500,11 +4684,11 @@ ol.rules-list li.open b { color: var(--ok); }
         st.mMax = Math.max(st.mMax, x);
         if (ms - st.mStart >= 250) { st.minute[st.mHead] = Math.min(60, st.mMax); st.mHead = (st.mHead + 1) % 240; st.mMax = 0; st.mStart = ms; }
         const a = st.alarm;
-        if (x >= st.limit) {
+        if (x >= st.limitNow) {
           if (!a.overSince) a.overSince = ms;
-          if (st.alarmOn && !a.active && ms - a.overSince >= st.holdMs) { a.active = true; a.count++; a.lastMs = ms; st.dOver = true; soundNote(st, st.term, "x", `too loud: ${x.toFixed(0)} dB`); }
+          if (st.alarmOn && !a.active && ms - a.overSince >= st.holdMs) { a.active = true; a.count++; a.lastMs = ms; st.dOver = true; soundNote(st, st.term, "x", st.units === "spl" && st.mic.digital ? `too loud: ${st.mic.spl().toFixed(0)} dB SPL` : `too loud: ${x.toFixed(0)} dB`); if (st.alarmSound) st.mic.spk.tune("A5/16 E5/16 A5/16 E5/16 A5/16 E5/16 A5/16 E5/16", 200, "square"); }
           if (a.active) a.worst = Math.max(a.worst, x);
-        } else if (x < st.limit - 3) { a.overSince = 0; if (a.active) { a.active = false; soundNote(st, st.term, "+", "calm again"); } }
+        } else if (x < st.limitNow - 3) { a.overSince = 0; if (a.active) { a.active = false; soundNote(st, st.term, "+", "calm again"); } }
         if (!st.dStart) st.dStart = ms;
         st.dLo = Math.min(st.dLo, x); st.dHi = Math.max(st.dHi, x); st.dSum += x; st.dN++;
         if (ms - st.dStart >= 10000) {
@@ -4521,9 +4705,23 @@ ol.rules-list li.open b { color: var(--ok); }
         if (a && a !== "fast" && a !== "slow") { term.line("[W] speed | speed fast | speed slow", "w"); return true; }
         st.slow = a ? a === "slow" : !st.slow; soundNote(st, term, "-", st.slow ? "slow: 1 s smoothing" : "fast: 125 ms smoothing"); return true;
       }
-      if (cmd === "limit") { const d = +a; if (!(d >= 3 && d <= 60)) term.line(`[W] limit <dB above the quiet>, 3-60 (now ${st.limit})`, "w"); else { st.limit = d; soundNote(st, term, "-", `limit ${d} dB`); } return true; }
+      if (cmd === "units") {
+        if (a && a !== "spl" && a !== "quiet") { term.line("[W] units | units spl | units quiet", "w"); return true; }
+        const want = a ? a === "spl" : st.units !== "spl";
+        if (want && !st.mic.digital) { term.line("[W] dB SPL needs the INMP441 (its sensitivity is known); the KY-037 shows dB above the quiet", "w"); return true; }
+        st.units = want ? "spl" : "quiet"; soundNote(st, term, "-", want ? "units: dB SPL" : "units: dB above the quiet"); return true;
+      }
+      if (cmd === "limit") {
+        const [d0, unit = ""] = line.toLowerCase().split(/\s+/).slice(1), d = +d0, spl = unit ? unit === "spl" : st.units === "spl" && st.mic.digital;
+        if (unit && unit !== "spl" && unit !== "quiet") { term.line("[W] limit <dB> [spl|quiet]", "w"); return true; }
+        if (spl && !st.mic.digital) { term.line("[W] a dB SPL limit needs the INMP441; try limit 35 (dB above the quiet)", "w"); return true; }
+        if (spl ? !(d >= 30 && d <= 120) : !(d >= 3 && d <= 60)) { term.line(`[W] limit <dB> [spl|quiet]: 30-120 dB SPL or 3-60 dB above the quiet (now ${spl ? st.splLimit + " dB SPL" : st.limit + " dB above the quiet"})`, "w"); return true; }
+        if (spl) st.splLimit = d; else st.limit = d;
+        soundNote(st, term, "-", `limit ${d} ${spl ? "dB SPL" : "dB above the quiet"}`); return true;
+      }
       if (cmd === "hold") { const ms = +a; if (!(a && ms >= 0 && ms <= 10000)) term.line(`[W] hold <ms>, 0-10000: how long over the limit before the alarm (now ${st.holdMs})`, "w"); else st.holdMs = ms; return true; }
-      if (cmd === "alarm") { if (a && a !== "on" && a !== "off") { term.line("[W] alarm | alarm on | alarm off", "w"); return true; } st.alarmOn = a ? a === "on" : !st.alarmOn; soundNote(st, term, "-", st.alarmOn ? "alarm armed" : "alarm off"); return true; }
+      if (cmd === "alarm" && a === "sound") { const b = line.toLowerCase().split(/\s+/)[2]; st.alarmSound = b ? b === "on" : !st.alarmSound; soundNote(st, term, "-", st.alarmSound ? "alarm sound on" : "alarm sound off"); return true; }
+      if (cmd === "alarm") { if (a && a !== "on" && a !== "off") { term.line("[W] alarm [on|off] | alarm sound [on|off]", "w"); return true; } st.alarmOn = a ? a === "on" : !st.alarmOn; soundNote(st, term, "-", st.alarmOn ? "alarm armed" : "alarm off"); return true; }
       if (cmd === "diary") {
         term.line(`Noise diary, newest last. Each row = 10 s, dB above the quiet. Limit ${st.limit} dB.`);
         term.line("  ago    low  avg  high");
@@ -4536,6 +4734,20 @@ ol.rules-list li.open b { color: var(--ok); }
     draw(g, C, view, t, st) {
       const T = sndText(g), L = st.mic.level, S8 = "8px 'IBM Plex Mono', monospace", v = st.value();
       const graphLimit = (x, y, w, h) => { const ly = y + h - (st.limit * h) / 60; for (let gx = x; gx < x + w; gx += 3) { g.fillStyle = C.coral; g.fillRect(gx, ly, 1, 1); } };
+      if (view === 0 && st.units === "spl" && st.mic.digital) {
+        // dB SPL: the INMP441's datasheet sensitivity makes the number absolute.
+        const L2 = st.mic.level, spl = (st.slow ? L2.slow : L2.fast) + 111, num = spl.toFixed(0), col = spl < 70 ? C.teal : spl < 85 ? C.amber : C.coral;
+        g.font = "bold 34px Archivo, sans-serif"; const nw = g.measureText(num).width;
+        T(14, 76, num, col, "bold 34px Archivo, sans-serif"); T(20 + nw, 76, "dB SPL", C.muted, "bold 12px Archivo, sans-serif");
+        T(20 + nw, 49, st.slow ? "slow (1 s)" : "fast (125 ms)", C.muted, S8);
+        T(14, 93, "unweighted, +-2 dB", C.muted, S8);
+        const x = 14, y = 112, w = 292, h = 22, xOf = (d) => x + ((Math.min(110, Math.max(30, d)) - 30) / 80) * w;
+        g.fillStyle = C.dim; g.globalAlpha = 0.6; g.beginPath(); g.roundRect(x, y, w, h, 3); g.fill(); g.globalAlpha = 1;
+        for (let d = 30; d < spl && d < 110; d += 1.5) { g.fillStyle = d < 70 ? C.teal : d < 85 ? C.amber : C.coral; g.fillRect(xOf(d), y + 2, 2, h - 4); }
+        for (let j = y - 3; j < y + h + 3; j += 2) { g.fillStyle = C.coral; g.fillRect(xOf(st.splLimit), j, 1, 1); }
+        [[30, "whisper"], [60, "talk"], [85, "risk"], [100, "loud"]].forEach(([d, l]) => { g.fillStyle = C.muted; g.fillRect(xOf(d), y + h + 2, 1, 3); T(xOf(d) - 6, y + h + 13, `${d} ${l}`, C.muted, S8); });
+        return;
+      }
       if (view === 0) {
         const num = v.toFixed(0);
         g.font = "bold 34px Archivo, sans-serif"; const nw = g.measureText(num).width;
@@ -4647,7 +4859,7 @@ ol.rules-list li.open b { color: var(--ok); }
       const det = sndOnsets({ riseDb: rise, releaseDb: rel }), events = [];
       for (let f = 0; f <= cursor; f++) { const e = det.push(env.db(f) + jitter[f], f * 4); if (e) events.push({ ...e, f }); }
       g.fillStyle = C.paper; g.fillRect(0, 0, 680, 330);
-      const x0 = 40, w = 600, y0 = 20, h = 160, yOf = (d) => y0 + h - (Math.min(50, d) / 50) * h;
+      const x0 = 70, w = 590, y0 = 20, h = 160, yOf = (d) => y0 + h - (Math.min(50, d) / 50) * h;
       for (let f = 0; f < N; f++) { const d = env.db(f) + jitter[f]; g.fillStyle = f <= cursor ? sndLevelColour(C, d) : C.dim; g.fillRect(x0 + (f * w) / N, yOf(d), 2, y0 + h - yOf(d)); }
       g.setLineDash([5, 4]);
       g.strokeStyle = C.ink; g.beginPath(); g.moveTo(x0, yOf(rise)); g.lineTo(x0 + w, yOf(rise)); g.stroke();
@@ -4685,19 +4897,21 @@ ol.rules-list li.open b { color: var(--ok); }
   SOUND_PANELS.soundClapMachine = soundClapMachine;
 
   // ---------- S3 on the board's screen ----------
-  const S3_ACTIONS = { none: "nothing", led: "toggle the LED on GPIO 4", colour: "next colour on the RGB LED", dark: "RGB LED off", screen: "backlight off / on", view: "next screen view", party: "2 s rainbow" };
+  const S3_SOUND = { led: "C5/16 G5/16", colour: "C5/32 E5/32 G5/32 C6/16", screen: "C6/32", view: "C6/32", party: SND_CHIME.score, dark: SND_CHIME.stop, tune: "C5/4 C5/4 G5/4 G5/4 A5/4 A5/4 G5/2", none: SND_CHIME.no };
+  const S3_ACTIONS = { tune: "play twinkle on the speaker", none: "nothing", led: "toggle the LED on GPIO 4", colour: "next colour on the RGB LED", dark: "RGB LED off", screen: "backlight off / on", view: "next screen view", party: "2 s rainbow" };
   const S3_COLOURS = [["warm white", "--scope-amber"], ["red", "--scope-coral"], ["orange", "--scope-amber"], ["green", "--scope-trace"], ["cyan", "--scope-blue"], ["blue", "--scope-blue"], ["violet", "--scope-violet"]];
   SOUND_SCREENS.S3 = {
     views: ["timeline", "lamp", "patterns", "tune"],
     dbl: ["test", "colour", "maps", "learn"],
     commands: [
-      ["map <1-4> <action>", "what n claps do: led colour dark screen view party none"],
+      ["map <1-4> <action>", "what n claps do: led colour dark screen view party tune none"],
       ["maps", "print the pattern map"],
       ["sens <dB>", "how far above the quiet a clap must jump (default 18)"],
       ["gap <ms>", "the pause that ends a pattern (default 650)"],
       ["learn", "clap 5 times: sets sens from your softest clap"],
       ["test [off]", "print every clap, long sound and group"],
       ["do <action>", "run an action now, without clapping"],
+      ["sound [on|off]", "a little sound per pattern on the speaker (saved)"],
       ["colour", "next RGB colour (the lamp view's double-click)"],
     ],
     captions: [
@@ -4742,11 +4956,12 @@ ol.rules-list li.open b { color: var(--ok); }
       const action = n >= 1 && n <= 4 ? st.map[n] : "none";
       st.last = { count: n, action, at: performance.now() };
       if (n > 4) return soundNote(st, st.term, "!", `${n} claps: applause? nothing to do`);
-      if (action === "none") return soundNote(st, st.term, "-", `${n} claps: not mapped`);
+      if (action === "none") { if (st.sound !== false) st.mic.spk.tune(S3_SOUND.none, 200, "square"); return soundNote(st, st.term, "-", `${n} claps: not mapped`); }
       soundNote(st, st.term, "-", `${n} clap${n > 1 ? "s" : ""} -> ${action}`);
       SOUND_SCREENS.S3.run(st, action);
     },
     run(st, a) {
+      if (st.sound !== false && S3_SOUND[a]) st.mic.spk.tune(S3_SOUND[a], a === "tune" ? 150 : 240, a === "party" ? "square" : "triangle");
       if (a === "led") { st.led = !st.led; soundNote(st, st.term, "+", `LED ${st.led ? "on" : "off"}`); }
       else if (a === "colour") { st.colour = st.colour < 0 ? 0 : (st.colour + 1) % S3_COLOURS.length; soundNote(st, st.term, "+", `colour: ${S3_COLOURS[st.colour][0]}`); }
       else if (a === "dark") { st.colour = -1; soundNote(st, st.term, "+", "RGB off"); }
@@ -4769,6 +4984,7 @@ ol.rules-list li.open b { color: var(--ok); }
       if (cmd === "test") { st.testing = a ? a !== "off" : !st.testing; soundNote(st, term, "-", st.testing ? "test on: every clap, long sound and group printed" : "test off"); return true; }
       if (cmd === "do") { const act = a === "color" ? "colour" : a; if (!(act in S3_ACTIONS) || act === "none") term.line("[W] do <led|colour|dark|screen|view|party>", "w"); else SOUND_SCREENS.S3.run(st, act); return true; }
       if (cmd === "colour" || cmd === "color") { SOUND_SCREENS.S3.run(st, "colour"); return true; }
+      if (cmd === "sound") { st.sound = a ? a === "on" : st.sound === false; soundNote(st, term, "+", `pattern sounds ${st.sound ? "on" : "off"} (saved)`); return true; }
       return false;
     },
     draw(g, C, view, t, st) {
@@ -4939,6 +5155,12 @@ ol.rules-list li.open b { color: var(--ok); }
         { t: "Stream one clip", d: "<code>GET /api/clip?n=3</code>: the board sends the 44-byte header, then the samples straight from PSRAM in chunks, made louder (normalised, up to ×64) on the way. Never one big string in RAM.", from: "board", to: "phone", msg: "WAV, chunk by chunk" },
         { t: "Draw and play", d: "The page decodes the WAV (WebAudio), draws its shape on a canvas and plays it with a moving playhead. Live level and state arrive over the WebSocket <code>/ws</code>.", from: "phone", to: "phone", msg: "decodeAudioData" },
       ],
+      board: [
+        { t: "Pick a clip", d: "On the <b>clips</b> view a long press picks the next clip; or type <code>play 3</code> (any clip number), <code>play 3 0.7</code> for slower and deeper.", from: "mac", to: "board", msg: "play 3 0.7" },
+        { t: "Louder, but not too loud", d: "The clip is made louder like the download, but at most ×16: a whisper on the KY-037 would otherwise come back as mostly hiss, at full volume.", from: "board", to: "board", msg: "gain = min(16, 29000 / peak)" },
+        { t: "Out of I2S1", d: "The samples go to the MAX98357A at <code>speed</code> × their rate: 0.5 = half speed, an octave down. While it plays, the detectors are deaf (the echo guard); <code>rec</code> stops playback first, and <code>play</code> is refused while recording.", from: "board", to: "speaker", msg: "I2S1 → class D → cone" },
+        { t: "From the phone too", d: "The page has <b>Play on board</b> and <b>Stop on board</b> per clip and a speed choice: <code>POST /api/play?n=3&speed=0.7</code> with the token; <code>/api/status</code> shows <code>playing</code> and <code>playProgress</code>.", from: "phone", to: "board", msg: "POST /api/play?n=3" },
+      ],
       usb: [
         { t: "Close the monitor", d: "Only one program can hold the serial port. Close <code>pio device monitor</code> first.", from: "mac", to: "mac", msg: "" },
         { t: "Ask for clip n", d: "<code>uv run python tools/sound_pull.py /dev/cu.usbserial-A5069RR4 3</code> opens the port without resetting the board and types <code>send 3</code>.", from: "mac", to: "board", msg: "send 3" },
@@ -4948,7 +5170,7 @@ ol.rules-list li.open b { color: var(--ok); }
     };
     const HDR = [["RIFF", "52 49 46 46", "the file type"], ["size", "24 90 01 00", "102 436 = everything after this"], ["WAVE", "57 41 56 45", "a wave file"], ["fmt ", "66 6D 74 20", "the format chunk"], ["16", "10 00 00 00", "its length"], ["1", "01 00", "PCM: plain samples"], ["1", "01 00", "one channel (mono)"], ["16000", "80 3E 00 00", "samples a second"], ["32000", "00 7D 00 00", "bytes a second"], ["2", "02 00", "bytes per sample"], ["16", "10 00", "bits per sample"], ["data", "64 61 74 61", "the samples follow"], ["size", "00 90 01 00", "102 400 bytes = 3.2 s"]];
     root.innerHTML = `<div class="wd"><div class="spi-ctl" role="group" aria-label="Path">
-        <button type="button" class="btn" data-p="phone" aria-pressed="true">📱 phone (Wi-Fi)</button><button type="button" class="btn" data-p="usb" aria-pressed="false">🔌 USB (serial)</button>
+        <button type="button" class="btn" data-p="phone" aria-pressed="true">📱 phone (Wi-Fi)</button><button type="button" class="btn" data-p="usb" aria-pressed="false">🔌 USB (serial)</button><button type="button" class="btn" data-p="board" aria-pressed="false">🔈 the board's speaker</button>
         <span style="flex:1"></span><button type="button" class="btn" data-a="prev" aria-label="Previous step">◀</button><span class="mono" data-o="n"></span><button type="button" class="btn" data-a="next" aria-label="Next step">▶</button></div>
       <canvas width="680" height="150" role="img" aria-label="The board, the phone and the Mac, with the message of the current step travelling between them." style="width:100%;height:auto;display:block"></canvas>
       <p class="sim-cap" data-o="cap" aria-live="polite"></p>
@@ -4960,11 +5182,11 @@ ol.rules-list li.open b { color: var(--ok); }
     root.querySelector('[data-a="prev"]').addEventListener("click", () => { at = (at + PATHS[path].length - 1) % PATHS[path].length; show(); });
     root.querySelector('[data-a="next"]').addEventListener("click", () => { at = (at + 1) % PATHS[path].length; show(); });
     show();
-    const POS = { board: 340, phone: 600, mac: 80 };
+    const POS = { board: 340, phone: 600, mac: 80, speaker: 600 };
     return soundLoop((dt, t, reduce) => {
       g.fillStyle = C.paper; g.fillRect(0, 0, 680, 150);
       const s = PATHS[path][at];
-      [["board", "ESP32-S3", "clips in PSRAM"], [path === "phone" ? "phone" : "mac", path === "phone" ? "phone" : "Mac", path === "phone" ? "browser" : "sound_pull.py"]].forEach(([k, n, sub]) => {
+      [["board", "ESP32-S3", "clips in PSRAM"], ...(path === "board" ? [["mac", "you", "serial or button"], ["speaker", "MAX98357A", "+ speaker"]] : [[path === "phone" ? "phone" : "mac", path === "phone" ? "phone" : "Mac", path === "phone" ? "browser" : "sound_pull.py"]])].forEach(([k, n, sub]) => {
         const x = POS[k], on = s.from === k || s.to === k;
         g.strokeStyle = on ? C.pink : C.dim; g.lineWidth = on ? 2 : 1; g.beginPath(); g.roundRect(x - 60, 40, 120, 60, 9); g.stroke(); g.lineWidth = 1;
         T(x, 66, n, C.ink, "bold 13px Archivo, sans-serif", "center"); T(x, 86, sub, C.muted, "10px 'IBM Plex Mono', monospace", "center");
@@ -4975,7 +5197,7 @@ ol.rules-list li.open b { color: var(--ok); }
         g.fillStyle = C.pink; g.beginPath(); g.arc(x, 120, 5, 0, 7); g.fill();
         T((a + b) / 2, 140, s.msg, C.ink, "11px 'IBM Plex Mono', monospace", "center");
       } else if (s.msg) T(POS[s.from], 130, s.msg, C.ink, "11px 'IBM Plex Mono', monospace", "center");
-      T(10, 20, path === "phone" ? "Every audio route needs the token · the board shows REC whoever starts it" : "No Wi-Fi needed · the board's USB serial port, 115 200 baud", C.muted, "10px 'IBM Plex Mono', monospace");
+      T(10, 20, path === "phone" ? "Every audio route needs the token · the board shows REC whoever starts it" : path === "board" ? "The board plays it itself: no phone, no cable" : "No Wi-Fi needed · the board's USB serial port, 115 200 baud", C.muted, "10px 'IBM Plex Mono', monospace");
     });
   }
   SOUND_PANELS.soundGetOut = soundGetOut;
@@ -4983,11 +5205,12 @@ ol.rules-list li.open b { color: var(--ok); }
   // ---------- S4 on the board's screen ----------
   SOUND_SCREENS.S4 = {
     views: ["recorder", "clips", "web"],
-    dbl: ["arm", "next", "wifi"],
+    dbl: ["arm", "play", "wifi"],
     commands: [
       ["arm [on|off]", "voice-activated recording (alone: toggle)"],
       ["rec", "record now, by hand (again, or long press: stop)"],
-      ["stop", "stop recording"],
+      ["stop", "stop recording (or the board's playback)"],
+      ["play [n] [speed]", "play clip n on the board's speaker, speed 0.5-2.0 (default 1)"],
       ["trigger <dB>", "how loud starts a clip, dB above the quiet (default 15)"],
       ["hold <ms>", "quiet this long ends a clip (default 1200)"],
       ["max <s>", "the longest clip (default 20)"],
@@ -5001,12 +5224,13 @@ ol.rules-list li.open b { color: var(--ok); }
     ],
     captions: [
       "recorder: OFF, ARMED or REC with the seconds, big. The last 3 s of loudness with the start line: amber = the pre-roll a clip took from the ring, red = what went into the clip.",
-      "clips: up to four rows with each clip's shape, length and kind (voice or hand); on the right the picked clip's loudest moment, how much louder it is sent, and when it started.",
+      "clips: up to four rows with each clip's shape, length and kind (voice or hand); on the right the picked clip's loudest moment, how much louder it is sent, and when it started. Double-click plays the picked clip on the board's speaker; a long press here picks the next one.",
       "web: where the page is (http://bench.local), the IP, the signal, how many pages are open, and how to get the token. Without saved Wi-Fi it points to W1 or sound_pull.py.",
     ],
     actions: [
       { label: "arm on/off", run(st) { SOUND_SCREENS.S4.onCommand("arm", st, st.term); } },
-      { label: "rec / stop (long press)", run(st) { SOUND_SCREENS.S4.onCommand(st.tr.state === "rec" ? "stop" : "rec", st, st.term); } },
+      { label: "rec / stop (long press)", run(st) { if (st.view === 1) return SOUND_SCREENS.S4.onCommand("next", st, st.term); SOUND_SCREENS.S4.onCommand(st.tr.state === "rec" ? "stop" : "rec", st, st.term); } },
+      { label: "▶ play picked (2x on clips)", run(st) { SOUND_SCREENS.S4.onCommand("play", st, st.term); } },
       { label: "🗣 talk 2 s", run(st) { st.mic.say("talk", 2); } },
     ],
     init() {
@@ -5020,6 +5244,7 @@ ol.rules-list li.open b { color: var(--ok); }
       };
       return st;
     },
+    tick(st) { if (st.playing && !st.mic.spk.busy()) { soundNote(st, st.term, "-", `clip ${st.playing} played`); st.playing = 0; } },
     result(st, r, ms) {
       if (!r) return;
       if (r.action === "start") {
@@ -5037,7 +5262,17 @@ ol.rules-list li.open b { color: var(--ok); }
     onCommand(line, st, term) {
       const [cmd, a = ""] = line.toLowerCase().split(/\s+/), now = st.mic.ms;
       if (cmd === "arm") { if (a && a !== "on" && a !== "off") { term.line("[W] arm | arm on | arm off", "w"); return true; } st.tr.arm(a ? a === "on" : !st.tr.armed); soundNote(st, term, "-", st.tr.armed ? "armed: talk and it records" : "voice trigger off"); return true; }
-      if (cmd === "rec") { if (st.tr.state === "rec") return SOUND_SCREENS.S4.onCommand("stop", st, term); SOUND_SCREENS.S4.result(st, st.tr.start(now), now); return true; }
+      if (cmd === "rec") { if (st.tr.state === "rec") return SOUND_SCREENS.S4.onCommand("stop", st, term); if (st.playing) { st.mic.spk.until = 0; soundNote(st, term, "-", `playback of clip ${st.playing} stopped`); st.playing = 0; } SOUND_SCREENS.S4.result(st, st.tr.start(now), now); return true; }
+      if (cmd === "play") {
+        const [nn, sp = "1"] = line.trim().split(/\s+/).slice(1), speed = +sp;
+        if (st.tr.state === "rec") { term.line("[W] recording: stop first (the microphone would hear the speaker)", "w"); return true; }
+        if (!(speed >= 0.5 && speed <= 2)) { term.line("[W] speed: 0.5 (slow, deep) to 2.0 (fast, chipmunk)", "w"); return true; }
+        const c = nn ? st.clips.find((x) => x.n === +nn) : st.clips[Math.min(st.picked, st.clips.length - 1)];
+        if (!c) { term.line(nn ? `[W] no finished clip ${nn}` : "[W] no clips yet", "w"); return true; }
+        st.playing = c.n; st.mic.spk.play((c.dur / speed) * 1000, 200 * speed, `clip ${c.n}`);
+        soundNote(st, term, "+", `playing clip ${c.n} (${(c.dur / speed).toFixed(1)} s) at x${speed.toFixed(2)}`); return true;
+      }
+      if (cmd === "stop" && st.playing && st.tr.state !== "rec") { st.mic.spk.until = 0; soundNote(st, term, "-", `playback of clip ${st.playing} stopped`); st.playing = 0; return true; }
       if (cmd === "stop") { const r = st.tr.stop(now); if (!r) soundNote(st, term, "-", "not recording"); else SOUND_SCREENS.S4.result(st, r, now); return true; }
       if (cmd === "trigger") { const d = +a; if (!(d >= 3 && d <= 60)) term.line(`[W] trigger <dB above the quiet>, 3-60 (now ${st.tr.cfg.startDb})`, "w"); else { st.tr.cfg.startDb = d; soundNote(st, term, "-", `voice starts above ${d} dB`); } return true; }
       if (cmd === "hold") { const ms = +a; if (!(ms >= 200 && ms <= 10000)) term.line(`[W] hold <ms>, 200-10000: quiet this long ends a clip (now ${st.tr.cfg.holdMs})`, "w"); else { st.tr.cfg.holdMs = ms; soundNote(st, term, "-", `a clip ends after ${(ms / 1000).toFixed(1)} s of quiet`); } return true; }
@@ -5094,7 +5329,7 @@ ol.rules-list li.open b { color: var(--ok); }
         sndStat(g, C, 194, 34, "loudest", `${sndDb(pc.peak).toFixed(0)} dBFS`);
         sndStat(g, C, 194, 72, "sent louder by", `x${Math.min(64, Math.max(1, 29000 / pc.peak)).toFixed(1)}`, C.pink);
         sndStat(g, C, 194, 110, "started", "14:02:31");
-        T(194, 155, `send ${pc.n}`, C.muted, S8);
+        T(194, 155, st.playing === pc.n ? "playing on the board" : `send ${pc.n} - 2x: play`, st.playing === pc.n ? C.pink : C.muted, S8);
       } else {
         T(12, 52, "http://bench.local", C.pink, B);
         sndStat(g, C, 12, 64, "or", "192.168.1.42"); sndStat(g, C, 150, 64, "signal", "-58 dBm"); sndStat(g, C, 240, 64, "pages open", "1", C.teal);
@@ -5258,12 +5493,14 @@ ol.rules-list li.open b { color: var(--ok); }
   // ---------- S5 on the board's screen ----------
   SOUND_SCREENS.S5 = {
     views: ["bars", "waterfall", "tuner", "steer"],
-    dbl: ["hold", "hold", "peaks", "target"],
+    dbl: ["hold", "hold", "ref", "target"],
     commands: [
       ["fft <256|512|1024>", "FFT size: finer bins vs faster answers (default 512)"],
       ["range <low> <high>", "the steer view's pitch range in Hz (default 600 2500)"],
       ["hold [off]", "freeze the bars and waterfall (long press too)"],
       ["peaks", "print the 5 strongest frequencies, with notes"],
+      ["ref [note|Hz]", "play a reference note on the speaker (tuner double-click)"],
+      ["sweep", "a 4 s tone sweep 100 Hz -> 8 kHz on the speaker"],
       ["a4 <Hz>", "tuning reference for note names (default 440)"],
       ["target [reset]", "steer: a new target (reset: score back to 0)"],
       ["limits", "what this FFT can and can't see"],
@@ -5279,9 +5516,11 @@ ol.rules-list li.open b { color: var(--ok); }
       { label: "〰 slide whistle 4 s", run(st) { st.mic.say("whistle", 4); } },
       { label: "🎵 music 3 s", run(st) { st.mic.say("music", 3); } },
       { label: "hold", run(st) { SOUND_SCREENS.S5.onCommand("hold", st, st.term); } },
+      { label: "ref (2x on tuner)", run(st) { SOUND_SCREENS.S5.onCommand("ref", st, st.term); st.view = 2; } },
+      { label: "sweep", run(st) { SOUND_SCREENS.S5.onCommand("sweep", st, st.term); } },
     ],
     init() {
-      const st = { mic: soundMic({ whistleHz: (t) => 1000 * Math.pow(2, 0.9 * Math.sin(t * 0.9)) }), fft: sndFft(512), hold: false, a4: 440, lo: 600, hi: 2500,
+      const st = { mic: soundMic({ whistleHz: (t) => (st.sweepAt !== undefined && t - st.sweepAt < 4 ? 100 * Math.pow(80, (t - st.sweepAt) / 4) : st.refHz && st.mic.spk.busy() ? st.refHz : 1000 * Math.pow(2, 0.9 * Math.sin(t * 0.9))) }), fft: sndFft(512), hold: false, a4: 440, lo: 600, hi: 2500,
         bars: new Float32Array(24), barFloor: new Float32Array(24), caps: new Float32Array(24), rowFloor: new Float32Array(48), learned: 0,
         hist: Array.from({ length: 140 }, () => new Uint8Array(48)), hh: 0, pitch: { heard: false, hz: 0, last: -1e9, trail: new Float32Array(120), th: 0 },
         steer: { y: 0.5, target: 0.6, inSince: 0, score: 0, ribbon: new Float32Array(120), rh: 0 }, acc: 0 };
@@ -5323,6 +5562,14 @@ ol.rules-list li.open b { color: var(--ok); }
       }
       if (cmd === "a4") { const hz = +a; if (!(hz >= 400 && hz <= 480)) term.line(`[W] a4 <Hz>, 400-480 (now ${st.a4.toFixed(1)}; most music: 440)`, "w"); else { st.a4 = hz; soundNote(st, term, "-", `A4 = ${hz.toFixed(1)} Hz`); } return true; }
       if (cmd === "target") { if (a === "reset") st.steer.score = 0; st.steer.target = 0.15 + Math.random() * 0.7; soundNote(st, term, "-", `new target${a === "reset" ? ", score 0" : ""}`); return true; }
+      if (cmd === "ref") {
+        // The nearest note heard in the last 2 s, else A4; or what you name. S5 reads the ring, so it hears its own tone.
+        let hz = a ? sndMidiHz(a.toUpperCase().replace("#", "#")) || +a : (performance.now() - st.pitch.last < 2000 ? 440 * Math.pow(2, Math.round(12 * Math.log2(st.pitch.hz / st.a4)) / 12) * (st.a4 / 440) : st.a4);
+        if (!(hz >= 20 && hz <= 8000)) { term.line("[W] ref [note|Hz]: ref, ref A4, ref 440", "w"); return true; }
+        st.mic.say("whistle", 1); st.refHz = hz; st.mic.spk.play(1000, hz, "ref"); sndAudio.tone(hz, 1000, "sine");
+        soundNote(st, term, "-", `reference ${sndNote(hz, st.a4).name} = ${hz.toFixed(1)} Hz, 1 s`); return true;
+      }
+      if (cmd === "sweep") { st.sweepAt = st.mic.t; st.mic.say("whistle", 4); st.mic.spk.play(4000, 100, "sweep"); st.view = 1; soundNote(st, term, "-", "sweep 100 Hz -> 8 kHz, 4 s"); return true; }
       if (cmd === "limits") { SOUND_SCREENS.S5.boot.forEach((l) => term.line(l)); return true; }
       return false;
     },
@@ -5483,10 +5730,11 @@ ol.rules-list li.open b { color: var(--ok); }
     views: ["knock", "bird", "party"],
     dbl: ["knock set", "bird", "party reset"],
     commands: [
-      ["knock [set|clear|show]", "set = knock a new secret; show = secret and last try"],
+      ["knock [set|clear|show|play]", "set = knock a new secret; show = secret and last try; play = hear it"],
       ["tol <percent>", "knock lock: how far each gap may be off (default 12)"],
       ["bird [reset]", "Clap Bird: a new round (reset = forget the best score)"],
-      ["party [sens <x>|reset]", "beat party: sensitivity 1.2-3.0 (default 1.6), or forget the tempo"],
+      ["party [sens <x>|click on|off|reset]", "beat party: sensitivity 1.2-3.0 (default 1.6), a tick per beat, forget the tempo"],
+      ["sound [on|off]", "the game sounds on the speaker (saved)"],
     ],
     boot: ["  Clap Bird best: 0"],
     captions: [
@@ -5498,10 +5746,11 @@ ol.rules-list li.open b { color: var(--ok); }
       { label: "🎵 music 6 s", run(st) { st.mic.say("music", 6); } },
       { label: "knock set", run(st) { SOUND_SCREENS.S6.onCommand("knock set", st, st.term); } },
       { label: "knock the secret (✊ ✊ ✊ … ✊ ✊)", run(st) { [0, 0.2, 0.4, 1.0, 1.2].forEach((d) => st.mic.clap(d)); } },
+      { label: "knock play", run(st) { SOUND_SCREENS.S6.onCommand("knock play", st, st.term); } },
     ],
     init() {
       const st = { mic: soundMic(), ears: sndOnsets({ maxClapMs: 200 }), secret: [], open: [], lastKnock: 0, attempt: [], match: null, setting: false, tol: 0.12, openUntil: 0, attemptAt: 0,
-        game: sndBirdGame(), best: 0, beats: sndBeats(), rings: [], beatLog: [], hue: 0, lastBeat: 0, view: 0 };
+        game: sndBirdGame(), best: 0, sound: true, click: false, beats: sndBeats(), rings: [], beatLog: [], hue: 0, lastBeat: 0, view: 0 };
       st.mic.onFrame = (f, ms) => {
         if (st.mic.level.learning()) return;
         const view = st.view, a = st.mic.level.instAbove();
@@ -5514,6 +5763,7 @@ ol.rules-list li.open b { color: var(--ok); }
           st.hue = (st.hue + 47) % 360; st.lastBeat = performance.now();
           st.rings.push({ at: st.lastBeat, x: 140 + Math.random() * 160, y: 50 + Math.random() * 80, hue: st.hue }); if (st.rings.length > 8) st.rings.shift();
           st.beatLog.push(st.lastBeat); if (st.beatLog.length > 40) st.beatLog.shift();
+          if (st.click) st.mic.spk.play(20, 3000, "tick");
         }
       };
       return st;
@@ -5527,26 +5777,35 @@ ol.rules-list li.open b { color: var(--ok); }
         return soundNote(st, st.term, "+", `secret saved: ${r.length} knocks, ${((r[r.length - 1] - r[0]) / 1000).toFixed(1)} s`);
       }
       st.attempt = r; st.match = sndMatchRhythm(st.secret, r, st.tol); st.attemptAt = performance.now();
-      if (st.match.ok) { st.openUntil = performance.now() + 5000; st.openedAt = performance.now(); soundNote(st, st.term, "+", `OPEN (score ${st.match.score})`); }
-      else soundNote(st, st.term, "x", `locked: ${st.match.why}`);
+      if (st.match.ok) { st.openUntil = performance.now() + 5000; st.openedAt = performance.now(); soundNote(st, st.term, "+", `OPEN (score ${st.match.score})`); if (st.sound) st.mic.spk.tune("C5/16 E5/16 G5/16 C6/8", 240); }
+      else { soundNote(st, st.term, "x", `locked: ${st.match.why}`); if (st.sound) st.mic.spk.tune(SND_CHIME.no, 200, "square"); }
     },
     flap(st) {
       const G = st.game;
       if (G.state === "over") { if (performance.now() - G.overAt > 800) { G.reset(); G.flapNow(); } return; }
       G.flapNow();
+      if (st.sound) { st.mic.spk.play(40, 900, "blip"); sndAudio.tone(900, 40, "square"); }
     },
     tick(st, dt, view) {
       st.view = view;
       const G = st.game, was = G.state;
       if (view === 1) for (let k = 0; k < 6 && dt > 0; k++) { G.step(Math.min(1 / 60, dt)); dt -= 1 / 60; }
-      if (was === "playing" && G.state === "over") { G.overAt = performance.now(); if (G.score > st.best) { st.best = G.score; soundNote(st, st.term, "+", `new best: ${st.best}`); } else soundNote(st, st.term, "-", `score ${G.score}`); }
+      if (was === "playing" && G.state === "over") { G.overAt = performance.now(); if (G.score > st.best) { st.best = G.score; soundNote(st, st.term, "+", `new best: ${st.best}`); if (st.sound) st.mic.spk.tune(SND_CHIME.score, 240, "square"); } else { soundNote(st, st.term, "-", `score ${G.score}`); if (st.sound) st.mic.spk.beep(120, 300, "noise"); } }
+      if (G.state === "playing" && G.score !== st.lastScore) { st.lastScore = G.score; if (G.score && st.sound) st.mic.spk.beep(1320, 60, "square"); }
     },
     onCommand(line, st, term) {
       const [cmd, a = "", b = ""] = line.toLowerCase().split(/\s+/);
       if (cmd === "knock") {
         if (a === "set") { st.setting = true; st.open = []; st.view = 0; soundNote(st, term, "-", "knock your new secret, then wait 1.5 s"); return true; }
         if (a === "clear") { st.secret = []; st.attempt = []; st.match = null; soundNote(st, term, "-", "secret erased"); return true; }
-        if (a && a !== "show") { term.line("[W] knock set | knock clear | knock show", "w"); return true; }
+        if (a === "play") {
+          if (!st.sound) { term.line("[W] sound is off: sound on", "w"); return true; }
+          if (st.secret.length < 2) { term.line("  no secret yet: knock set"); return true; }
+          const len = st.secret[st.secret.length - 1] - st.secret[0]; st.mic.spk.play(len + 60, 2000, "knocks");
+          st.secret.forEach((k) => sndAudio.tone(1800, 12, "square", (k - st.secret[0]) / 1000));
+          soundNote(st, term, "-", `playing the secret: ${st.secret.length} knocks`); return true;
+        }
+        if (a && a !== "show") { term.line("[W] knock set | knock clear | knock show | knock play", "w"); return true; }
         if (st.secret.length < 2) term.line("  no secret yet: knock set");
         else term.line(`  secret: ${st.secret.length} knocks over ${Math.round(st.secret[st.secret.length - 1] - st.secret[0])} ms, gaps: ${sndShares(st.secret).map((s, i) => `${Math.round(st.secret[i + 1] - st.secret[i])} (${Math.round(s * 100)}%)`).join(" ")}`);
         if (st.match) term.line(`  match: ${st.match.ok ? "OPEN" : st.match.why}, score ${st.match.score}, worst gap off by ${Math.round(st.match.worst * 100)}% (tolerance ${Math.round(st.tol * 100)}%)`);
@@ -5554,8 +5813,10 @@ ol.rules-list li.open b { color: var(--ok); }
       }
       if (cmd === "tol") { const p = +a; if (!(p >= 3 && p <= 30)) term.line(`[W] tol <percent>, 3-30: how far each gap may be off, as a share of the pattern (now ${Math.round(st.tol * 100)})`, "w"); else { st.tol = p / 100; soundNote(st, term, "-", `tolerance ${p}%`); } return true; }
       if (cmd === "bird") { if (a === "reset") { st.best = 0; soundNote(st, term, "-", "best score reset"); } else { st.game.reset(); soundNote(st, term, "-", "new round: clap to fly"); } st.view = 1; return true; }
+      if (cmd === "sound") { if (a && a !== "on" && a !== "off") { term.line("[W] sound | sound on | sound off", "w"); return true; } st.sound = a ? a === "on" : !st.sound; soundNote(st, term, "-", st.sound ? "game sounds on" : "game sounds off"); return true; }
       if (cmd === "party") {
         if (a === "sens") { const r = +b; if (!(r >= 1.2 && r <= 3)) term.line(`[W] party sens <ratio>, 1.2-3.0: how far a beat must jump over the last second (now ${st.beats.ratio.toFixed(1)})`, "w"); else { st.beats.ratio = r; soundNote(st, term, "-", `beat = ${r.toFixed(1)}x the last second`); } return true; }
+        if (a === "click") { st.click = b === "on"; soundNote(st, term, "-", st.click ? "a tick on every beat (the board can't hear for ~200 ms after it)" : "no beat tick"); return true; }
         if (a === "reset") { const r = st.beats.ratio; st.beats = sndBeats(); st.beats.ratio = r; soundNote(st, term, "-", "tempo forgotten: listening again"); return true; }
         term.line(`  ${st.beats.beats} beats, ${st.beats.bpm()} BPM, sens x${st.beats.ratio.toFixed(1)}`); return true;
       }
@@ -5623,30 +5884,600 @@ ol.rules-list li.open b { color: var(--ok); }
     },
   };
 
+
+  // ---------- Panel: analog mic vs digital mic, and how I2S carries a sample ----------
+  function soundMics(root) {
+    const P = soundPanelCanvas(root, {
+      h: 360, label: "Top: the KY-037's analog path and the INMP441's digital path. Below: an I2S frame on the SCK, WS and SD wires, a cursor reading the sample bit by bit, and the sample turned into a 16-bit number.",
+      controls: `<button type="button" class="btn" data-a="play">❚❚ Pause</button><button type="button" class="btn" data-a="step" aria-label="One clock tick">tick ▶</button>
+        <label>sound pressure <input type="range" min="-100" max="100" value="37" data-k="v" aria-label="The sample's value, as a share of full scale"></label><span class="mono" data-o="v"></span>`,
+    });
+    const { g, C, cap, q } = P, T = sndText(g);
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let playing = !reduce, tick = reduce ? 63 : 0, acc = 0;
+    q('[data-a="play"]').addEventListener("click", (e) => { playing = !playing; e.target.textContent = playing ? "❚❚ Pause" : "▶ Play"; });
+    q('[data-a="step"]').addEventListener("click", () => { playing = false; q('[data-a="play"]').textContent = "▶ Play"; tick = (tick + 1) % 64; });
+    const hex = (v, n) => (v >>> 0).toString(16).toUpperCase().padStart(n, "0").slice(-n);
+    return soundLoop((dt) => {
+      if (playing && (acc += dt) > 0.12) { acc = 0; tick = (tick + 1) % 64; }
+      // A 24-bit sample from the slider (a sliver of full scale: real voices are small).
+      const frac = +q('[data-k="v"]').value / 100, s24 = Math.round(frac * 0.02 * 8388607) | 0;
+      q('[data-o="v"]').textContent = `${s24} (24-bit)`;
+      const slot = (s24 << 8) >>> 0; // the 32-bit left slot: 24 data bits, then 8 zeros
+      g.fillStyle = C.paper; g.fillRect(0, 0, 680, 360);
+      // The two paths.
+      const lane = (y, title, col, boxes) => {
+        T(12, y + 22, title, col, "bold 12px Archivo, sans-serif");
+        boxes.forEach(([a, b], i) => { const x = 130 + i * 110; g.strokeStyle = col; g.beginPath(); g.roundRect(x, y, 100, 36, 7); g.stroke(); T(x + 50, y + 15, a, C.ink, "11px 'IBM Plex Mono', monospace", "center"); T(x + 50, y + 29, b, C.muted, "9px 'IBM Plex Mono', monospace", "center"); if (i) { g.fillStyle = col; g.fillRect(x - 10, y + 18, 10, 1.5); } });
+      };
+      lane(8, "KY-037", C.pink, [["capsule", "a few mV"], ["+ bias", "~1.5 V on AO"], ["ESP32 ADC", "12-bit, 0.76 mV"], ["− average", "DMA, ring"], ["× 16", "int16"]]);
+      lane(54, "INMP441", C.teal, [["capsule", "+ its own amp"], ["24-bit ADC", "inside the mic"], ["I2S frames", "SCK · WS · SD"], [">> 8", "24-bit sample"], [">> 6", "int16 (+12 dB)"]]);
+      // The I2S frame: 64 SCK ticks = left slot (32) + right slot (32).
+      const x0 = 70, w = 600, tw = w / 64, yS = 128, yW = 160, yD = 192;
+      T(12, yS + 12, "SCK", C.muted); T(12, yW + 12, "WS", C.muted); T(12, yD + 12, "SD", C.muted);
+      g.strokeStyle = C.ink; g.beginPath();
+      for (let i = 0; i < 64; i++) { const x = x0 + i * tw; g.moveTo(x, yS + 16); g.lineTo(x, yS); g.lineTo(x + tw / 2, yS); g.lineTo(x + tw / 2, yS + 16); g.lineTo(x + tw, yS + 16); }
+      g.stroke();
+      g.strokeStyle = C.amber; g.beginPath(); g.moveTo(x0, yW + 16); g.lineTo(x0 + 32 * tw, yW + 16); g.lineTo(x0 + 32 * tw, yW); g.lineTo(x0 + w, yW); g.stroke();
+      T(x0 + 16 * tw, yW - 2, "left slot (L/R → GND: the mic talks here)", C.amber, "9px 'IBM Plex Mono', monospace", "center");
+      T(x0 + 48 * tw, yW - 2, "right slot: nobody (zeros)", C.muted, "9px 'IBM Plex Mono', monospace", "center");
+      // SD: bit k of the slot goes out on tick k+1 (Philips: one tick after WS changes).
+      for (let i = 0; i < 64; i++) {
+        const x = x0 + i * tw, k = i - 1, bit = k >= 0 && k < 32 ? (slot >>> (31 - k)) & 1 : 0, data = k >= 0 && k < 24;
+        g.fillStyle = data ? (i <= tick ? C.teal : C.dim) : C.dim; g.globalAlpha = data ? 1 : 0.45;
+        g.fillRect(x + 1, bit ? yD : yD + 12, tw - 2, 4); g.globalAlpha = 1;
+        if (data && i <= tick && tw > 8) T(x + tw / 2, yD + 28, String(bit), C.ink, "9px 'IBM Plex Mono', monospace", "center");
+      }
+      g.fillStyle = C.pink; g.fillRect(x0 + tick * tw, yS - 6, 1.5, yD + 34 - yS);
+      T(x0, yD + 46, "bit 23 (the sign) first … bit 0", C.muted, "9px 'IBM Plex Mono', monospace");
+      T(x0 + 25 * tw, yD + 46, "8 padding zeros", C.muted, "9px 'IBM Plex Mono', monospace");
+      // What the board does with it.
+      const got = Math.min(24, Math.max(0, tick)), partial = got ? (slot >>> (32 - got)) : 0;
+      const y = 278;
+      T(12, y, `read so far: ${got} of 24 bits${got ? `  ${partial.toString(2).padStart(got, "0")}` : ""}`, C.ink);
+      if (tick >= 25) {
+        T(12, y + 20, `left slot = 0x${hex(slot, 8)}  →  >> 8 = ${s24} (24-bit, ±8 388 608)  →  >> 6 = ${s24 >> 6} (int16)`, C.teal);
+        T(12, y + 40, `that's ${(20 * Math.log10(Math.max(1, Math.abs(s24 >> 6)) / 32768)).toFixed(1)} dBFS; ≈ ${(20 * Math.log10(Math.max(1, Math.abs(s24 >> 6)) / 32768) + 111).toFixed(0)} dB SPL for a sine (dBFS + 111, from the datasheet's -26 dBFS at 94 dB SPL)`, C.muted, "10px 'IBM Plex Mono', monospace");
+      }
+      T(12, y + 64, "SCK = 16 000 samples × 2 slots × 32 bits = 1.024 MHz, driven by the ESP32 (I2S0); the speaker uses I2S1", C.muted, "10px 'IBM Plex Mono', monospace");
+      cap.textContent = tick < 25
+        ? "Each tick of SCK, the mic puts one bit on SD; the ESP32 reads it on the rising edge. WS says whose turn it is: low = the left slot."
+        : "Why >> 6 and not >> 8 more? Taking the top 16 bits would leave a quiet room near zero. Keeping 6 more low bits is 12 dB of gain: a voice uses real numbers, and only a clap right at the mic (about 114 dB SPL) clips.";
+    });
+  }
+  SOUND_PANELS.soundMics = soundMics;
+
+  // ---------- Panel: from numbers to a moving cone, volume, and the echo guard ----------
+  function soundSpeakerPath(root) {
+    const P = soundPanelCanvas(root, {
+      h: 400, label: "Samples going to the MAX98357A over I2S, its fast on-off pulses whose width follows each sample, the speaker cone following their average; a volume curve; and a timeline of the echo guard muting the detectors while the speaker plays.",
+      controls: `<label>volume <input type="range" min="0" max="100" value="40" data-k="vol" aria-label="Volume 0 to 100"></label><span class="mono" data-o="vol"></span>
+        <button type="button" class="btn" data-a="hear">🔈 hear 440 Hz at this volume</button>`,
+    });
+    const { g, C, cap, q } = P, T = sndText(g);
+    q('[data-a="hear"]').addEventListener("click", () => { sndAudio.on = true; sndAudio.start(); const v = +q('[data-k="vol"]').value; sndAudio.tone(440, 600, "sine", 0, [10, 50, 1, 80], Math.min(1, (v / 100) ** 2 * 2.5)); });
+    let loopT = 0;
+    return soundLoop((dt, t, reduce) => {
+      const vol = +q('[data-k="vol"]').value, gain = (vol / 100) ** 2, db = gain > 0 ? 20 * Math.log10(gain) : -Infinity;
+      q('[data-o="vol"]').textContent = `${vol} → ×${gain.toFixed(2)} (${isFinite(db) ? db.toFixed(1) + " dB" : "silent"})`;
+      const tt = reduce ? 0.3 : t * 0.25;
+      g.fillStyle = C.paper; g.fillRect(0, 0, 680, 400);
+      // 1. Samples.
+      T(12, 16, "samples (16-bit)", C.muted);
+      for (let i = 0; i < 24; i++) { const v = Math.sin((i / 24) * Math.PI * 2 + tt * 6) * gain; g.fillStyle = C.pink; g.fillRect(14 + i * 5, 60 - v * 30, 3, 3); }
+      // 2. I2S1.
+      g.strokeStyle = C.violet; g.beginPath(); g.roundRect(140, 26, 136, 64, 8); g.stroke();
+      T(208, 46, "I2S1", C.ink, "bold 12px Archivo, sans-serif", "center"); T(208, 62, "BCLK 39 · LRC 38", C.muted, "9px 'IBM Plex Mono', monospace", "center"); T(208, 76, "DIN 47 · L = R", C.muted, "9px 'IBM Plex Mono', monospace", "center");
+      // 3. Class D: pulses whose width follows the sample.
+      T(290, 16, "MAX98357A: on/off ~300 000 times a second", C.muted);
+      g.strokeStyle = C.amber; g.beginPath();
+      for (let k = 0; k < 28; k++) {
+        const v = Math.sin((k / 28) * Math.PI * 2 + tt * 6) * gain, duty = 0.5 + 0.45 * v, x = 290 + k * 9;
+        g.moveTo(x, 80); g.lineTo(x, 34); g.lineTo(x + 9 * duty, 34); g.lineTo(x + 9 * duty, 80); g.lineTo(x + 9, 80);
+      }
+      g.stroke();
+      // 4. The cone follows the average.
+      const v = Math.sin(tt * 6 * 4.6) * gain, cx = 600 + v * 12;
+      g.fillStyle = C.dim; g.fillRect(580, 30, 8, 60);
+      g.strokeStyle = C.ink; g.lineWidth = 2; g.beginPath(); g.moveTo(588, 40); g.lineTo(cx + 30, 22); g.moveTo(588, 80); g.lineTo(cx + 30, 98); g.moveTo(cx + 30, 22); g.lineTo(cx + 30, 98); g.stroke(); g.lineWidth = 1;
+      for (let k = 0; k < 3; k++) { const r = ((t * 30 + k * 14) % 42) + 8; g.strokeStyle = C.pink; g.globalAlpha = gain * (1 - r / 52); g.beginPath(); g.arc(cx + 34, 60, r, -0.7, 0.7); g.stroke(); }
+      g.globalAlpha = 1;
+      T(605, 116, "the cone", C.muted, "10px 'IBM Plex Mono', monospace", "center");
+      // Volume is squared.
+      const gx = 20, gy = 160, gw = 150, gh = 90;
+      g.strokeStyle = C.dim; g.strokeRect(gx, gy, gw, gh);
+      g.strokeStyle = C.teal; g.beginPath(); for (let i = 0; i <= 100; i++) { const x = gx + (i / 100) * gw, y = gy + gh - (i / 100) ** 2 * gh; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+      g.fillStyle = C.ink; g.beginPath(); g.arc(gx + (vol / 100) * gw, gy + gh - gain * gh, 4, 0, 7); g.fill();
+      T(gx, gy - 6, "vol → loudness (squared: 50 = a quarter)", C.muted, "10px 'IBM Plex Mono', monospace");
+      // The echo guard, a 6 s loop: a beep, a clap during it (ignored), a clap later (heard).
+      if (!reduce) loopT = (loopT + dt) % 6;
+      const ex = 300, ew = 360, ey = 160, xOf = (s) => ex + (s / 6) * ew;
+      T(ex, ey - 6, "the echo guard: the mic hears the board's own beep", C.muted, "10px 'IBM Plex Mono', monospace");
+      g.fillStyle = C.violet; g.globalAlpha = 0.18; g.fillRect(xOf(1), ey, xOf(1.6) - xOf(1), 130); g.globalAlpha = 1;
+      [["speaker", ey + 20], ["mic", ey + 60], ["to the lab", ey + 100]].forEach(([l, y]) => T(ex - 4, y + 4, l, C.muted, "9px 'IBM Plex Mono', monospace", "right"));
+      g.fillStyle = C.pink; g.fillRect(xOf(1), ey + 14, xOf(1.4) - xOf(1), 12);
+      for (let s = 0; s < 6; s += 0.02) {
+        let lv = 3 + Math.random() * 2;
+        if (s >= 1 && s < 1.4) lv = 26; if (s >= 1.25 && s < 1.32) lv = 40; if (s >= 3.5 && s < 3.58) lv = 38 - (s - 3.5) * 200;
+        g.fillStyle = s <= loopT ? sndLevelColour(C, lv) : C.dim; g.fillRect(xOf(s), ey + 76 - lv * 0.8, 2, lv * 0.8);
+      }
+      g.fillStyle = C.teal; g.fillRect(ex, ey + 96, xOf(1) - ex, 8); g.fillRect(xOf(1.6), ey + 96, ex + ew - xOf(1.6), 8);
+      T(xOf(1.3), ey + 124, "muted: beep + 200 ms", C.violet, "9px 'IBM Plex Mono', monospace", "center");
+      if (loopT > 1.3) T(xOf(1.28), ey + 48, "✗", C.coral, "bold 13px 'IBM Plex Mono', monospace", "center");
+      if (loopT > 3.55) T(xOf(3.54), ey + 48, "✓ clap", C.teal, "bold 12px 'IBM Plex Mono', monospace", "center");
+      g.fillStyle = C.ink; g.fillRect(xOf(loopT), ey + 8, 1.5, 104);
+      T(12, 334, "Volume is squared because ears hear ratios: 100 → 50 is −12 dB, a quarter of the power.", C.muted, "10px 'IBM Plex Mono', monospace");
+      T(12, 352, "The mic and the speaker share the room: while the speaker plays (and 200 ms after), the", C.muted, "10px 'IBM Plex Mono', monospace");
+      T(12, 368, "detectors get no frames. A beep is never a clap. S8's live effects read the ring instead.", C.muted, "10px 'IBM Plex Mono', monospace");
+      cap.textContent = `Volume ${vol}: every sample × ${gain.toFixed(2)} before it leaves. The amplifier's pulses are too fast for the cone, so it follows their average: the wave.`;
+    });
+  }
+  SOUND_PANELS.soundSpeakerPath = soundSpeakerPath;
+
+  // ---------- S7 panel: a synth to play with (in the browser, after a click) ----------
+  function soundSynth(root) {
+    const NOTES = ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5", "D5", "E5", "F5", "G5", "A5", "B5"];
+    root.innerHTML = `<div class="wd"><div class="spi-ctl" role="group" aria-label="Wave">${["sine", "square", "triangle", "saw"].map((w, i) => `<button type="button" class="btn" data-w="${w}" aria-pressed="${i === 2}">${w}</button>`).join("")}
+        <span style="flex:1"></span><span class="mono" data-o="info"></span></div>
+      <div class="snd-keys" role="group" aria-label="Keys: play a note">${NOTES.map((n) => `<button type="button" class="btn" data-n="${n}">${n}</button>`).join("")}</div>
+      <canvas width="680" height="300" role="img" aria-label="The wave's shape, its harmonics up to 8 kHz with the ones that fold back at 16 kHz in red, and the ADSR envelope with four handles to drag." style="width:100%;height:auto;display:block;border-radius:10px;touch-action:none"></canvas>
+      <p class="sim-cap" data-o="cap" aria-live="polite">Pick a wave, press a key to hear it (quietly, in this browser). Drag the four round handles of the envelope. The board's S7 makes the same sounds.</p></div>`;
+    const cv = root.querySelector("canvas"), g = cv.getContext("2d"), C = soundPalette(), T = sndText(g), cap = root.querySelector('[data-o="cap"]');
+    let wave = "triangle", hz = 440, adsr = { a: 6, d: 80, s: 0.65, r: 90 }, dot = null;
+    root.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", () => { wave = b.dataset.w; root.querySelectorAll("[data-w]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }));
+    root.querySelectorAll("[data-n]").forEach((b) => b.addEventListener("click", () => {
+      hz = sndMidiHz(b.dataset.n); sndAudio.on = true; sndAudio.start();
+      sndAudio.tone(hz, 600, wave, 0, [adsr.a, adsr.d, adsr.s, adsr.r]); dot = performance.now();
+    }));
+    // The envelope's handles: attack end, decay end (= sustain level), release end. Area: x 360-670, y 170-280.
+    const EX = 360, EW = 310, EY = 188, EH = 90, HOLD = 250;
+    const total = () => adsr.a + adsr.d + HOLD + adsr.r, xMs = (ms) => EX + (ms / Math.max(800, total())) * EW, yA = (a) => EY + EH - a * EH;
+    const handles = () => [{ k: "a", x: xMs(adsr.a), y: yA(1) }, { k: "d", x: xMs(adsr.a + adsr.d), y: yA(adsr.s) }, { k: "s", x: xMs(adsr.a + adsr.d + HOLD), y: yA(adsr.s) }, { k: "r", x: xMs(total()), y: yA(0) }];
+    let drag = null;
+    const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * 680, y: ((e.clientY - r.top) / r.height) * 300 }; };
+    cv.addEventListener("pointerdown", (e) => { const p = pos(e); drag = handles().find((h) => Math.hypot(h.x - p.x, h.y - p.y) < 14)?.k || null; if (drag) cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener("pointermove", (e) => {
+      if (!drag) return; const p = pos(e), ms = Math.max(1, ((p.x - EX) / EW) * Math.max(800, total()));
+      if (drag === "a") adsr.a = Math.min(400, ms);
+      if (drag === "d") { adsr.d = Math.max(1, Math.min(600, ms - adsr.a)); adsr.s = Math.max(0, Math.min(1, (EY + EH - p.y) / EH)); }
+      if (drag === "s") adsr.s = Math.max(0, Math.min(1, (EY + EH - p.y) / EH));
+      if (drag === "r") adsr.r = Math.max(5, Math.min(800, ms - adsr.a - adsr.d - HOLD));
+    });
+    cv.addEventListener("pointerup", () => (drag = null));
+    const amp = (w, n) => (w === "sine" ? (n === 1 ? 1 : 0) : w === "square" ? (n % 2 ? 1 / n : 0) : w === "triangle" ? (n % 2 ? 1 / (n * n) : 0) : 1 / n);
+    const shape = (w, ph) => { const f = ph - Math.floor(ph); return w === "sine" ? Math.sin(2 * Math.PI * f) : w === "square" ? (f < 0.5 ? 1 : -1) : w === "triangle" ? (f < 0.5 ? 4 * f - 1 : 3 - 4 * f) : 2 * f - 1; };
+    return soundLoop(() => {
+      g.fillStyle = C.paper; g.fillRect(0, 0, 680, 300);
+      root.querySelector('[data-o="info"]').textContent = `${wave} · ${hz.toFixed(1)} Hz · adsr ${adsr.a.toFixed(0)} ${adsr.d.toFixed(0)} ${(adsr.s * 100).toFixed(0)}% ${adsr.r.toFixed(0)}`;
+      // The wave: four periods.
+      T(14, 18, "four periods", C.muted);
+      g.strokeStyle = C.pink; g.lineWidth = 2; g.beginPath(); for (let x = 0; x <= 320; x++) { const y = 80 - shape(wave, (x / 320) * 4) * 50; x ? g.lineTo(14 + x, y) : g.moveTo(14, y); } g.stroke(); g.lineWidth = 1;
+      // Harmonics: up to 8 kHz in pink; above it, where they fold back to at 16 kHz (aliasing), in coral.
+      T(360, 18, "harmonics, 0-8 kHz (the board's 16 kHz limit)", C.muted);
+      g.fillStyle = C.dim; g.fillRect(360, 140, 310, 1);
+      let aliased = 0;
+      for (let n = 1; n <= 40; n++) {
+        const a = amp(wave, n); if (!a) continue;
+        let f = n * hz; const real = f <= 8000;
+        if (!real) { f = Math.abs(16000 * Math.round(f / 16000) - f); aliased++; if (f > 8000) continue; }
+        const h = Math.max(1, (1 + Math.log10(a) / 2.5) * 110); if (h <= 1) continue;
+        g.fillStyle = real ? C.pink : C.coral; g.globalAlpha = real ? 1 : 0.7; g.fillRect(360 + (f / 8000) * 310, 140 - h, 2.5, h); g.globalAlpha = 1;
+      }
+      [0, 2000, 4000, 6000, 8000].forEach((f) => T(360 + (f / 8000) * 310, 154, f ? `${f / 1000}k` : "0", C.muted, "9px 'IBM Plex Mono', monospace", "center"));
+      // The envelope.
+      T(14, 186, "ADSR: attack, decay, sustain, release", C.muted);
+      T(14, 206, "a note that starts or stops at full height", C.muted, "10px 'IBM Plex Mono', monospace");
+      T(14, 222, "makes the cone jump: a click. The envelope", C.muted, "10px 'IBM Plex Mono', monospace");
+      T(14, 238, "fades it in and out. Drag the handles →", C.muted, "10px 'IBM Plex Mono', monospace");
+      const H = handles(), cols = [C.teal, C.amber, C.pink, C.coral];
+      g.fillStyle = C.dim; g.fillRect(EX, EY + EH, EW, 1);
+      let px = EX, py = yA(0);
+      H.forEach((h, i) => { g.strokeStyle = cols[i]; g.lineWidth = 2; g.beginPath(); g.moveTo(px, py); g.lineTo(h.x, h.y); g.stroke(); g.lineWidth = 1; px = h.x; py = h.y; });
+      H.forEach((h, i) => { g.fillStyle = cols[i]; g.beginPath(); g.arc(h.x, h.y, drag === h.k ? 8 : 6, 0, 7); g.fill(); T(h.x, h.y - 10, "ADSR"[i], cols[i], "bold 10px 'IBM Plex Mono', monospace", "center"); });
+      if (dot) {
+        const ms = performance.now() - dot, held = 600 - adsr.r;
+        let x, a;
+        if (ms < adsr.a) { x = xMs(ms); a = ms / adsr.a; } else if (ms < adsr.a + adsr.d) { x = xMs(ms); a = 1 - (1 - adsr.s) * (ms - adsr.a) / adsr.d; }
+        else if (ms < held) { x = xMs(Math.min(ms, adsr.a + adsr.d + HOLD)); a = adsr.s; } else { const k = Math.min(1, (ms - held) / adsr.r); x = xMs(adsr.a + adsr.d + HOLD + k * adsr.r); a = adsr.s * (1 - k); }
+        g.fillStyle = C.ink; g.beginPath(); g.arc(x, yA(a), 4, 0, 7); g.fill();
+        if (ms > 600 + 200) dot = null;
+      }
+      cap.textContent = `${wave}: ${wave === "sine" ? "one frequency, pure" : wave === "square" ? "odd harmonics 1, 3, 5…: hollow, like a clarinet or an old game" : wave === "triangle" ? "odd harmonics, falling fast: soft, flute-like" : "every harmonic: bright, buzzy"}.${aliased ? ` On the board ${aliased} harmonics are above 8 kHz and fold back as wrong notes (red): the grit of a simple 16 kHz synth.` : ""}`;
+    });
+  }
+  SOUND_PANELS.soundSynth = soundSynth;
+
+  // fx.h in JS: the parrot's voices, applied to a recording.
+  function sndVoiceFx(x, rate, fx) {
+    if (fx === "reverse") return Float32Array.from(x).reverse();
+    if (fx === "robot") { const out = new Float32Array(x.length); for (let i = 0; i < x.length; i++) { const v = x[i] * Math.sin((2 * Math.PI * 50 * i) / rate); out[i] = Math.round(v * 32) / 32; } return out; }
+    if (fx === "echo") { const d = Math.round(0.22 * rate), out = new Float32Array(x.length + Math.round(1.5 * rate)); for (let i = 0; i < out.length; i++) out[i] = (x[i] || 0) + (i >= d ? out[i - d] * 0.45 : 0); return out; }
+    return x;
+  }
+  const SND_FX_SPEED = { chipmunk: 1.5, giant: 0.7 };
+  // A canned "voice": two syllables of buzzing vocal folds shaped by vowel formants, at 16 kHz.
+  function sndCannedVoice() {
+    const rate = 16000, n = Math.round(1.1 * rate), out = new Float32Array(n);
+    const syl = [[0.08, 0.45, [700, 1200]], [0.55, 1.0, [400, 2000]]];
+    for (let i = 0; i < n; i++) {
+      const t = i / rate; let v = 0;
+      for (const [a, b, [f1, f2]] of syl) {
+        if (t < a || t > b) continue;
+        const env = Math.sin(((t - a) / (b - a)) * Math.PI) ** 0.6, f0 = 150 + 30 * Math.sin(t * 5);
+        for (let h = 1; h < 30; h++) { const f = h * f0, w = Math.exp(-(((f - f1) / 140) ** 2)) + 0.6 * Math.exp(-(((f - f2) / 200) ** 2)) + 0.05; v += (env * w * Math.sin(2 * Math.PI * f * t)) / h ** 0.5; }
+      }
+      out[i] = v * 0.12;
+    }
+    return { samples: out, rate };
+  }
+
+  // ---------- S8 panel: the parrot, in your browser ----------
+  function soundParrot(root) {
+    const FX = ["normal", "chipmunk", "giant", "robot", "echo", "reverse"];
+    root.innerHTML = `<div class="wd"><div class="spi-ctl" role="group" aria-label="Voice">${FX.map((f, i) => `<button type="button" class="btn" data-f="${f}" aria-pressed="${i === 1}">${f}</button>`).join("")}</div>
+      <div class="spi-ctl"><button type="button" class="btn" data-a="play">▶ the parrot says it</button>
+        <button type="button" class="btn" data-a="rec">🎙 record 3 s with my microphone</button><span class="snd-rec" data-o="rec" hidden>● REC</span>
+        <button type="button" class="btn" data-a="canned">use the example voice</button></div>
+      <canvas width="680" height="220" role="img" aria-label="The recording on top and what the parrot plays below, with a playhead." style="width:100%;height:auto;display:block;border-radius:10px"></canvas>
+      <p class="sim-cap" data-o="cap" aria-live="polite">An example voice is loaded. Your own voice is optional: the microphone starts only when you press record, stops after 3 s, and the sound never leaves this page.</p></div>`;
+    const cv = root.querySelector("canvas"), g = cv.getContext("2d"), C = soundPalette(), T = sndText(g), cap = root.querySelector('[data-o="cap"]'), recEl = root.querySelector('[data-o="rec"]');
+    let voice = sndCannedVoice(), fx = "chipmunk", playing = null, recording = null;
+    const norm = (x) => { let m = 0; for (const v of x) m = Math.max(m, Math.abs(v)); const k = m > 1e-4 ? 0.9 / m : 1; return x.map((v) => v * k); };
+    root.querySelectorAll("[data-f]").forEach((b) => b.addEventListener("click", () => { fx = b.dataset.f; root.querySelectorAll("[data-f]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }));
+    root.querySelector('[data-a="canned"]').addEventListener("click", () => { voice = sndCannedVoice(); cap.textContent = "The example voice: two syllables made of harmonics shaped like vowels."; });
+    root.querySelector('[data-a="play"]').addEventListener("click", () => {
+      sndAudio.on = true; if (!sndAudio.start()) { cap.textContent = "This browser has no Web Audio."; return; }
+      if (playing && playing.src) try { playing.src.stop(); } catch {}
+      const out = sndVoiceFx(voice.samples, voice.rate, fx), speed = SND_FX_SPEED[fx] || 1;
+      playing = { src: sndAudio.buffer(out, voice.rate, speed), at: performance.now(), dur: (out.length / voice.rate / speed) * 1000, out };
+    });
+    root.querySelector('[data-a="rec"]').addEventListener("click", async () => {
+      if (recording) return;
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { cap.textContent = "No microphone access in this browser: the example voice works the same."; return; }
+      let stream;
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+      catch { cap.textContent = "The microphone wasn't allowed (by you, the browser or this page's host). The example voice works the same."; return; }
+      const chunks = [], mr = new MediaRecorder(stream);
+      recording = { at: performance.now() }; recEl.hidden = false;
+      mr.ondataavailable = (e) => chunks.push(e.data);
+      mr.onstop = async () => {
+        stream.getTracks().forEach((tr) => tr.stop()); recEl.hidden = true; recording = null;
+        try {
+          sndAudio.start();
+          const decoded = await sndAudio.ctx.decodeAudioData(await new Blob(chunks).arrayBuffer());
+          const off = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000), src = off.createBufferSource();
+          src.buffer = decoded; src.connect(off.destination); src.start();
+          const r = await off.startRendering();
+          voice = { samples: norm(r.getChannelData(0)), rate: 16000 };
+          cap.textContent = `Recorded ${decoded.duration.toFixed(1)} s, kept in this page only (made louder, like the board does). Pick a voice and press ▶.`;
+        } catch { cap.textContent = "Couldn't read that recording: the example voice is still here."; }
+      };
+      mr.start(); setTimeout(() => mr.state !== "inactive" && mr.stop(), 3000);
+      cap.textContent = "Recording from your microphone for 3 s… (the red dot shows it)";
+    });
+    return soundLoop(() => {
+      g.fillStyle = C.paper; g.fillRect(0, 0, 680, 220);
+      const drawWave = (x, y, h, s, col, label) => { T(x, y - 4, label, C.muted, "10px 'IBM Plex Mono', monospace"); const k = Math.max(...Array.from(s.filter((_, i) => i % 64 === 0), Math.abs), 1e-3); sndWave(g, x, y, 600, h, s, s.length, k * 1.1, col); };
+      drawWave(60, 22, 70, voice.samples, C.teal, "what it heard");
+      const out = playing ? playing.out : sndVoiceFx(voice.samples, voice.rate, fx);
+      drawWave(60, 126, 70, out, C.pink, `what the parrot says (${fx}${SND_FX_SPEED[fx] ? `, ×${SND_FX_SPEED[fx]} speed` : ""})`);
+      if (playing) { const k = (performance.now() - playing.at) / playing.dur; if (k <= 1) { g.fillStyle = C.ink; g.fillRect(60 + k * 600, 120, 1.5, 80); } else playing = null; }
+      if (recording) { const s = (performance.now() - recording.at) / 1000; T(660, 16, `● REC ${s.toFixed(1)} s`, C.coral, "bold 12px 'IBM Plex Mono', monospace", "right"); }
+    });
+  }
+  SOUND_PANELS.soundParrot = soundParrot;
+
+  // ---------- S7 on the board's screen ----------
+  const S7_TUNES = [["twinkle", "C5/4 C5/4 G5/4 G5/4 A5/4 A5/4 G5/2 F5/4 F5/4 E5/4 E5/4 D5/4 D5/4 C5/2", 150], ["ode", "E5/4 E5/4 F5/4 G5/4 G5/4 F5/4 E5/4 D5/4 C5/4 C5/4 D5/4 E5/4 E5/4. D5/8 D5/2", 150],
+    ["happy", "C5/8. C5/16 D5/4 C5/4 F5/4 E5/2 C5/8. C5/16 D5/4 C5/4 G5/4 F5/2", 120], ["korobeiniki", "E5/4 B4/8 C5/8 D5/4 C5/8 B4/8 A4/4 A4/8 C5/8 E5/4 D5/8 C5/8 B4/4. C5/8 D5/4 E5/4 C5/4 A4/4 A4/2", 150],
+    ["scale", "C4/8 D4/8 E4/8 F4/8 G4/8 A4/8 B4/8 C5/8 D5/8 E5/8 F5/8 G5/8 A5/8 B5/8 C6/4", 160], ["arpeggio", "C4/16 E4/16 G4/16 C5/16 E5/16 G5/16 C6/8 G5/16 E5/16 C5/16 G4/16 E4/16 C4/4", 110]];
+  const S7_FX = [["laser", "a square wave diving 2.4 kHz -> 150 Hz"], ["coin", "B5 then E6, square, ringing out"], ["jump", "a quick glide up, 250 -> 900 Hz"], ["powerup", "three rising arpeggios"],
+    ["explosion", "noise through a closing low-pass filter"], ["siren", "a sine wobbling 550-1250 Hz"], ["modem", "dial tone, two-tone chirps, hiss"]];
+  // Rough copies of sounds.h's recipes, so the fx view has a real shape (and the browser can play it).
+  function s7Fx(name) {
+    const R = 16000, sq = (p) => (p - Math.floor(p) < 0.5 ? 1 : -1), out = [];
+    let ph = 0;
+    const sweep = (f0, f1, ms, w = sq, a = 0.6, dec = 0) => { const n = (ms / 1000) * R; for (let i = 0; i < n; i++) { const k = i / n, f = f0 * Math.pow(f1 / f0, k); ph += f / R; out.push(w(ph) * a * (dec ? Math.exp(-k * dec) : 1)); } };
+    const sin = (p) => Math.sin(2 * Math.PI * p);
+    if (name === "laser") sweep(2400, 150, 300);
+    else if (name === "coin") { sweep(988, 988, 80); sweep(1319, 1319, 420, sq, 0.6, 5); }
+    else if (name === "jump") sweep(250, 900, 200, sq, 0.5);
+    else if (name === "powerup") for (let r = 0; r < 3; r++) for (const m of [0, 4, 7, 12]) sweep(392 * Math.pow(2, (m + r * 5) / 12), 392 * Math.pow(2, (m + r * 5) / 12), 60);
+    else if (name === "explosion") { let lp = 0; const n = 0.8 * R; for (let i = 0; i < n; i++) { const k = i / n, a = 0.02 + 0.5 * (1 - k) ** 3; lp += a * ((Math.random() * 2 - 1) - lp); out.push(lp * 2.2 * (1 - k)); } }
+    else if (name === "siren") { const n = 2 * R; for (let i = 0; i < n; i++) { const f = 900 + 350 * Math.sin((2 * Math.PI * i) / R); ph += f / R; out.push(sin(ph) * 0.5); } }
+    else if (name === "modem") { const n1 = 0.5 * R; for (let i = 0; i < n1; i++) out.push((sin((350 * i) / R) + sin((440 * i) / R)) * 0.25); for (let c = 0; c < 6; c++) sweep(c % 2 ? 1200 : 2100, c % 2 ? 1200 : 2100, 90, sin, 0.4); for (let i = 0; i < 0.4 * R; i++) out.push((Math.random() * 2 - 1) * 0.25); }
+    return Float32Array.from(out);
+  }
+  SOUND_SCREENS.S7 = {
+    views: ["wave", "keys", "envelope", "tunes", "fx"],
+    dbl: ["wave next", "next note", "note A4 600", "tune picked", "fx picked"],
+    commands: [
+      ["wave <name|next>", "sine square triangle saw noise: the timbre"],
+      ["play <notes>", "notes one after another: play C4 E4 G4/2 r/4 C5"],
+      ["chord <name>", "notes together: Cmaj Am G7 Fmaj7 Bdim Dsus4"],
+      ["note <name|Hz> [ms]", "one note: note A4, note 1000 250"],
+      ["adsr <a> <d> <s%> <r>", "the envelope, ms ms % ms (default 6 80 65 90)"],
+      ["tune <name>", "twinkle ode happy korobeiniki scale arpeggio"],
+      ["bpm <n>", "tempo for play (default 120)"],
+      ["fx <name>", "laser coin jump powerup explosion siren modem"],
+      ["stop", "silence"],
+      ["next", "the next note of the C major scale"],
+    ],
+    boot: ["  - start quiet: vol 20, then raise it"],
+    captions: [
+      "wave: one note's waveform (four periods) and its spectrum 0-8 kHz. Same note, different wave = different timbre; the line under it says why.",
+      "keys: two octaves, C4 to B5. Notes light while they sound. Double-click = the next note of the scale, long press = the next chord.",
+      "envelope: the ADSR curve (attack, decay, sustain, release); a dot rides it while a single note plays.",
+      "tunes: the list on the left, a piano roll on the right scrolling past the amber playhead. Double-click plays the picked tune, long press picks the next.",
+      "fx: game sounds built from recipes (sweeps, noise, filters); the last one's whole waveform with a playhead.",
+    ],
+    actions: [
+      { label: "wave next", run(st) { SOUND_SCREENS.S7.onCommand("wave next", st, st.term); } },
+      { label: "▶ tune picked", run(st) { SOUND_SCREENS.S7.onCommand(`tune ${S7_TUNES[st.tuneIdx][0]}`, st, st.term); st.view = 3; } },
+      { label: "▶ fx picked", run(st) { SOUND_SCREENS.S7.onCommand(`fx ${S7_FX[st.fxIdx][0]}`, st, st.term); st.view = 4; } },
+      { label: "long press (next)", run(st) { if (st.view === 3) st.tuneIdx = (st.tuneIdx + 1) % S7_TUNES.length; else if (st.view === 4) st.fxIdx = (st.fxIdx + 1) % S7_FX.length; else if (st.view === 1) SOUND_SCREENS.S7.onCommand(`chord ${["Cmaj", "Fmaj", "Gmaj", "Am", "Dm", "G7"][st.chord++ % 6]}`, st, st.term); else SOUND_SCREENS.S7.onCommand("stop", st, st.term); } },
+    ],
+    init() {
+      return { mic: soundMic({ digital: true }), wave: "triangle", hz: 440, adsr: [6, 80, 0.65, 90], bpm: 120, tuneIdx: 0, fxIdx: 0, chord: 0, scaleAt: 0, piece: null, fxBuf: null };
+    },
+    // Something starts playing: what the keys light and the roll scrolls.
+    start(st, events, title, samples) {
+      const total = events.reduce((m, e) => Math.max(m, e.at + e.ms), 0) || (samples ? (samples.length / 16) : 0);
+      st.piece = { events, title, at: performance.now(), total, samples };
+      st.mic.spk.play(total, events[0]?.hz || 600, title);
+      if (samples) sndAudio.buffer(samples, 16000); else events.forEach((e) => e.hz && sndAudio.tone(e.hz, e.ms, st.wave, e.at / 1000, st.adsr));
+    },
+    onCommand(line, st, term) {
+      const [cmd, ...rest] = line.trim().split(/\s+/), a = rest.join(" "), low = a.toLowerCase(), S = SOUND_SCREENS.S7;
+      const midi = (hz) => Math.round(69 + 12 * Math.log2(hz / 440));
+      if (cmd === "wave") {
+        const W = ["sine", "square", "triangle", "saw", "noise"], w = low === "next" || !low ? W[(W.indexOf(st.wave) + 1) % 5] : low;
+        if (!W.includes(w)) { term.line("[W] wave sine | square | triangle | saw | noise | next", "w"); return true; }
+        st.wave = w; soundNote(st, term, "-", `wave ${w}`); return true;
+      }
+      if (cmd === "play") {
+        if (!a) { term.line("[W] play <notes>, e.g. play C4 E4 G4 C5/2   (/4 = quarter, /8 = eighth, r = rest)", "w"); return true; }
+        let at = 0; const ev = sndParseTune(a, st.bpm).map((n) => { const e = { at, ms: n.ms, hz: n.hz, midi: n.hz ? midi(n.hz) : -1 }; at += n.ms; return e; });
+        S.start(st, ev, "play"); return true;
+      }
+      if (cmd === "chord") {
+        const m = /^([A-G][#b]?)(maj7|maj|m7|m|7|dim|aug|sus4|sus2)$/.exec(a);
+        if (!m) { term.line("[W] chord <root><quality>: Cmaj Am G7 Fmaj7 Dm7 Bdim Caug Dsus4 Esus2 (root may have # or b)", "w"); return true; }
+        const iv = { maj: [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10], dim: [0, 3, 6], aug: [0, 4, 8], sus4: [0, 5, 7], sus2: [0, 2, 7] }[m[2]];
+        const root = sndMidiHz(`${m[1]}4`), ev = iv.map((s) => ({ at: 0, ms: 1200, hz: root * Math.pow(2, s / 12), midi: midi(root) + s }));
+        soundNote(st, term, "-", `${a} = ${ev.map((e) => SND_NOTES[((e.midi % 12) + 12) % 12] + (Math.floor(e.midi / 12) - 1)).join(" ")}`);
+        S.start(st, ev, a); return true;
+      }
+      if (cmd === "note") {
+        const [what, ms = "600"] = rest; const hz = sndMidiHz(what || "") || +what;
+        if (!(hz >= 20 && hz <= 8000) || !(+ms >= 20 && +ms <= 10000)) { term.line("[W] note A4 | note C#5 300 | note 1000", "w"); return true; }
+        st.hz = hz; S.start(st, [{ at: 0, ms: +ms, hz, midi: midi(hz) }], "note"); return true;
+      }
+      if (cmd === "adsr") {
+        const v = rest.map(Number);
+        if (v.length !== 4 || v.some((x) => !(x >= 0))) { term.line("[W] adsr <attack ms> <decay ms> <sustain %> <release ms>, e.g. adsr 5 80 65 90 (a plucked string: adsr 1 300 0 50)", "w"); return true; }
+        st.adsr = [v[0], v[1], Math.min(1, v[2] / 100), v[3]]; soundNote(st, term, "-", `adsr ${v.join(" ")}`); return true;
+      }
+      if (cmd === "tune") {
+        const i = S7_TUNES.findIndex((x) => x[0] === low);
+        if (i < 0) { term.line(`tunes: ${S7_TUNES.map((x) => x[0]).join(" ")}`); if (low) term.line(`[W] no tune '${low}'`, "w"); return true; }
+        st.tuneIdx = i; let at = 0; const ev = sndParseTune(S7_TUNES[i][1], S7_TUNES[i][2]).map((n) => { const e = { at, ms: n.ms, hz: n.hz, midi: n.hz ? midi(n.hz) : -1 }; at += n.ms; return e; });
+        S.start(st, ev, S7_TUNES[i][0]); return true;
+      }
+      if (cmd === "bpm") { const b = +a; if (!(b >= 30 && b <= 300)) term.line(`[W] bpm <30-300> (now ${st.bpm}): the tempo for play`, "w"); else st.bpm = b; return true; }
+      if (cmd === "fx") {
+        const i = S7_FX.findIndex((x) => x[0] === low);
+        if (i < 0) { term.line(`effects: ${S7_FX.map((x) => x[0]).join(" ")}`); return true; }
+        st.fxIdx = i; st.fxBuf = s7Fx(S7_FX[i][0]); soundNote(st, term, "-", `fx ${S7_FX[i][0]}: ${S7_FX[i][1]}`);
+        S.start(st, [], S7_FX[i][0], st.fxBuf); return true;
+      }
+      if (cmd === "stop") { st.piece = null; st.mic.spk.until = 0; return true; }
+      if (cmd === "next") { const sc = ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5"], n = sc[st.scaleAt++ % 8]; return S.onCommand(`note ${n} 400`, st, term); }
+      return false;
+    },
+    draw(g, C, view, t, st) {
+      const T = sndText(g), S8 = "8px 'IBM Plex Mono', monospace", P = st.piece, el = P ? performance.now() - P.at : 0;
+      if (P && el > P.total + 300) st.piece = null;
+      const shape = (w, ph) => { const f = ph - Math.floor(ph); return w === "sine" ? Math.sin(2 * Math.PI * f) : w === "square" ? (f < 0.5 ? 1 : -1) : w === "triangle" ? (f < 0.5 ? 4 * f - 1 : 3 - 4 * f) : w === "saw" ? 2 * f - 1 : Math.random() * 2 - 1; };
+      if (view === 0) {
+        g.fillStyle = C.pink; for (let x = 0; x < 300; x++) { const y = 62 - shape(st.wave, (x / 300) * 4) * 26; g.fillRect(10 + x, y, 1, 2); }
+        const nt = sndNote(st.hz); T(10, 99, `${st.wave}  ${st.hz.toFixed(0)} Hz (${nt.name})`, C.ink, S8);
+        const amp = (n) => (st.wave === "sine" ? (n === 1 ? 1 : 0) : st.wave === "square" ? (n % 2 ? 1 / n : 0) : st.wave === "triangle" ? (n % 2 ? 1 / (n * n) : 0) : st.wave === "saw" ? 1 / n : 0.3);
+        for (let n = 1; n <= 40; n++) { let f = n * st.hz; if (f > 8000) f = 16000 - (f % 16000); if (f > 8000 || f < 0) continue; const a = st.wave === "noise" ? 0.3 : amp(n); if (!a) continue; const h = Math.max(0, (1 + Math.log10(a) / 3) * 46); g.fillStyle = C.pink; g.fillRect(10 + (f / 8000) * 300, 150 - h, 1.5, h); }
+        if (st.wave === "noise") for (let x = 0; x < 300; x++) { g.fillStyle = C.pink; g.fillRect(10 + x, 150 - 20 - Math.random() * 10, 1, 25); }
+        g.fillStyle = C.dim; g.fillRect(10, 150, 300, 1);
+        T(10, 160, "0", C.muted, S8); T(154, 160, "4k", C.muted, S8); T(310, 160, "8kHz", C.muted, S8, "right");
+      } else if (view === 1) {
+        const lit = new Set(); if (P) P.events.forEach((e) => { if (el >= e.at && el < e.at + e.ms) lit.add(e.midi); });
+        const ws = [0, 2, 4, 5, 7, 9, 11];
+        for (let i = 0; i < 14; i++) { const m = 60 + Math.floor(i / 7) * 12 + ws[i % 7]; g.fillStyle = lit.has(m) ? C.pink : C.ink; g.fillRect(13 + i * 21, 48, 19, 80); if (i % 7 === 0) T(17 + i * 21, 124, `C${4 + i / 7}`, C.paper, S8); }
+        const after = [0, 1, 3, 4, 5], bs = [1, 3, 6, 8, 10];
+        for (let o = 0; o < 2; o++) for (let j = 0; j < 5; j++) { const m = 60 + o * 12 + bs[j]; g.fillStyle = lit.has(m) ? C.pink : C.paper; g.fillRect(13 + (o * 7 + after[j]) * 21 + 14, 48, 12, 48); }
+        T(10, 41, `${st.wave} - A${st.adsr[0]} D${st.adsr[1]} S${Math.round(st.adsr[2] * 100)}% R${st.adsr[3]} ms`, C.muted, S8);
+        T(10, 141, "2x: next note   long: next chord", C.muted, S8); if (P) T(220, 141, P.title, C.pink, S8);
+      } else if (view === 2) {
+        const [A, D, Sl, R] = st.adsr, hold = 250, tot = A + D + hold + R, X = (ms) => 14 + (ms / tot) * 292, Y = (a) => 128 - a * 84;
+        const pts = [[0, 0], [A, 1], [A + D, Sl], [A + D + hold, Sl], [tot, 0]], cols = [C.teal, C.amber, C.pink, C.coral];
+        g.fillStyle = C.dim; g.fillRect(14, 128, 292, 1);
+        for (let i = 0; i < 4; i++) { g.strokeStyle = cols[i]; g.lineWidth = 2; g.beginPath(); g.moveTo(X(pts[i][0]), Y(pts[i][1])); g.lineTo(X(pts[i + 1][0]), Y(pts[i + 1][1])); g.stroke(); T((X(pts[i][0]) + X(pts[i + 1][0])) / 2 - 2, 139, "ADSR"[i], cols[i], S8); }
+        g.lineWidth = 1;
+        if (P && P.events.length === 1) { const dur = P.events[0].ms, held = dur - R; let ms, a; if (el < A) { ms = el; a = el / A; } else if (el < A + D) { ms = el; a = 1 - (1 - Sl) * (el - A) / D; } else if (el < held) { ms = Math.min(el, A + D + hold * 0.99); a = Sl; } else { const k = Math.min(1, (el - held) / R); ms = A + D + hold + k * R; a = Sl * (1 - k); } g.fillStyle = C.ink; g.beginPath(); g.arc(X(Math.min(ms, tot)), Y(a), 4, 0, 7); g.fill(); }
+        T(14, 149, `adsr ${A} ${D} ${Math.round(Sl * 100)} ${R}   (ms, ms, %, ms)`, C.ink, S8);
+        T(14, 39, "fade in, fall, hold, fade out: no clicks", C.muted, S8);
+      } else if (view === 3) {
+        S7_TUNES.forEach(([n], i) => { if (i === st.tuneIdx) { g.fillStyle = C.dim; g.fillRect(4, 34 + i * 16, 92, 15); } T(8, 45 + i * 16, n, i === st.tuneIdx ? C.pink : C.muted, S8); });
+        T(8, 149, "2x: play", C.muted, S8); T(8, 159, "long: next", C.muted, S8);
+        const x0 = 104, y0 = 34, w = 210, h = 124, live = P && P.title === S7_TUNES[st.tuneIdx][0];
+        g.strokeStyle = C.dim; g.strokeRect(x0 + 0.5, y0 + 0.5, w, h);
+        let at = 0; const ev = live ? P.events : sndParseTune(S7_TUNES[st.tuneIdx][1], S7_TUNES[st.tuneIdx][2]).map((n) => { const e = { at, ms: n.ms, midi: n.hz ? Math.round(69 + 12 * Math.log2(n.hz / 440)) : -1 }; at += n.ms; return e; });
+        const ms = ev.filter((e) => e.midi >= 0).map((e) => e.midi), lo = Math.min(...ms) - 1, hi = Math.max(...ms) + 1, now = live ? el : 0, playX = x0 + w / 4, k = w / 4000;
+        g.save(); g.beginPath(); g.rect(x0 + 1, y0 + 1, w - 2, h - 2); g.clip();
+        ev.forEach((e) => { if (e.midi < 0) return; const x = playX + (e.at - now) * k, y = y0 + h - 4 - ((e.midi - lo) * (h - 8)) / Math.max(1, hi - lo), on = live && now >= e.at && now < e.at + e.ms; g.fillStyle = on ? C.ink : C.pink; g.globalAlpha = on ? 1 : 0.4; g.fillRect(x, y - 2, Math.max(2, e.ms * k - 1), 5); });
+        g.restore(); g.globalAlpha = 1; g.fillStyle = live ? C.amber : C.dim; g.fillRect(playX, y0 + 1, 1, h - 2);
+      } else {
+        S7_FX.forEach(([n], i) => { if (i === st.fxIdx) { g.fillStyle = C.dim; g.fillRect(4, 34 + i * 16, 82, 15); } T(8, 45 + i * 16, n, i === st.fxIdx ? C.pink : C.muted, S8); });
+        const x0 = 94, y0 = 36, w = 218, h = 96; g.strokeStyle = C.dim; g.strokeRect(x0 - 0.5, y0 - 0.5, w + 1, h + 1);
+        if (st.fxBuf) {
+          sndWave(g, x0, y0, w, h, st.fxBuf, st.fxBuf.length, 1, C.pink);
+          if (P && P.samples) { const kk = Math.min(1, el / P.total); g.fillStyle = C.ink; g.fillRect(x0 + kk * w, y0, 1, h); }
+          T(x0, y0 + h + 12, `${S7_FX[st.fxIdx][0]}, ${Math.round(st.fxBuf.length / 16)} ms`, C.ink, S8);
+        } else T(x0 + 10, y0 + h / 2 + 3, "double-click to play an effect", C.muted, S8);
+        T(x0, y0 + h + 24, S7_FX[st.fxIdx][1], C.muted, S8);
+      }
+      void t;
+    },
+  };
+
+  // ---------- S8 on the board's screen ----------
+  const S8_FX = [["normal", "just as you said it"], ["chipmunk", "1.5x faster = higher"], ["giant", "0.7x slower = deeper"], ["robot", "ring modulator + bitcrush"], ["echo", "220 ms echo, 45 % feedback"], ["reverse", "backwards"]];
+  SOUND_SCREENS.S8 = {
+    views: ["parrot", "echo", "robot", "scope"],
+    dbl: ["fx next", "echo", "robot", "again"],
+    commands: [
+      ["fx <name|next>", "the parrot's voice: normal chipmunk giant robot echo reverse"],
+      ["again", "say the last recording again, with the current voice"],
+      ["rec", "record by hand / stop (long press)"],
+      ["parrot [on|off]", "let the parrot listen, or rest"],
+      ["echo [on|off]", "live echo through the speaker (careful: feedback)"],
+      ["delay <ms>", "echo delay, 20-500 (default 250)"],
+      ["feedback <percent>", "echo feedback, 0-70 (default 40)"],
+      ["robot [on|off]", "live robot voice through the speaker"],
+      ["carrier <Hz>", "the robot's carrier, 10-300 (default 50)"],
+      ["trigger <dB>", "how loud starts a recording (default 12)"],
+    ],
+    captions: [
+      "parrot: say something and it says it back in the chosen voice. Listening (arcs come in), recording (wide eye, REC), talking (the beak moves with the speaker). Below: your level against the start line.",
+      "echo: live, mic → delay line → speaker. The bars show what one clap turns into: each repeat feedback × quieter, delay apart. Bottom: in and out levels and the latency.",
+      "robot: live, your voice times a slow sine (the carrier) plus 8-bit crunch; the mouth lights with what comes out.",
+      "scope: the chain mic → effect → speaker, with what goes in (teal) and what comes out (pink).",
+    ],
+    actions: [
+      { label: "🗣 say something (2 s)", run(st) { st.mic.say("talk", 2); } },
+      { label: "fx next", run(st) { SOUND_SCREENS.S8.onCommand("fx next", st, st.term); } },
+      { label: "again", run(st) { SOUND_SCREENS.S8.onCommand("again", st, st.term); } },
+      { label: "echo on/off", run(st) { SOUND_SCREENS.S8.onCommand("echo", st, st.term); st.view = 1; } },
+      { label: "robot on/off", run(st) { SOUND_SCREENS.S8.onCommand("robot", st, st.term); st.view = 2; } },
+    ],
+    init() {
+      const st = { mic: soundMic({ digital: true }), fx: 1, mood: "listening", recFrom: 0, recLen: 0, talkUntil: 0, live: "", delay: 250, feedback: 40, carrier: 50, trig: sndTrigger({ startDb: 12, holdMs: 700, prerollMs: 300, maxMs: 6000 }), parrotOn: true, howlUntil: 0 };
+      st.trig.arm(true);
+      st.mic.onFrame = (f, ms) => {
+        if (st.mic.level.learning() || !st.parrotOn || st.live || st.mood === "talking") return;
+        const r = st.trig.push(st.mic.level.above(), ms);
+        if (!r) return;
+        if (r.action === "start") { st.mood = "recording"; st.recFrom = ms; return; }
+        st.mood = "listening";
+        if (r.action === "drop") return soundNote(st, st.term, "-", "too short: a bang, not a word");
+        st.recLen = (r.to - r.from) / 1000; SOUND_SCREENS.S8.talk(st);
+      };
+      return st;
+    },
+    talk(st) {
+      const speed = { chipmunk: 1.5, giant: 0.7 }[S8_FX[st.fx][0]] || 1, secs = st.recLen / speed + (S8_FX[st.fx][0] === "echo" ? 1.5 : 0);
+      st.mood = "talking"; st.talkAt = performance.now(); st.talkMs = secs * 1000; st.mic.spk.play(st.talkMs, 300, "parrot");
+      soundNote(st, st.term, "+", `${S8_FX[st.fx][0]}, ${st.recLen.toFixed(1)} s, x${(4 + Math.random() * 8).toFixed(0)} louder`);
+    },
+    tick(st) { if (st.mood === "talking" && performance.now() - st.talkAt > st.talkMs + 300) { st.mood = "listening"; st.trig.arm(true); } },
+    onCommand(line, st, term) {
+      const [cmd, a = ""] = line.toLowerCase().trim().split(/\s+/), S = SOUND_SCREENS.S8;
+      if (cmd === "fx") { const i = a === "next" || !a ? (st.fx + 1) % 6 : S8_FX.findIndex((x) => x[0] === a); if (i < 0) { term.line("[W] fx normal | chipmunk | giant | robot | echo | reverse | next", "w"); return true; } st.fx = i; soundNote(st, term, "-", `voice: ${S8_FX[i][0]} (${S8_FX[i][1]})`); return true; }
+      if (cmd === "again") { if (!st.recLen) term.line("[W] nothing recorded yet: say something first", "w"); else if (st.live || st.mood !== "listening") term.line("[W] busy", "w"); else S.talk(st); return true; }
+      if (cmd === "rec") { if (st.mood === "recording") { st.recLen = Math.max(0.3, (st.mic.ms - st.recFrom) / 1000); st.mood = "listening"; S.talk(st); } else { st.mood = "recording"; st.recFrom = st.mic.ms; } return true; }
+      if (cmd === "parrot") { st.parrotOn = a ? a === "on" : !st.parrotOn; soundNote(st, term, "-", st.parrotOn ? "the parrot listens" : "the parrot rests"); return true; }
+      if (cmd === "echo" || cmd === "robot") {
+        const on = a ? a === "on" : st.live !== cmd;
+        if (!on) { st.live = ""; soundNote(st, term, "-", "live off"); return true; }
+        st.live = cmd; soundNote(st, term, "!", `live ${cmd}: speaker away from the mic, volume low`); return true;
+      }
+      if (cmd === "delay") { const v = +a; if (!(v >= 20 && v <= 500)) term.line(`[W] delay <20-500 ms> (now ${st.delay})`, "w"); else st.delay = v; return true; }
+      if (cmd === "feedback") { const v = +a; if (!(a !== "" && v >= 0 && v <= 70)) term.line(`[W] feedback <0-70 %> (now ${st.feedback}): how much of each echo echoes again`, "w"); else st.feedback = v; return true; }
+      if (cmd === "carrier") { const v = +a; if (!(v >= 10 && v <= 300)) term.line(`[W] carrier <10-300 Hz> (now ${st.carrier}): 30-80 = robot, 150+ = bell-like`, "w"); else st.carrier = v; return true; }
+      if (cmd === "trigger") { const v = +a; if (!(v >= 4 && v <= 40)) term.line(`[W] trigger <dB above the quiet> 4-40 (now ${st.trig.cfg.startDb})`, "w"); else st.trig.cfg.startDb = v; return true; }
+      return false;
+    },
+    draw(g, C, view, t, st) {
+      const T = sndText(g), S8 = "8px 'IBM Plex Mono', monospace", B = "bold 12px Archivo, sans-serif", L = st.mic.level;
+      st.rec = st.mood === "recording";
+      if (st.live) { st.mic.spk.play(120, 0, "live"); if (L.above() > 0) st.mic.spk.until = performance.now() + 100; }
+      if (view === 0) {
+        const cx = 70, cy = 70, bob = Math.sin(t * 2) * 2, open = st.mood === "talking" ? Math.abs(Math.sin(t * 14)) : 0, grn = css("--scope-trace");
+        g.fillStyle = grn; g.beginPath(); g.arc(cx, cy + 22 + bob, 24, 0, 7); g.fill(); g.beginPath(); g.arc(cx + 8, cy - 8 + bob, 18, 0, 7); g.fill();
+        g.fillStyle = C.dim; g.beginPath(); g.moveTo(cx - 22, cy + 10 + bob); g.lineTo(cx - 4, cy + 18 + bob); g.lineTo(cx - 18, cy + 46 + bob); g.fill();
+        g.fillStyle = C.coral; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(cx + 2 + i * 6, cy - 24 + bob); g.lineTo(cx + 8 + i * 6, cy - 24 + bob); g.lineTo(cx + i * 7, cy - 38 + bob - i * 2); g.fill(); }
+        g.fillStyle = C.ink; g.beginPath(); g.arc(cx + 14, cy - 12 + bob, st.mood === "recording" ? 7 : 5, 0, 7); g.fill(); g.fillStyle = C.paper; g.beginPath(); g.arc(cx + 15, cy - 12 + bob, 2.5, 0, 7); g.fill();
+        g.fillStyle = C.amber; g.beginPath(); g.moveTo(cx + 24, cy - 12 + bob); g.lineTo(cx + 24, cy - 4 + bob); g.lineTo(cx + 40, cy - 2 + bob); g.fill();
+        g.beginPath(); g.moveTo(cx + 24, cy - 3 + bob + open * 6); g.lineTo(cx + 24, cy + 2 + bob + open * 12); g.lineTo(cx + 35, cy - 1 + bob + open * 12); g.fill();
+        if (st.mood === "listening") for (let i = 0; i < 3; i++) { const k = (t * 0.8 + i / 3) % 1; g.strokeStyle = C.pink; g.globalAlpha = 1 - k; g.beginPath(); g.arc(150, 60, 8 + (1 - k) * 30, Math.PI / 2, Math.PI * 1.5); g.stroke(); }
+        g.globalAlpha = 1;
+        g.fillStyle = C.dim; g.beginPath(); g.roundRect(150, 36, 162, 58, 10); g.fill();
+        const line1 = !st.parrotOn ? "Resting (parrot on)" : st.live ? "Busy: live effect on" : { listening: "Say something!", recording: "I'm listening...", talking: "Squawk!" }[st.mood];
+        T(158, 58, line1, st.mood === "recording" ? C.coral : C.ink, B);
+        T(158, 70, `voice: ${S8_FX[st.fx][0]}`, C.pink, S8); T(158, 81, S8_FX[st.fx][1], C.muted, S8);
+        if (st.mood === "recording") T(150, 118, `REC ${((st.mic.ms - st.recFrom) / 1000).toFixed(1)} s`, C.coral, B);
+        else if (st.mood === "talking") { const k = Math.min(1, (performance.now() - st.talkAt) / st.talkMs); g.strokeStyle = C.dim; g.strokeRect(150.5, 110.5, 160, 8); g.fillStyle = C.pink; g.fillRect(151, 111, 158 * k, 6); }
+        const fill = Math.min(1, L.above() / 50) * 158; g.fillStyle = C.dim; g.fillRect(150, 130, 160, 10); g.fillStyle = sndLevelColour(C, L.above()); g.fillRect(151, 132, fill, 6);
+        g.fillStyle = C.coral; g.fillRect(151 + (st.trig.cfg.startDb / 50) * 158, 127, 1, 16);
+        T(150, 152, `${L.above().toFixed(0)} dB, starts at ${st.trig.cfg.startDb}`, C.muted, S8);
+      } else if (view === 1) {
+        const on = st.live === "echo";
+        T(10, 50, on ? "Echo ON" : "Echo off", on ? C.teal : C.muted, B);
+        T(110, 47, `delay ${st.delay} ms - feedback ${st.feedback} %`, C.ink, S8);
+        const x0 = 14, y0 = 64, h = 54, w = 292; g.fillStyle = C.dim; g.fillRect(x0, y0 + h, w, 1); g.fillStyle = C.ink; g.fillRect(x0, y0, 3, h);
+        let a = 1; for (let k = 1; k < 12; k++) { const x = x0 + (k * st.delay * w) / 2000; if (x > x0 + w) break; const hh = h * a; g.fillStyle = C.pink; if (hh > 0.5) g.fillRect(x, y0 + h - hh, 3, hh); a *= st.feedback / 100; }
+        T(x0, y0 + h + 11, "one clap -> its echoes over 2 s", C.muted, S8);
+        T(10, 141, `in ${L.fast.toFixed(0)} dBFS  out ${on ? (L.fast - 3).toFixed(0) : "-96"} dBFS  latency ~${on ? 64 : 0} ms`, on ? C.ink : C.muted, S8);
+        T(10, 157, "speaker away from the mic, vol low", C.muted, S8);
+      } else if (view === 2) {
+        const on = st.live === "robot", cx = 80, cy = 92;
+        g.fillStyle = C.muted; g.beginPath(); g.roundRect(cx - 44, cy - 44, 88, 84, 10); g.fill();
+        g.fillStyle = C.dim; g.fillRect(cx - 1, cy - 58, 2, 14); g.fillStyle = on && t % 1 < 0.5 ? C.coral : C.dim; g.beginPath(); g.arc(cx, cy - 60, 4, 0, 7); g.fill();
+        [-18, 18].forEach((dx) => { g.fillStyle = C.paper; g.beginPath(); g.arc(cx + dx, cy - 14, 9, 0, 7); g.fill(); g.fillStyle = on ? C.teal : C.dim; g.beginPath(); g.arc(cx + dx, cy - 14, 4, 0, 7); g.fill(); });
+        const lvl = on ? Math.min(1, L.above() / 30) : 0;
+        for (let i = 0; i < 7; i++) { const hh = 4 + lvl * 18 * (0.6 + 0.4 * Math.sin(i * 1.7 + t * 20)); g.fillStyle = on ? C.pink : C.dim; g.fillRect(cx - 30 + i * 9, cy + 18 - hh / 2, 6, Math.max(2, hh)); }
+        T(150, 50, on ? "Robot ON" : "Robot off", on ? C.teal : C.muted, B);
+        T(150, 73, `carrier ${st.carrier} Hz`, C.ink, S8); T(150, 89, "voice x a slow sine:", C.muted, S8); T(150, 100, "every f becomes f-c, f+c", C.muted, S8); T(150, 111, "+ 8-bit crunch", C.muted, S8);
+        T(150, 137, "speaker away from the mic", C.muted, S8);
+      } else {
+        const active = !!st.live || st.mood !== "listening", mid = st.live === "echo" ? "delay" : st.live === "robot" ? "ring mod" : S8_FX[st.fx][0];
+        ["mic", mid, "speaker"].forEach((b, i) => { const y = 38 + i * 42; g.fillStyle = active ? C.pink : C.dim; g.globalAlpha = active ? 0.3 : 0.6; g.beginPath(); g.roundRect(6, y, 76, 26, 6); g.fill(); g.globalAlpha = 1; T(12, y + 17, b, active ? C.ink : C.muted, S8); if (i < 2) { g.fillStyle = active ? C.pink : C.dim; g.beginPath(); g.moveTo(40, y + 30); g.lineTo(48, y + 30); g.lineTo(44, y + 38); g.fill(); } });
+        const inS = st.mic.latest(320); T(92, 41, "in", C.muted, S8); sndWave(g, 92, 44, 222, 50, inS, 320, Math.max(512, ...Array.from(inS, Math.abs)), C.teal);
+        T(92, 105, "out", C.muted, S8);
+        const out = new Float32Array(320); if (st.live === "robot") for (let i = 0; i < 320; i++) out[i] = Math.round(inS[i] * Math.sin((2 * Math.PI * st.carrier * i) / 16000) / 256) * 256; else if (st.live === "echo" || st.mood === "talking") out.set(inS);
+        sndWave(g, 92, 108, 222, 50, out, 320, Math.max(512, ...Array.from(out, Math.abs)), C.pink);
+      }
+    },
+  };
+
   // ---------- The lessons ----------
-  const sndFlash = (id) => ({ c: `uv run pio run -e sound-lab-${id} -t upload`, where: "mac", card: "squiet", does: `Builds lab ${id.toUpperCase()} and writes it to the board, then open the monitor with <code>uv run pio device monitor</code>.`, see: `<code>[I] Mic: AO on GPIO 6 (ADC1 channel 5) at 16000 Hz, attenuation 12 dB (0-3.1 V); DO on GPIO 21</code>, then <code>Sound lab ${id.toUpperCase()} …</code> and the command list. Stay quiet for half a second: <code>- learning the quiet...</code>`, fix: "“GPIO 6 is not an ADC1 pin”: someone changed PIN_MIC_AO; use GPIO 1-10. “Failed to connect”: hold BOOT, tap RST, release BOOT, run it again." });
+  const sndFlash = (id) => ({ c: `uv run pio run -e sound-lab-${id} -t upload`, where: "mac", card: "squiet", does: `Builds lab ${id.toUpperCase()} and writes it to the board, then open the monitor with <code>uv run pio device monitor</code>.`, see: `<code>Listening for an INMP441 on the I2S pins...</code>, <code>Microphone: INMP441 (I2S, digital) (mic setting: auto)</code> (or KY-037), then <code>Sound lab ${id.toUpperCase()} …</code>, the command list and a three-note hello from the speaker. Stay quiet for half a second: <code>- learning the quiet...</code>`, fix: "Wrong mic picked: <code>mic inmp441</code> or <code>mic ky037</code> (saved, restarts). No hello: the speaker is optional; check VIN and DIN. “Failed to connect”: hold BOOT, tap RST, release BOOT, run it again." });
+  const sndMicCmd = { c: "mic inmp441 (or mic ky037, mic auto)", card: "sany", does: "Which microphone the shell uses. <code>auto</code> (the default) listens for an INMP441 for 0.3 s at start-up. Saved in NVS (namespace <code>sound</code>); the board restarts.", see: "<code>Microphone: INMP441 (I2S, digital) (mic setting: inmp441)</code>; top right of the screen a small <b>D</b> instead of the DO lamp.", fix: "Stays on the KY-037: check SCK 40, WS 41, SD 42, L/R to GND." };
 
   SOUND_LESSONS.push({
     ...soundCommon, id: "S1", title: "Hear", cmd: "uv run pio run -e sound-lab-s1 -t upload",
-    heading: "Hear what the microphone really sends",
-    goal: "The KY-037 has two outputs. <b>AO</b> is the microphone's own voltage: a tiny wave riding on a steady <i>bias</i>. <b>DO</b> is a yes/no from the LM393 comparator, set by the blue trim pot. S1 samples AO 16 000 times a second with the ADC's DMA (no <code>analogRead()</code> in a loop), draws it as an oscilloscope, shows where it sits in the ADC's range, and lets you tune the pot. Every other sound lab stands on this: the sampler, the 4-second ring and the level meter live in <code>lib/sound-kit</code>.",
-    goalLine: "See your voice and a clap as a wave, read the bias, pick the right ADC range, and tune the comparator so DO lights only with loud sounds.",
+    heading: "Hear what the microphones really send",
+    goal: sndParts(["mic"]) + "Two microphones, two ways in. The <b>INMP441</b> is digital: its own amplifier and 24-bit converter, numbers over I2S. The KY-037 has two outputs. <b>AO</b> is the microphone's own voltage: a tiny wave riding on a steady <i>bias</i>. <b>DO</b> is a yes/no from the LM393 comparator, set by the blue trim pot. S1 samples AO 16 000 times a second with the ADC's DMA (no <code>analogRead()</code> in a loop), draws it as an oscilloscope, shows where it sits in the ADC's range, and lets you tune the pot. The <b>mics</b> view puts both side by side. Every other sound lab stands on this: the sampler, the 4-second ring and the level meter live in <code>lib/sound-kit</code>.",
+    goalLine: "See your voice and a clap as a wave, compare the two microphones, read the bias (or the bits), and tune the comparator so it fires only with loud sounds.",
     goalCheck: [
       "The <b>scope</b> shows a flat line while you're quiet and a wave when you talk; a whistle stands still (trigger on).",
       "The <b>bias</b> view shows your module's bias in mV and no CLIPPING when you clap close to it; you tried <code>atten 6</code> and saw the step size halve.",
       "On the <b>comparator</b> view, DO lights with claps and stays dark while you talk normally: “tuned”.",
       "<code>status</code> says <code>16000 Hz measured</code> and <code>DMA overruns 0</code>.",
+      "With both mics wired, the <b>mics</b> view says how many dB more clearly the INMP441 hears a word.",
     ],
-    learn: ["electret capsule", "bias voltage", "ADC attenuation", "continuous ADC + DMA", "ring buffer", "removing DC", "comparator & trim pot", "dBFS"],
+    learn: ["analog vs digital mic", "I2S", "bias voltage", "ADC attenuation", "continuous ADC + DMA", "ring buffer", "6 dB per bit, headroom", "comparator & hysteresis", "dBFS"],
     panels: [
       { title: "The sound track, lab by lab", fn: "soundJourney", intro: "Six labs, each its own firmware, all reading the same microphone. Pick one to see what it turns sound into." },
       { title: "From air to numbers", fn: "soundChain", intro: "Eight stages between your voice and a number the code can use. Step through them (or let it play); the buttons at the right make sounds, and every value below the picture is live." },
-      { title: "Where the wave sits in the ADC's range", fn: "soundBias", intro: "Move the bias and the loudness, change the attenuation. The ADC can only measure inside the shaded range: outside it the wave is cut flat (clipping). A smaller range gives finer steps, as long as the wave still fits." },
+      { title: "Analog mic, digital mic: how I2S carries a sample", fn: "soundMics", intro: "The KY-037 hands the ESP32 a voltage to measure; the INMP441 measures it itself and sends the number. Below: one I2S frame on its three wires. Step it tick by tick and watch a 24-bit sample arrive, then become the 16-bit number every lab uses." },
+      { title: "Where the wave sits in the ADC's range (KY-037)", fn: "soundBias", intro: "Move the bias and the loudness, change the attenuation. The ADC can only measure inside the shaded range: outside it the wave is cut flat (clipping). A smaller range gives finer steps, as long as the wave still fits." },
       { title: "The comparator and its pot", fn: "soundComparator", intro: "The LM393 compares AO with the voltage the pot sets. Above the line, DO is high (and LED2 on the module lights). Drag the dashed line (or the slider) and watch DO: too low and it chatters all the time, too high and even a clap is missed." },
-      { title: "What the screen shows", fn: "soundScreens", intro: "Four views. Click = next view, double-click = the action at the bottom left, long press = freeze. Top right: the level bar, the DO lamp, and a red dot whenever anything records (from S4 on)." },
+      { title: "What the screen shows", fn: "soundScreens", intro: "Five views. Click = next view, double-click = the action at the bottom left, long press = freeze. Top right: the level bar, the DO lamp (or <b>D</b> with the INMP441), waves while the speaker plays, and a red dot whenever anything records (S4, S8)." },
     ],
     commands: [
       sndFlash("s1"),
+      sndMicCmd,
+      { c: "(click to the mics view, then talk)", where: "button", card: "ssound", does: "Opens the other microphone too and shows both lanes, INMP441 on top: each one's quiet in dBFS and how far above it you are.", see: "<code>INMP441 hears it 12 dB more clearly</code> (the number depends on your room); the KY-037's lane is grainier.", fix: "Only one lane: the other mic isn't wired. Wire it, then press RST: S1 looks for it at start-up." },
+      { c: "thresh 20", card: "ssound", does: "With the INMP441 there is no DO pin: the board compares in software. thresh is the line in dB above the quiet (default 15), with 3 dB of hysteresis.", see: "<code>- software comparator at 20 dB</code>; on the comparator view only claps cross it.", fix: "" },
       { c: "(talk, then clap, near the mic)", where: "hands", card: "ssound", does: "The <b>scope</b> view draws the last 20 ms. Talking makes a small wobbly wave, a clap fills the box.", see: "A wave in pink; the scale on the left grows to ±1-5 mV for a voice, ±100 mV and more for a clap.", fix: "Flat line whatever you do: AO isn't on GPIO 6, or + isn't on 3V3 (the module's power LED must be on)." },
       { c: "status", card: "sany", does: "The sampler, the ADC and the level in numbers.", see: "<code>sampler: 16000 Hz asked, 16000 Hz measured · frames dropped 0 · DMA overruns 0</code>, then <code>ADC: attenuation 12 dB (0-3.1 V) · bias … mV</code>.", fix: "Overruns climbing: something blocks core 0 for long; tell Claude what else runs." },
       { c: "(click to the bias view)", where: "button", card: "squiet", does: "The 0-3.3 V ruler, your bias, and the swing of the last 0.1 s.", see: "A bias line somewhere around 1-2 V and a hint such as <code>fits in 0-1.75 V: try atten 6 (2x finer)</code>.", fix: "Bias near 0 or 3.3 V: the module is on 5 V or a wire is loose. Use 3V3." },
@@ -5665,21 +6496,21 @@ ol.rules-list li.open b { color: var(--ok); }
       "Type <code>pot</code> and tune the comparator. <b>Checkpoint 4:</b> “tuned” on the comparator view.",
       "Type <code>status</code>. <b>Checkpoint 5:</b> 16000 Hz measured, 0 overruns.",
     ],
-    note: "Honest expectations: the KY-037 has no amplifier. Its AO is the capsule's raw voltage, a few millivolts for a voice, so speech uses only a handful of the ADC's 4096 steps. That makes it a good <b>loudness</b> sensor (claps, knocks, noise, beats) and only a rough microphone. DO is a single comparator: a clap makes dozens of edges on it as the wave crosses the line, so the labs listen to AO and use DO for the hardware lamp and as a second opinion. The ADC samples through ADC1, which keeps working while Wi-Fi is on (ADC2 doesn't).",
+    note: "With the INMP441 the scope's scale is in % of full scale, the bias view becomes a ladder of its 24 bits (each bit = 6 dB; how many the sound uses, the headroom left), the comparator is software, and <b>numbers</b> adds dB SPL. Honest expectations for the KY-037: it has no amplifier. Its AO is the capsule's raw voltage, a few millivolts for a voice, so speech uses only a handful of the ADC's 4096 steps. That makes it a good <b>loudness</b> sensor (claps, knocks, noise, beats) and only a rough microphone. DO is a single comparator: a clap makes dozens of edges on it as the wave crosses the line, so the labs listen to AO and use DO for the hardware lamp and as a second opinion. The ADC samples through ADC1, which keeps working while Wi-Fi is on (ADC2 doesn't).",
   });
 
   SOUND_LESSONS.push({
     ...soundCommon, id: "S2", title: "Loudness", cmd: "uv run pio run -e sound-lab-s2 -t upload",
     heading: "A sound level meter for your room",
-    goal: "How loud is it, compared with the quiet of your room? S2 turns the samples into decibels the way a sound level meter does: <b>fast</b> (125 ms) or <b>slow</b> (1 s) smoothing, a peak hold, and a noise floor that learns your room. Then it keeps a minute of graph, a ten-minute noise diary, and an alarm that lights lesson 02's LED on GPIO 4 when it stays too loud.",
-    goalLine: "Read your room's level in dB above its quiet, see the difference between fast and slow, keep a diary, and set off (and silence) the alarm.",
+    goal: sndParts(["mic"], ["spk"]) + "How loud is it? With the <b>INMP441</b> S2 shows real <b>dB SPL</b> (its datasheet says −26 dBFS at 94 dB SPL, so RMS dBFS + 111): 30 whisper, 60 talk, 85 the hearing-risk line. With the KY-037 it shows dB above your room's quiet. S2 turns the samples into decibels the way a sound level meter does: <b>fast</b> (125 ms) or <b>slow</b> (1 s) smoothing, a peak hold, and a noise floor that learns your room. Then it keeps a minute of graph, a ten-minute noise diary, and an alarm that lights lesson 02's LED on GPIO 4 when it stays too loud.",
+    goalLine: "Read your room's level (in dB SPL with the INMP441), see the difference between fast and slow, keep a diary, and set off (and silence) the alarm.",
     goalCheck: [
       "The <b>meter</b> reads about 0 when quiet, 15-25 when you talk, 40+ for a clap, and says what that roughly is.",
       "With <code>speed slow</code> the number calms down; the peak tick still catches a clap.",
       "After a few minutes, <code>diary</code> prints rows with low / avg / high.",
       "Loud music for a second turns the <b>alarm</b> view red, lights the LED, and a button press silences it.",
     ],
-    learn: ["decibels (+6 = ×2)", "RMS", "dBFS vs dB above the quiet", "fast / slow smoothing", "peak hold", "noise floor", "hysteresis", "NVS settings"],
+    learn: ["decibels (+6 = ×2)", "RMS", "dB SPL needs a known sensitivity", "unweighted vs dBA", "85 dB risk line", "fast / slow smoothing", "noise floor", "echo guard"],
     panels: [
       { title: "What a decibel is", fn: "soundDecibels", intro: "Our ears hear ratios, not differences, so loudness is measured in decibels: 20 × log10(this ÷ the quiet). Slide the loudness and watch the wave: every +6 dB doubles its height, +20 dB is ten times." },
       { title: "Fast, slow and the floor", fn: "soundBallistics", intro: "The same sound through the meter's three lenses, replayed. Pick a scene. The floor follows the quiet: it drops at once and creeps up 0.5 dB a second, so a fan that keeps running becomes the new quiet." },
@@ -5689,7 +6520,9 @@ ol.rules-list li.open b { color: var(--ok); }
       sndFlash("s2"),
       { c: "(talk, then clap)", where: "hands", card: "ssound", does: "The <b>meter</b> view: the big number is dB above your room's quiet.", see: "Around 15-25 while you talk (“talking”), 40+ on a clap (“shout, clap, bang”). The white tick is the peak hold.", fix: "Always 0: the quiet was learnt while you were talking. Type <code>quiet</code> and stay silent for half a second." },
       { c: "speed slow", card: "ssound", does: "Switches the meter, graphs and alarm to 1 s smoothing (double-click on meter toggles).", see: "<code>- slow: 1 s smoothing</code>; the number moves calmly, a clap barely lifts it.", fix: "" },
-      { c: "limit 30", card: "sany", does: "Moves the alarm line to 30 dB above the quiet (default 35). Saved in NVS (namespace <code>loud</code>).", see: "<code>- limit 30 dB</code>; the dotted red line on the meter and graphs moves.", fix: "" },
+      { c: "units quiet (units spl)", card: "sany", does: "Switches between dB SPL (INMP441 only) and dB above the quiet.", see: "<code>- units: dB above the quiet</code>; <code>units spl</code> on the KY-037: <code>dB SPL needs the INMP441 (its sensitivity is known)</code>.", fix: "" },
+      { c: "limit 75 spl (or limit 30 quiet)", card: "sany", does: "The alarm line: 30-120 dB SPL (default 80) or 3-60 dB above the quiet (default 35). Saved in NVS (namespace <code>loud</code>).", see: "<code>- limit 75 dB SPL</code>; the dotted red line moves.", fix: "" },
+      { c: "alarm sound off", card: "sany", does: "The alarm tune plays once per alarm on the speaker (the button stops it too). The echo guard keeps S2 from measuring its own tune.", see: "<code>- alarm sound off</code>.", fix: "" },
       { c: "(play loud music for 2 s)", where: "hands", card: "smusic", does: "Over the limit for <code>hold</code> (1 s) fires the alarm.", see: "<code>x too loud: 38 dB</code>; the <b>alarm</b> view pulses red, the LED on GPIO 4 lights (if wired).", fix: "No alarm: <code>alarm on</code>, or a lower <code>limit</code>." },
       { c: "(press the button)", where: "button", card: "sany", does: "While the alarm rings, any press silences it; it re-arms when the room is calm (3 dB under the line).", see: "<code>- alarm silenced</code>, later <code>+ calm again</code>.", fix: "" },
       { c: "diary", card: "sany", does: "Prints the last ten minutes, one row per 10 s: quietest, average, loudest, and ALARM.", see: "<code>  60s     2   11   34  |=====      |</code> rows.", fix: "Empty: the diary fills one row every 10 s. Come back in a few minutes." },
@@ -5702,13 +6535,13 @@ ol.rules-list li.open b { color: var(--ok); }
       "Play music loudly near the mic. <b>Checkpoint 4:</b> TOO LOUD on the alarm view, then silence it with the button.",
       "Leave it for ten minutes, then <code>diary</code>. <b>Checkpoint 5:</b> a table of your room's ten minutes.",
     ],
-    note: "These are dB above <i>your</i> room's quiet, not dB SPL (the number a calibrated meter shows): that would need a reference microphone and the capsule's sensitivity. The floor is learnt in the first half second after boot or <code>quiet</code>, then follows the quiet (down at once, up 0.5 dB/s). Settings (speed, limit, hold, alarm) survive a reset in NVS; the diary doesn't.",
+    note: "dB SPL needs a microphone whose sensitivity is known: the INMP441's is in its datasheet, so S2 can show it (unweighted, about ±2 dB; real meters often show dBA, which weights the frequencies like the ear and reads lower for a deep hum). The KY-037's numbers are dB above <i>your</i> room's quiet, not dB SPL (the number a calibrated meter shows): that would need a reference microphone and the capsule's sensitivity. The floor is learnt in the first half second after boot or <code>quiet</code>, then follows the quiet (down at once, up 0.5 dB/s). Settings (speed, limit, hold, alarm) survive a reset in NVS; the diary doesn't.",
   });
 
   SOUND_LESSONS.push({
     ...soundCommon, id: "S3", title: "Clap control", cmd: "uv run pio run -e sound-lab-s3 -t upload",
     heading: "Switch things with your hands",
-    goal: "One clap toggles the LED, two change the RGB colour, three put the screen to sleep, four throw a party. A voice, a whistle or music never counts: a clap is not just loud, it has a <b>shape</b> (a jump within 4 ms, over within 160 ms). Claps close together form one pattern; a pause of 0.65 s ends it. What each pattern does is a map in NVS you can change.",
+    goal: sndParts(["mic"], ["spk"]) + "One clap toggles the LED, two change the RGB colour, three put the screen to sleep, four throw a party. A voice, a whistle or music never counts: a clap is not just loud, it has a <b>shape</b> (a jump within 4 ms, over within 160 ms). Claps close together form one pattern; a pause of 0.65 s ends it. What each pattern does is a map in NVS you can change, and each action answers with its own little sound on the speaker.",
     goalLine: "Make 1, 2, 3 and 4 claps do four different things, prove that talking doesn't trigger them, and tune the detector to your own claps.",
     goalCheck: [
       "One clap toggles the LED on GPIO 4 (or prints <code>LED on</code>), two change the RGB colour.",
@@ -5716,7 +6549,7 @@ ol.rules-list li.open b { color: var(--ok); }
       "<code>learn</code> + 5 claps set <code>sens</code> from your softest clap.",
       "You remapped a pattern with <code>map</code> and it survived a reset.",
     ],
-    learn: ["onset detection", "a clap's shape", "hysteresis", "grouping in time", "calibrating from data", "state machines", "NVS map"],
+    learn: ["onset detection", "a clap's shape", "hysteresis", "grouping in time", "calibrating from data", "NVS map", "sound as feedback", "echo guard"],
     panels: [
       { title: "Is it a clap? The detector, 4 ms at a time", fn: "soundClapMachine", intro: "The same rules as lib/sound-kit/src/onsets.h, run on a sound you pick. Step one frame at a time or play it, move the rise and release lines. Armed → loud (ONSET) → quiet (CLAP if it was short, LONG if not) → armed again after 40 ms of quiet." },
       { title: "What the screen shows", fn: "soundScreens", intro: "Four views. Click = next, double-click = the action at the bottom left (test, colour, maps, learn), long press = learn." },
@@ -5726,7 +6559,8 @@ ol.rules-list li.open b { color: var(--ok); }
       { c: "(clap once, then twice)", where: "hands", card: "ssound", does: "One clap = <code>led</code>, two = <code>colour</code> (the defaults; three = <code>screen</code>, four = <code>party</code>).", see: "<code>- 1 clap -> led</code>, <code>+ LED on</code>; then <code>- 2 claps -> colour</code>, <code>+ colour: warm white</code>. The <b>lamp</b> view shows both.", fix: "Nothing: claps too soft for <code>sens</code> 18 dB. Try <code>learn</code>." },
       { c: "test", card: "ssound", does: "Prints every clap, long sound and group as it happens.", see: "<code>  clap at 5120 ms: 31.0 dB, 48 ms long</code>, <code>  LONG (not a clap) at …: 22.0 dB, 380 ms long</code>, <code>  group of 2: gaps 290 ms</code>.", fix: "<code>test off</code> to stop." },
       { c: "learn", card: "ssound", does: "Jumps to <b>tune</b>: clap 5 times as you normally would. sens becomes 60 % of the softest (between 8 and 40 dB), saved.", see: "<code>- clap 1 of 5: 29 dB</code> … <code>+ learnt: sens 17 dB (saved)</code>; five bars with their dB and ms.", fix: "Talking during learn is counted under <i>long (voice?)</i>, not as a clap." },
-      { c: "map 3 view", card: "sany", does: "Three claps now go to the next screen view. Actions: led colour dark screen view party none.", see: "<code>+ 3 claps -> view (saved)</code>; <code>maps</code> prints all four.", fix: "" },
+      { c: "map 3 tune", card: "sany", does: "Three claps now play twinkle on the speaker. Actions: led colour dark screen view party tune none.", see: "<code>+ 3 claps -> tune (saved)</code>; <code>maps</code> prints all four.", fix: "" },
+      { c: "sound off", card: "sany", does: "Each action answers with a sound: LED up/down, a colour arpeggio, a click for screen and view, a fanfare for the party, a low No when a pattern isn't mapped. <code>sound off</code> silences them (saved).", see: "<code>+ pattern sounds off (saved)</code>.", fix: "" },
       { c: "gap 400", card: "sany", does: "A shorter pause ends a pattern: snappier, but slow clappers split into two patterns.", see: "<code>+ pause 400 ms ends a pattern (saved)</code>.", fix: "" },
       { c: "do party", card: "any", does: "Runs an action without clapping (to test the wiring).", see: "<code>+ party!</code>, 2 s of rainbow on the RGB LED.", fix: "" },
     ],
@@ -5738,33 +6572,35 @@ ol.rules-list li.open b { color: var(--ok); }
       "<code>learn</code>, clap 5 times. <b>Checkpoint 4:</b> a new <code>sens</code>, saved.",
       "<code>map 1 party</code>, clap once, reset the board, clap once again. <b>Checkpoint 5:</b> still a party.",
     ],
-    note: "Five or more claps in a row count as applause and do nothing. Three claps put the backlight out: it comes back after 30 s or with any button press, so the screen can't be lost. The detector listens to AO through the level meter, not to DO: one clap makes dozens of DO edges.",
+    note: "The board's own sounds never count as claps: while the speaker plays (and 200 ms after) the detector gets no frames, the echo guard. Five or more claps in a row count as applause and do nothing. Three claps put the backlight out: it comes back after 30 s or with any button press, so the screen can't be lost. The detector listens to AO through the level meter, not to DO: one clap makes dozens of DO edges.",
   });
 
   SOUND_LESSONS.push({
     ...soundCommon, id: "S4", title: "Recorder", cmd: "uv run pio run -e sound-lab-s4 -t upload",
     heading: "A voice-activated recorder",
-    goal: "Armed, the board waits for a sound louder than the trigger, then records into PSRAM, starting half a second <i>before</i> the trigger (the ring buffer still has it), until 1.2 s of quiet. Up to 12 clips, 6 MB, gone on reset. Listen on your phone at <code>http://bench.local</code> (the Wi-Fi network W1 saved, plus the admin token), or pull a WAV over USB with <code>tools/sound_pull.py</code>. The board always shows REC and a red LED while it records, whoever started it.",
+    goal: sndParts(["mic"], ["wifi", "spk"]) + "Armed, the board waits for a sound louder than the trigger, then records into PSRAM, starting half a second <i>before</i> the trigger (the ring buffer still has it), until 1.2 s of quiet. Up to 12 clips, 6 MB, gone on reset. Listen on your phone at <code>http://bench.local</code> (the Wi-Fi network W1 saved, plus the admin token), or pull a WAV over USB with <code>tools/sound_pull.py</code>, or play it on the board's own speaker (<code>play 3 0.7</code>: slower and deeper). The board always shows REC and a red LED while it records, whoever started it.",
     goalLine: "Record a sentence hands-free, see the pre-roll, play it on your phone, and pull one clip to your Mac as a WAV file.",
     goalCheck: [
       "<code>arm</code>, then talk: the <b>recorder</b> view goes ARMED → REC → ARMED and <code>clips</code> lists a voice clip.",
       "A door slam or a single clap starts a recording but is dropped (too short).",
       "The phone page at <code>http://bench.local</code> unlocks with the token, draws the clip and plays it.",
       "<code>tools/sound_pull.py</code> wrote a .wav that plays on the Mac.",
+      "<code>play</code> (or a double-click on <b>clips</b>) plays the picked clip on the board's speaker; <code>play 1 2</code> is a chipmunk.",
     ],
-    learn: ["pre-roll from a ring", "trigger + hold", "PSRAM clip store", "WAV format", "streaming responses", "base64 + CRC-32", "tokens & visible recording"],
+    learn: ["pre-roll from a ring", "trigger + hold", "PSRAM clip store", "WAV format", "streaming responses", "base64 + CRC-32", "playback speed = pitch", "tokens & visible recording"],
     panels: [
       { title: "Voice-activated recording, step by step", fn: "soundRecorderTimeline", intro: "Nine seconds: a door bang, then a sentence with a pause in it. Step through or play, move the trigger and the hold. Amber = the pre-roll taken from the ring, red = recorded, grey = dropped." },
-      { title: "Getting the audio out", fn: "soundGetOut", intro: "Two paths: the phone over Wi-Fi, or the Mac over the USB serial port. Below: the 44 bytes every WAV file starts with (for a 3.2 s clip at 16 000 Hz)." },
+      { title: "Getting the audio out", fn: "soundGetOut", intro: "Three paths: the phone over Wi-Fi, the Mac over the USB serial port, or the board's own speaker. Below: the 44 bytes every WAV file starts with (for a 3.2 s clip at 16 000 Hz)." },
       { title: "What the screen shows", fn: "soundScreens", intro: "Three views. Click = next, double-click = the action at the bottom left (arm, next, wifi), long press = rec / stop." },
     ],
     commands: [
       sndFlash("s4"),
       { c: "arm", card: "squiet", does: "Voice-activated: louder than <code>trigger</code> (15 dB above the quiet) starts a clip.", see: "<code>- armed: talk and it records</code>; the <b>recorder</b> view says ARMED (teal ring).", fix: "" },
       { c: "(say a sentence, then wait)", where: "hands", card: "ssound", does: "Records from half a second before your first word until 1.2 s after the last loud moment.", see: "<code>x REC clip 1 (voice)</code>; REC 2.4 s in red, the header's red dot, the RGB LED red; then <code>+ clip 1: 3.1 s</code>.", fix: "Never starts: speak closer, or <code>trigger 10</code>." },
+      { c: "play 1 0.7", card: "sany", does: "Plays clip 1 on the board's speaker at 0.7× speed (deeper, slower). Without a number: the clip picked on the <b>clips</b> view. Made louder like the download, but at most ×16. <code>stop</code> stops it; <code>rec</code> stops it before recording; it is refused while recording.", see: "<code>+ playing clip 1 (4.4 s) at x0.70</code>, then <code>- clip 1 played</code>; waves in the header.", fix: "<code>recording: stop first (the microphone would hear the speaker)</code>." },
       { c: "clips", card: "sany", does: "Lists the clips: number, length, voice or hand, loudest, how much louder it is sent, when.", see: "<code>    1    3.1s  voice  -38.2 dBFS  x23.4  2026-10-14 14:02:31</code>", fix: "" },
       { c: "token", card: "sany", does: "Prints the admin token the phone page asks for (shared with W2/R7/R8).", see: "<code>Admin token: 3f…</code> and where to paste it.", fix: "Keep it out of chats and git; <code>token new</code> replaces it." },
-      { c: "http://bench.local", where: "phone", card: "sany", does: "The board's own page: live level, arm / rec / stop, the clip list with each waveform, play and download. The token stays in that tab only.", see: "A clip card with its shape; play moves a playhead.", fix: "“no Wi-Fi saved”: flash wifi-lab-w1 once and join. Page unreachable: same network? Try the IP from <code>wifi</code>." },
+      { c: "http://bench.local", where: "phone", card: "sany", does: "The board's own page: live level, arm / rec / stop, the clip list with each waveform, play and download, a speed choice and <b>Play on board</b> / <b>Stop on board</b> per clip. The token stays in that tab only.", see: "A clip card with its shape; play moves a playhead.", fix: "“no Wi-Fi saved”: flash wifi-lab-w1 once and join. Page unreachable: same network? Try the IP from <code>wifi</code>." },
       { c: "uv run python tools/sound_pull.py /dev/cu.usbserial-A5069RR4 1", where: "mac", card: "sany", does: "Close the monitor first. Types <code>send 1</code>, reads the base64 WAV, checks the CRC-32 and the size, writes the file.", see: "<code>Receiving clip 1: 99244 bytes as …</code>, then <code>Saved … (3.1 s at 16000 Hz, 99244 bytes, CRC ok)</code>.", fix: "<code>Could not open … (is the serial monitor still open?)</code>: close it." },
     ],
     steps: [
@@ -5781,7 +6617,7 @@ ol.rules-list li.open b { color: var(--ok); }
   SOUND_LESSONS.push({
     ...soundCommon, id: "S5", title: "Spectrum", cmd: "uv run pio run -e sound-lab-s5 -t upload",
     heading: "See which frequencies are in a sound",
-    goal: "Our own FFT (no library) runs on the newest 512 samples about 25 times a second: bars from 100 Hz to 8 kHz, a scrolling waterfall, a tuner that names the note you whistle or hum, and a game you steer with the pitch of your whistle.",
+    goal: sndParts(["mic"], ["spk"]) + "Our own FFT (no library) runs on the newest 512 samples about 25 times a second: bars from 100 Hz to 8 kHz, a scrolling waterfall, a tuner that names the note you whistle or hum, and a game you steer with the pitch of your whistle. With the speaker, the board checks itself: <code>ref</code> plays a reference note for the tuner, <code>sweep</code> climbs from 100 Hz to 8 kHz across the bars.",
     goalLine: "Find the frequency of your whistle, see why finer bins are slower, and score in the steer game.",
     goalCheck: [
       "The <b>bars</b> view shows a single tall bar when you whistle and many low ones when you talk.",
@@ -5789,7 +6625,7 @@ ol.rules-list li.open b { color: var(--ok); }
       "<code>fft 1024</code> and <code>fft 256</code>: you can say what changed (Hz per bin, how fast it reacts).",
       "<b>steer</b>: you scored at least 3 targets.",
     ],
-    learn: ["FFT bins", "Hann window & leakage", "Nyquist (8 kHz)", "resolution vs speed", "log frequency", "notes & cents", "clarity"],
+    learn: ["FFT bins", "Hann window & leakage", "Nyquist (8 kHz)", "resolution vs speed", "log frequency", "notes & cents", "reference tones", "log sweep"],
     panels: [
       { title: "Build a sound, see its spectrum", fn: "soundFftExplainer", intro: "Up to three tones plus noise, the samples on top and the FFT's bins below. Untick the window to see leakage; change N to trade sharp bins for a slower answer." },
       { title: "From a whistle to a note", fn: "soundWhistleSeq", intro: "Six steps, the same as the tuner view does 25 times a second. Move the whistle slider and watch the parabola find the pitch between two bins." },
@@ -5800,6 +6636,8 @@ ol.rules-list li.open b { color: var(--ok); }
       { c: "(whistle, then hum)", where: "hands", card: "ssound", does: "The <b>bars</b> view: one tall bar for a whistle (1-3 kHz), lower and wider for a hum.", see: "<code>loudest 1.76 kHz (A6)</code> at the top; right: <code>N 512 - 31 Hz/bin - … us</code>.", fix: "Nothing moves: whistle within a hand's width (no amplifier on the module)." },
       { c: "peaks", card: "ssound", does: "Prints the 5 strongest frequencies with their notes.", see: "<code>   1765.6 Hz   -31.2 dBFS  A6   +2 cents</code> …", fix: "" },
       { c: "fft 1024", card: "sany", does: "Twice as many samples: bins 15.6 Hz apart, but each answer looks at 64 ms. <code>fft 256</code>: 62.5 Hz bins, 16 ms.", see: "<code>- FFT 1024: 15.6 Hz per bin, 64 ms window</code>.", fix: "" },
+      { c: "ref (or ref A4, ref 440)", card: "squiet", does: "A 1 s sine on the speaker: the note nearest to what you whistled in the last 2 s, else A4. S5 reads the ring directly, so it hears its own tone on purpose. Double-click on <b>tuner</b> does the same.", see: "<code>- reference A4 = 440.0 Hz, 1 s</code>; the tuner shows A4 with the needle near 0.", fix: "Off by many cents: the speaker and mic are fine; check <code>a4</code>." },
+      { c: "sweep", card: "squiet", does: "A 4 s tone from 100 Hz to 8 kHz on a log scale; the screen jumps to the waterfall.", see: "A diagonal line climbing the waterfall at an even slope: log frequency, like the bars.", fix: "" },
       { c: "a4 442", card: "sany", does: "Tunes the note names to A4 = 442 Hz (some orchestras do).", see: "<code>- A4 = 442.0 Hz</code>; the tuner's cents shift by about 8.", fix: "" },
       { c: "(steer view: whistle up and down)", where: "hands", card: "ssound", does: "The dot follows your pitch on a log scale (600-2500 Hz); hold it in the ring 1 s to score. The RGB LED takes the dot's colour.", see: "<code>+ target 1!</code>, a new ring elsewhere.", fix: "Can't reach the top: <code>range 500 2000</code>." },
       { c: "limits", card: "sany", does: "What this FFT can and can't see.", see: "Up to 8000 Hz (Nyquist), bins 31.2 Hz apart, 32 ms per answer, and the no-amplifier warning.", fix: "" },
@@ -5818,7 +6656,7 @@ ol.rules-list li.open b { color: var(--ok); }
   SOUND_LESSONS.push({
     ...soundCommon, id: "S6", title: "Sound games", cmd: "uv run pio run -e sound-lab-s6 -t upload",
     heading: "Play with what the microphone hears",
-    goal: "Three games on one microphone, each listening only while its view is on screen. <b>knock</b>: a knock lock that opens for your secret rhythm, fast or slow. <b>bird</b>: Clap Bird, every clap is a flap. <b>party</b>: the board finds the beat in music and throws light at it.",
+    goal: sndParts(["mic"], ["spk"]) + "Three games on one microphone, each listening only while its view is on screen. <b>knock</b>: a knock lock that opens for your secret rhythm, fast or slow. <b>bird</b>: Clap Bird, every clap is a flap. <b>party</b>: the board finds the beat in music and throws light at it. With the speaker: blips, dings and a crash in Clap Bird, the secret knock played back, an unlock tune.",
     goalLine: "Open the lock with your secret knock (and fail with a wrong one), get past 5 pipes in Clap Bird, and make the party follow a song's tempo.",
     goalCheck: [
       "<code>knock set</code> + a rhythm saved a secret; the same rhythm slower still opens (LED on GPIO 4, green RGB for 5 s).",
@@ -5835,8 +6673,11 @@ ol.rules-list li.open b { color: var(--ok); }
       sndFlash("s6"),
       { c: "knock set", card: "squiet", does: "The next pattern becomes the secret (2-12 knocks; 1.5 s of quiet ends it). Saved in NVS.", see: "<code>- knock your new secret, then wait 1.5 s</code>, then <code>+ secret saved: 5 knocks, 1.2 s</code>.", fix: "<code>a secret needs 2 knocks or more</code>." },
       { c: "(knock the secret on the table)", where: "hands", card: "ssound", does: "Every finished pattern is compared with the secret.", see: "<code>+ OPEN (score 92)</code>: the shackle lifts, LED on GPIO 4 and the RGB LED green for 5 s. Wrong: <code>x locked: the rhythm is off</code>.", fix: "Knocks missed: knock firmly, near the mic; <code>knock show</code> prints both rhythms." },
+      { c: "knock play", card: "squiet", does: "Plays the secret back as clicks at the knocks' exact times (an esp_timer checks every 2 ms).", see: "<code>- playing the secret: 5 knocks</code> and your rhythm from the speaker.", fix: "<code>sound is off: sound on</code>." },
       { c: "tol 20", card: "sany", does: "Each gap may be off by 20 % of the pattern (default 12).", see: "<code>- tolerance 20%</code>.", fix: "" },
       { c: "bird", card: "ssound", does: "Clap Bird: a new round. A clap starts it; every clap flaps.", see: "<code>clap to fly!</code>; later <code>+ new best: 6</code>.", fix: "Flaps late: knock-style claps (short and sharp) fire the onset fastest." },
+      { c: "sound off", card: "sany", does: "Game sounds on the speaker off (saved in NVS, namespace <code>games</code>).", see: "<code>- game sounds off</code>.", fix: "" },
+      { c: "party click on", card: "smusic", does: "A tick on every beat. The board can't hear for about 200 ms after each tick (the echo guard), so beats in that window are skipped. Off by default.", see: "<code>- a tick on every beat (the board can't hear for ~200 ms after it)</code>.", fix: "" },
       { c: "(play music near the mic)", where: "hands", card: "smusic", does: "On <b>party</b>, every beat flashes a colour, sends out a ring and lights the RGB LED.", see: "A BPM number (e.g. 120) after a few beats.", fix: "Too many beats: <code>party sens 2.0</code>. Too few: <code>party sens 1.3</code>." },
     ],
     steps: [
@@ -5848,6 +6689,81 @@ ol.rules-list li.open b { color: var(--ok); }
     ],
     note: "Knocks are claps to the detector (short bangs, up to 200 ms here). The lock compares rhythm, not loudness or speed, so it is a toy, not security: anyone who hears you knock can copy it. Clap Bird runs its physics in fixed 1/60 s steps whatever the screen does, so the game feels the same on any frame rate; it flaps on the onset (at once), not on the finished clap (160 ms later).",
   });
+
+  SOUND_LESSONS.push({
+    ...soundCommon, id: "S7", title: "Speaker", cmd: "uv run pio run -e sound-lab-s7 -t upload",
+    heading: "Make the board play: a synth on one speaker",
+    goal: sndParts(["spk"]) + "Numbers go out over I2S to the <b>MAX98357A</b>, a class-D amplifier: it switches the speaker fully on and off about 300 000 times a second, and how long each pulse lasts follows the number. The cone is too slow to follow, so it moves with the average: the wave. S7 makes notes in five timbres, chords, envelopes, tunes and game sounds, and draws what you hear.",
+    goalLine: "Hear the difference between the five waves, play a chord and a tune, change the envelope until a note plucks, and fire every game sound.",
+    goalCheck: [
+      "<code>beep</code> and the hello chime come out of the speaker at <code>vol 20</code>.",
+      "On <b>wave</b>, the spectrum shows one line for sine, odd harmonics for square, all for saw.",
+      "<code>adsr 1 300 0 50</code> makes <code>note A4 600</code> sound plucked; <code>adsr 300 80 65 300</code> soft.",
+      "<code>tune korobeiniki</code> plays and the piano roll scrolls; <code>fx explosion</code> rumbles.",
+    ],
+    learn: ["I2S out", "class-D amplifier", "timbre = harmonics", "aliasing at 16 kHz", "ADSR vs clicks", "semitones & chords", "tempo", "procedural sound", "squared volume"],
+    panels: [
+      { title: "From numbers to a moving cone", fn: "soundSpeakerPath", intro: "What happens to a sample after the board computes it, why the volume knob is squared, and the echo guard that keeps the microphone from hearing the speaker as claps." },
+      { title: "A synth to play with", fn: "soundSynth", intro: "The same waves and envelope as the board. Pick a wave, press a key to hear it in this browser (quietly; nothing plays until you press), and drag the envelope's handles. The red bars are harmonics the board can't make at 16 kHz: they fold back as wrong notes." },
+      { title: "What the screen shows", fn: "soundScreens", intro: "Five views. Click = next, double-click = the action at the bottom left. Keys: long press = the next chord. Tunes and fx: long press picks the next one. Elsewhere a long press stops the sound." },
+    ],
+    commands: [
+      sndFlash("s7"),
+      { c: "vol 20", card: "squiet", does: "Start quiet: volume is squared, 20 = 4 % of full power. Saved in NVS (default 40).", see: "<code>- volume 20</code>; then <code>beep</code> plays 440 Hz.", fix: "Silent: VIN to 5V, DIN to 47, BCLK 39, LRC 38; the speaker on the terminal." },
+      { c: "wave square, then wave saw", card: "squiet", does: "The timbre: sine, square, triangle, saw, noise (<code>wave next</code>, or a double-click on <b>wave</b>).", see: "<code>- wave square</code>; the spectrum's lines at 1, 3, 5… × the note.", fix: "" },
+      { c: "note A4 600", card: "squiet", does: "One note (a name or Hz) for 600 ms. A double-click on <b>envelope</b> does the same.", see: "The dot rides the ADSR curve.", fix: "<code>close to 8 kHz: the limit at 16 kHz</code> above 7 kHz." },
+      { c: "adsr 1 300 0 50", card: "squiet", does: "The envelope: attack ms, decay ms, sustain %, release ms (default 6 80 65 90). Attack 0 makes a click.", see: "<code>- adsr 1 300 0 50</code>: a plucked string.", fix: "" },
+      { c: "chord Am (G7, Fmaj7, Bdim, Dsus4)", card: "squiet", does: "Notes together on a one-voice speaker: the board adds them into one buffer (30 s in PSRAM).", see: "<code>- Am = A4 C5 E5</code>; three keys light on <b>keys</b>.", fix: "" },
+      { c: "play C4 E4 G4/2 r/4 C5", card: "squiet", does: "Notes one after another at <code>bpm</code> (default 120): /4 quarter, /8 eighth, r rest, . dotted.", see: "The keys light in turn.", fix: "" },
+      { c: "tune korobeiniki", card: "squiet", does: "twinkle ode happy korobeiniki scale arpeggio. Double-click on <b>tunes</b> plays the picked one; long press picks the next.", see: "The piano roll scrolls past the amber playhead.", fix: "" },
+      { c: "fx laser (coin jump powerup explosion siren modem)", card: "squiet", does: "Game sounds from recipes: sweeps, noise, a closing filter.", see: "The whole waveform on <b>fx</b>, a playhead crossing it.", fix: "" },
+      { c: "stop", card: "sany", does: "Silence.", see: "The waves in the header stop.", fix: "" },
+    ],
+    steps: [
+      "Wire the MAX98357A: VIN → 5V, GND, BCLK → 39, LRC → 38, DIN → 47; the speaker on its screw terminal (red to +). GAIN and SD stay unconnected. No microphone needed.",
+      "Flash <code>sound-lab-s7</code>. <b>Checkpoint 1:</b> the hello chime and <code>start quiet: vol 20, then raise it</code>.",
+      "<code>vol 20</code>, then <code>wave next</code> five times with <code>note A4</code>. <b>Checkpoint 2:</b> five timbres, five spectra.",
+      "<code>adsr 1 300 0 50</code>, <code>note A4 600</code>; then <code>adsr 0 0 100 0</code>. <b>Checkpoint 3:</b> you hear the click the envelope removes.",
+      "<code>chord Am</code>, <code>tune ode</code>, <code>fx coin</code>. <b>Checkpoint 4:</b> all three play.",
+    ],
+    note: "One speaker, one stream: chords and tunes are rendered into PSRAM first (up to 30 s), then played. At 16 000 samples a second nothing above 8 kHz exists, so a square or saw's high harmonics fold back down as wrong frequencies: a slight grit on high notes, the honest limit of a simple synth. Every other sound lab uses the same speaker for its chimes, and the echo guard keeps its detectors deaf while it plays.",
+  });
+
+  SOUND_LESSONS.push({
+    ...soundCommon, id: "S8", title: "Voice FX", cmd: "uv run pio run -e sound-lab-s8 -t upload",
+    heading: "A parrot that repeats you, and a live robot voice",
+    goal: sndParts(["inmp", "spk"]) + "Microphone in, speaker out. Say something and the parrot says it back: normal, as a <b>chipmunk</b> (1.5× faster), a <b>giant</b> (0.7×), a <b>robot</b> (ring modulator + 6-bit crunch), with an <b>echo</b>, or <b>reverse</b>. Then live effects: an echo you talk into, a robot voice. The parrot is voice-activated like S4 (12 dB, 0.3 s pre-roll, 0.7 s hold, 6 s at most) and never hears itself.",
+    goalLine: "Make the parrot repeat you in three voices, talk through the live echo without a howl, and explain why a chipmunk talks fast.",
+    goalCheck: [
+      "You said a word and the parrot answered in the chipmunk voice; <code>fx giant</code> + <code>again</code> answered deep and slow.",
+      "<b>echo</b> view: <code>echo on</code>, a clap comes back as fading repeats, latency about 60-80 ms.",
+      "You provoked (and the guard stopped) a howl by pointing the speaker at the mic: <code>Howl! Move the speaker away or turn it down</code>.",
+    ],
+    learn: ["resampling = pitch + speed", "ring modulation f±c", "bitcrush", "delay + feedback", "loop gain < 1", "howl detection", "latency budget", "echo guard"],
+    panels: [
+      { title: "The parrot, in your browser", fn: "soundParrot", intro: "The same effects as fx.h, in this page. An example voice is loaded; recording your own is optional and only starts when you press the button (3 s, a red indicator while it records, nothing leaves the page)." },
+      { title: "What the screen shows", fn: "soundScreens", intro: "Four views. Click = next, double-click = the action at the bottom left (fx next, echo, robot, again), long press = record by hand / stop." },
+    ],
+    commands: [
+      sndFlash("s8"),
+      { c: "vol 25", card: "squiet", does: "Keep it low: the mic hears the speaker.", see: "<code>- volume 25</code>.", fix: "With the KY-037: <code>KY-037: it works, but an INMP441 sounds much clearer</code>." },
+      { c: "(say “hello parrot”)", where: "hands", card: "ssound", does: "Louder than 12 dB above the quiet starts a recording with 0.3 s from before; 0.7 s of quiet ends it; then it plays back through the voice.", see: "The bubble: <code>I'm listening...</code>, REC, then <code>Squawk!</code> with the beak moving; <code>+ chipmunk, 1.4 s, x9 louder</code>.", fix: "<code>too short: a bang, not a word</code>: speak a little longer. Never starts: <code>trigger 8</code>." },
+      { c: "fx next (or fx robot, fx reverse)", card: "sany", does: "The parrot's voice: normal chipmunk giant robot echo reverse. Double-click on <b>parrot</b>.", see: "<code>- voice: robot (ring modulator + bitcrush)</code>.", fix: "" },
+      { c: "again", card: "squiet", does: "Says the last recording again with the current voice (double-click on <b>scope</b>).", see: "The same words, another voice.", fix: "<code>nothing recorded yet: say something first</code>." },
+      { c: "echo on", card: "ssound", does: "Live: mic → delay line → speaker. <code>delay 120</code> (20-500 ms), <code>feedback 60</code> (0-70 %). Needs the mic at 16 000 Hz.", see: "<code>! live echo: speaker away from the mic, volume low</code>; the taps of one clap on the <b>echo</b> view and a latency of ~60-80 ms.", fix: "A howl: the guard stops it with a low No. Turn the speaker away, lower <code>vol</code> or <code>feedback</code>." },
+      { c: "robot on", card: "ssound", does: "Live: your voice × a slow sine (<code>carrier 50</code>, 10-300 Hz) + crunch. Every frequency f becomes f − c and f + c.", see: "The robot's mouth lights with what comes out. <code>carrier 200</code> sounds like a bell.", fix: "" },
+    ],
+    steps: [
+      "Wire the INMP441 (VDD 3V3, GND, L/R → GND, SCK 40, WS 41, SD 42) and the MAX98357A + speaker as in S7. Point the speaker away from the mic.",
+      "Flash <code>sound-lab-s8</code>, <code>vol 25</code>. <b>Checkpoint 1:</b> <code>Microphone: INMP441</code> and the parrot says “Say something!”.",
+      "Say a short sentence. <b>Checkpoint 2:</b> the chipmunk answers.",
+      "<code>fx giant</code>, <code>again</code>; <code>fx reverse</code>, <code>again</code>. <b>Checkpoint 3:</b> you can say why the giant is slow.",
+      "<code>echo on</code>, clap. <b>Checkpoint 4:</b> fading repeats; <code>echo off</code>.",
+      "<code>robot on</code>, talk. <b>Checkpoint 5:</b> a robot voice; <code>robot off</code>.",
+    ],
+    note: "Changing the speed of a recording changes its pitch and its length together: that's why the chipmunk talks fast. Keeping the speed while shifting the pitch needs much more DSP (grains or a phase vocoder). Feedback: if what the mic hears comes back louder than it went out (loop gain above 1), it goes round and round: the howl. The guard cuts the live effect when the level keeps climbing (9 dB within 300 ms) or stays above −12 dBFS. Latency = one screen frame of processing + the speaker's queue + its 16 ms DMA block.",
+  });
+
   // ===== SOUND PARTS END =====
 
 
@@ -6406,7 +7322,7 @@ ol.rules-list li.open b { color: var(--ok); }
     })(),
     // ----- Bluetooth LE track (one firmware per lab: ble-lab-b1 … b8; shared code: lib/ble-kit) -----
     ...BLE_LESSONS,
-    // ----- Sound track (one firmware per lab: sound-lab-s1 … s6; shared code: lib/sound-kit) -----
+    // ----- Sound track (one firmware per lab: sound-lab-s1 … s8; shared code: lib/sound-kit) -----
     ...SOUND_LESSONS,
   ];
 
@@ -10442,6 +11358,11 @@ ol.rules-list li.open b { color: var(--ok); }
       why: "You asked for labs on the KY-037: getting sound, control with sound, record with sound, and creative ones. Six labs on a shared lib/sound-kit (the ADC in continuous mode with DMA, a 4-second ring in PSRAM, the level meter, clap/knock/beat detectors, our own FFT): S1 Hear, S2 Loudness, S3 Clap control, S4 Recorder (phone page + sound_pull.py), S5 Spectrum, S6 Sound games. KY-037 on 3V3, AO → GPIO 6 (ADC1), DO → GPIO 21.",
       out: "sound-lab-s1 SUCCESS · RAM 14.5% (47524 B)  Flash 6.4% (417079 B)\nsound-lab-s2 SUCCESS · RAM 8.3% (27340 B)  Flash 6.8% (445111 B)\nsound-lab-s3 SUCCESS · RAM 8.6% (28236 B)  Flash 6.7% (439747 B)\nsound-lab-s4 SUCCESS · RAM 17.6% (57628 B)  Flash 18.0% (1176934 B)\nsound-lab-s5 SUCCESS · RAM 15.0% (49036 B)  Flash 6.8% (443747 B)\nsound-lab-s6 SUCCESS · RAM 8.4% (27396 B)  Flash 6.9% (450395 B)\n0 warnings · 4 host tests: sound dsp: all checks pass (and games, clips, spectrum) · sound_pull.py compiles",
       result: "Next, by you: wire the KY-037 and flash sound-lab-s1. Nothing was sent to the board." },
+    { n: 49, types: ["build"], title: "Sound track, round 2: INMP441, the speaker, S7 Speaker and S8 Voice FX", where: "Mac · no board",
+      cmd: "uv run pio run -e sound-lab-s1 … sound-lab-s8   (build only)\nc++ -std=c++17 -Wall … test/host/sound_dsp · sound_games · sound_clips · sound_spectrum · sound_synth · sound_fx   (Mac only)\npython -m py_compile tools/sound_pull.py",
+      why: "You have an INMP441 I2S microphone and a MAX98357A I2S amplifier with a 4 Ω speaker too. lib/sound-kit now finds the microphone itself (mic auto: listens for the INMP441 for 0.3 s at start-up; KY-037 otherwise) and every lab can speak (vol, beep, tune, a hello chime, the echo guard). INMP441: SCK 40, WS 41, SD 42, L/R to GND, on I2S0. MAX98357A: BCLK 39, LRC 38, DIN 47, VIN 5V, on I2S1. S1-S6 grew (both mics side by side, dB SPL, sounds, play on the board); S7 Speaker and S8 Voice FX are new.",
+      out: "sound-lab-s1 SUCCESS · RAM 16.9% (55396 B)  Flash 7.1% (466067 B)\nsound-lab-s2 SUCCESS · RAM 9.7% (31636 B)  Flash 7.2% (474743 B)\nsound-lab-s3 SUCCESS · RAM 9.9% (32532 B)  Flash 7.1% (467127 B)\nsound-lab-s4 SUCCESS · RAM 18.9% (61948 B)  Flash 18.5% (1211038 B)\nsound-lab-s5 SUCCESS · RAM 16.3% (53412 B)  Flash 7.4% (483459 B)\nsound-lab-s6 SUCCESS · RAM 9.7% (31756 B)  Flash 7.3% (478415 B)\nsound-lab-s7 SUCCESS · RAM 17.0% (55692 B)  Flash 7.2% (468823 B)\nsound-lab-s8 SUCCESS · RAM 10.9% (35860 B)  Flash 7.1% (467271 B)\n0 warnings · 6 host tests pass · sound_pull.py compiles",
+      result: "Next, by you: wire the INMP441 and the speaker, flash sound-lab-s1 and open the mics view, then S7 at vol 20. Nothing was sent to the board." },
   ];
   const TYPES = ["all", "install", "build", "read", "reset", "flash", "failed"];
   let logFilter = "all";
