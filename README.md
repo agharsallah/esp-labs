@@ -8,6 +8,8 @@ This folder is a standalone sandbox. It is not part of the pnpm workspace, and t
 
 **[guide/bench-guide.html](guide/bench-guide.html)** is the source of the interactive [bench guide](https://claude.ai/artifact/TRr7C3mgC4YahK3XKt3y7r): pinout, wiring diagrams, lesson previews and the bench log. Edit it here, then republish it to the same link. Open it in a browser to use it offline.
 
+**[../test-esp-web](../test-esp-web/README.md)** is the same guide rebuilt as a modular React app (React 19, React Router, TanStack Query, Vite). Its bench log lives in `test-esp-web/public/data/bench-log.json`.
+
 ## Kit
 
 | Part                        | Notes                                                                                                                                |
