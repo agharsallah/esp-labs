@@ -6,11 +6,19 @@
 //
 // Honest limits, worth knowing before you whistle:
 //   - The KY-037 has no amplifier: quiet sounds sit close to the hiss. Whistle or hum near the mic.
+//     The INMP441 (24-bit, its own amplifier) hears far more: the tuner locks on sooner and the
+//     waterfall shows voices and music cleanly, not only whistles.
 //   - Resolution = rate / N: 16000 / 512 = 31 Hz between bins. Finer (fft 1024) = slower answers.
 //   - Nyquist: sampling at 16 kHz can only show up to 8 kHz. Higher sounds fold back as fakes.
 //
-// Wiring: as S1 (+ -> 3V3, G -> GND, AO -> GPIO 6, DO -> GPIO 21) and the screen from lesson 03.
-// The push button on GPIO 5 is optional (it does what BOOT does).
+// The speaker: `ref` plays a reference note (the tuner should read it at 0 cents), `sweep` glides
+// a tone from 100 Hz to 8 kHz so you watch it climb the bars and the waterfall. S5 reads the
+// sample ring directly, not the shell's frames, so the echo guard doesn't apply here: on purpose,
+// this lab is meant to hear its own speaker.
+//
+// Wiring: the screen and a microphone: the INMP441 (VDD -> 3V3, GND -> GND, L/R -> GND, SCK -> 40,
+// WS -> 41, SD -> 42) or the KY-037 (+ -> 3V3, G -> GND, AO -> GPIO 6, DO -> GPIO 21). Optional:
+// the MAX98357A + speaker (BCLK 39, LRC 38, DIN 47, VIN 5V); the push button on GPIO 5.
 //
 // Views: bars · waterfall · tuner · steer   (click = next, double-click = the action in the footer,
 //        long press = hold)
@@ -21,6 +29,7 @@
 #include "pitch.h"
 #include "sound_lab.h"
 #include "spectrum.h"
+#include "synth.h"
 
 namespace {
 
@@ -40,7 +49,15 @@ struct State {
   uint32_t fftUs = 0;                // the last transform's time
   uint32_t lastTick = 0;
   bool fresh = false;  // a spectrum was computed this frame
+  uint32_t refUntil = 0;  // millis() while the reference note plays
+  char refName[8] = "";
+  float refHz = 0;
 } st;
+
+// The sweep: 4 s of a sine gliding 100 Hz -> 8 kHz, made once into PSRAM (the speaker plays it
+// from there, so it must stay alive).
+constexpr uint32_t kSweepSamples = snd::Speaker::kRate * 4;
+int16_t *sweep = nullptr;
 
 s5::BandFloors<kBars> bars;
 s5::BandFloors<kRows> rows;
@@ -240,8 +257,9 @@ void drawTuner(SoundLab &lab, FrameBuffer &fb, float) {
       fb.fillRect(10 + i * 300 / kTrail, ty - int(d / 2 * th), 2, 2, fabsf(d) < 0.05f ? pal::teal : sv::kSound);
     }
   }
-  snprintf(text, sizeof(text), "A4 = %.0f Hz", st.a4);
-  sv::small(fb, 318 - sv::textWidth(fb, text), sv::kTop + 4, pal::muted, text);
+  if (millis() < st.refUntil) snprintf(text, sizeof(text), "speaker: %s %.1f Hz", st.refName, st.refHz);
+  else snprintf(text, sizeof(text), "A4 = %.0f Hz", st.a4);
+  sv::small(fb, 318 - sv::textWidth(fb, text), sv::kTop + 4, millis() < st.refUntil ? sv::kSound : pal::muted, text);
   (void)lab;
 }
 
@@ -286,7 +304,7 @@ void drawSteer(SoundLab &lab, FrameBuffer &fb, float t) {
 const SoundView kViews[] = {
     {"bars", drawBars, "hold"},
     {"waterfall", drawWaterfall, "hold"},
-    {"tuner", drawTuner, "peaks"},
+    {"tuner", drawTuner, "ref"},
     {"steer", drawSteer, "target"},
 };
 
@@ -367,12 +385,51 @@ void cmdTarget(SoundLab &lab, const String &, const String &lower) {
   lab.note(sv::Note::Info, "new target%s", lower == "reset" ? ", score 0" : "");
 }
 
+// ref: the nearest note to what you sing (or A4 when nothing is heard); ref C5; ref 523.
+void cmdRef(SoundLab &lab, const String &arg, const String &) {
+  float hz = 0;
+  if (arg.isEmpty()) {
+    const bool recent = pitch.hz > 0 && millis() - pitch.lastHeard < 2000;
+    const int midi = recent ? s5::noteFor(pitch.hz, st.a4).midi : 69;
+    hz = st.a4 * powf(2.0f, (midi - 69) / 12.0f);
+  } else if (!SoundLab::decimal(arg, 50, 4000, hz)) {
+    hz = syn::noteHz(arg.c_str(), st.a4);
+    if (hz < 50 || hz > 4000) return lab.warn("ref [note|Hz]: ref A4, ref C#5, ref 523 (50-4000 Hz)");
+  }
+  const snd::Note nt = s5::noteFor(hz, st.a4);
+  strlcpy(st.refName, nt.name, sizeof(st.refName));
+  st.refHz = hz;
+  st.refUntil = millis() + 1000;
+  lab.speaker().tone(hz, 1000, syn::Wave::Sine, 0.8f);
+  lab.note(sv::Note::Info, "ref %s %.1f Hz", nt.name, hz);
+}
+
+// A log sweep: the frequency doubles at a steady pace, so each octave takes the same time and
+// it climbs the log-scaled bars at an even speed. Phase = integral of the frequency.
+void cmdSweep(SoundLab &lab, const String &, const String &) {
+  if (!sweep) {
+    sweep = static_cast<int16_t *>(heap_caps_malloc(kSweepSamples * sizeof(int16_t), MALLOC_CAP_SPIRAM));
+    if (!sweep) return lab.warn("no PSRAM for the sweep");
+    const double f0 = 100, f1 = 8000 * 0.98, T = 4.0, k = log(f1 / f0), rate = snd::Speaker::kRate;
+    for (uint32_t i = 0; i < kSweepSamples; i++) {
+      const double t = i / rate;
+      const double phase = 2 * M_PI * f0 * T / k * (exp(t / T * k) - 1);
+      const double fade = std::min(1.0, std::min(t, T - t) / 0.02);  // 20 ms in and out: no clicks
+      sweep[i] = int16_t(sin(phase) * fade * 16000);
+    }
+  }
+  lab.speaker().play(sweep, kSweepSamples);
+  lab.showView("waterfall");
+  lab.note(sv::Note::Info, "sweep 100 Hz -> 8 kHz, 4 s");
+}
+
 void cmdLimits(SoundLab &lab, const String &, const String &) {
   const float rate = lab.mic().rate();
   Serial.printf("What this FFT can and can't see (rate %.0f Hz, N %d):\n", rate, fft.size());
   Serial.printf("  frequencies up to %.0f Hz only (Nyquist: half the sample rate)\n", rate / 2);
   Serial.printf("  bins %.1f Hz apart; each answer looks at %.0f ms of sound\n", rate / fft.size(), fft.size() * 1000 / rate);
-  Serial.println("  the KY-037 has no amplifier: whistle or hum within a hand's width, quiet sounds drown in the hiss");
+  if (lab.mic().digital()) Serial.println("  the INMP441: 24 bits and its own amplifier; voices and music show clearly");
+  else Serial.println("  the KY-037 has no amplifier: whistle or hum within a hand's width, quiet sounds drown in the hiss");
 }
 
 const SoundCommand kCommands[] = {
@@ -380,6 +437,8 @@ const SoundCommand kCommands[] = {
     {"range", "<low> <high>", "the steer view's pitch range in Hz (default 600 2500)", cmdRange},
     {"hold", "[off]", "freeze the bars and waterfall (long press too)", cmdHold},
     {"peaks", "", "print the 5 strongest frequencies, with notes", cmdPeaks},
+    {"ref", "[note|Hz]", "play a reference note on the speaker (tuner double-click)", cmdRef},
+    {"sweep", "", "a 4 s tone sweep 100 Hz -> 8 kHz on the speaker", cmdSweep},
     {"a4", "<Hz>", "tuning reference for note names (default 440)", cmdA4},
     {"target", "[reset]", "steer: a new target (reset: score back to 0)", cmdTarget},
     {"limits", "", "what this FFT can and can't see", cmdLimits},
@@ -411,6 +470,7 @@ void tick(SoundLab &lab) {
   else if (millis() - steer.inSince >= 1000) {
     steer.score++;
     lab.note(sv::Note::Good, "target %d!", steer.score);
+    lab.chime(Chime::Score);
     newTarget();
   }
 

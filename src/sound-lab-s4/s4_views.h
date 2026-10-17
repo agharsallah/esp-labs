@@ -1,7 +1,8 @@
 // S4's three screens (320 x 170, under the shared header):
 //   recorder  the state as a big word (OFF, ARMED, REC 3.2 s), the last 3 s of loudness with the
 //             trigger line, the pre-roll (amber) and what went into a clip (red)
-//   clips     the list with each clip's shape, and the picked clip's facts
+//   clips     the list with each clip's shape, and the picked clip's facts; a playhead runs
+//             across the clip the speaker is playing
 //   web       where the page is, the Wi-Fi, how to get the token, who is watching
 #pragma once
 
@@ -68,7 +69,7 @@ inline void recorder(FrameBuffer &fb, const rec::Recorder &r, const snd::Trigger
   sv::small(fb, x, y + h + 4, pal::muted, settings);
 }
 
-inline void clips(FrameBuffer &fb, const rec::ClipStore &store, int &picked) {
+inline void clips(FrameBuffer &fb, const rec::ClipStore &store, int &picked, uint32_t playing = 0, float progress = 0) {
   const int n = store.count();
   if (n == 0) {
     sv::bold(fb, 12, kTop + 34, pal::ink, "No clips yet.");
@@ -96,7 +97,14 @@ inline void clips(FrameBuffer &fb, const rec::ClipStore &store, int &picked) {
     char dur[12];
     snprintf(dur, sizeof(dur), "%.1fs", c.durationMs() / 1000.0f);
     sv::small(fb, 142, y + 6, pal::ink, dur);
-    sv::small(fb, 142, y + 16, pal::muted, c.open ? "REC" : c.manual ? "hand" : "voice");
+    const bool sounding = playing && c.number == playing;
+    sv::small(fb, 142, y + 16, sounding ? pal::teal : pal::muted, c.open ? "REC" : sounding ? "PLAY" : c.manual ? "hand" : "voice");
+    if (sounding) {
+      // The playhead: what the speaker has played so far, over the clip's shape.
+      const int px = 42 + int(std::min(1.0f, progress) * 96);
+      fb.drawFastVLine(px, y + 1, 25, pal::ink);
+      fb.fillTriangle(px - 3, y + 1, px + 3, y + 1, px, y + 5, pal::ink);
+    }
   }
   // The picked clip's facts.
   rec::Clip c;
@@ -115,7 +123,7 @@ inline void clips(FrameBuffer &fb, const rec::ClipStore &store, int &picked) {
     snprintf(a, sizeof(a), "%lus in", static_cast<unsigned long>(c.startMs / 1000));
   }
   sv::stat(fb, 194, kTop + 80, "started", a);
-  snprintf(b, sizeof(b), "send %lu", static_cast<unsigned long>(c.number));
+  snprintf(b, sizeof(b), "long press: next clip");
   sv::small(fb, 194, kTop + 118, pal::muted, b);
 }
 

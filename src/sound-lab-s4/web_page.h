@@ -2,7 +2,8 @@
 // works on a network without internet. It asks for the admin token first and holds no audio
 // until then; with it, a WebSocket brings the live level and state ~10 times a second, and each
 // clip is fetched as a WAV, decoded by the browser (Web Audio) and drawn as a waveform you can
-// play, scrub, download or delete.
+// play, scrub, download or delete, or play on the board's own speaker (with a speed choice and
+// the board's progress, live from the WebSocket).
 //
 // Colours are design tokens in the :root block, with a dark set for phones in dark mode.
 #pragma once
@@ -75,13 +76,17 @@ ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .clip h3 { margin: 0; font-size: 1rem; }
 .clip canvas { width: 100%; height: 72px; display: block; border-radius: 10px; background: var(--surface-2); cursor: pointer; touch-action: manipulation; }
 .empty { text-align: center; padding: 28px 8px; }
+.board-progress { width: 100%; height: 6px; accent-color: var(--accent); }
+select { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); min-height: 44px; }
+.speed { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.speed label { margin: 0; font-weight: 500; }
 [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>Bench recorder <small>S4 · KY-037</small></h1>
+    <h1>Bench recorder <small id="mic">S4</small></h1>
     <span class="pill" id="link" role="status" aria-live="polite">locked</span>
   </header>
 
@@ -111,6 +116,13 @@ ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
   <section class="card" id="clips-card" hidden aria-labelledby="clips-title">
     <h2 id="clips-title">Clips</h2>
     <p class="muted">Kept in the board's RAM: they vanish when it restarts. Download the ones you want to keep.</p>
+    <div class="speed">
+      <label for="speed">Speed on the board's speaker</label>
+      <select id="speed">
+        <option value="0.5">0.5x (giant)</option><option value="0.75">0.75x</option><option value="1" selected>1x</option>
+        <option value="1.5">1.5x</option><option value="2">2x (chipmunk)</option>
+      </select>
+    </div>
     <ol id="clips"></ol>
     <p class="muted empty" id="empty">No clips yet. Turn on the voice trigger and say something.</p>
   </section>
@@ -120,8 +132,10 @@ ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
   <li class="clip card">
     <header><h3></h3><span class="muted when"></span></header>
     <canvas aria-label="Waveform: tap to play from that point" role="img"></canvas>
+    <progress class="board-progress" max="1" value="0" hidden aria-label="Playing on the board"></progress>
     <div class="row">
       <button type="button" class="play">Play</button>
+      <button type="button" class="board">Play on board</button>
       <a class="button download" href="#" download>Download</a>
       <button type="button" class="delete">Delete</button>
       <span class="muted info"></span>
@@ -192,6 +206,14 @@ function showStatus(s) {
   $("#meter").setAttribute("aria-valuenow", String(Math.round(s.above)));
   trig.style.left = `${Math.min(1, s.trigger / 60) * 100}%`;
   $("#arm").setAttribute("aria-pressed", String(s.armed));
+  $("#mic").textContent = `S4 · ${s.mic}`;
+  for (const [n, entry] of clips) {
+    const on = s.playing === n, bar = $(".board-progress", entry.el);
+    bar.hidden = !on;
+    if (on) bar.value = s.playProgress;
+    $(".board", entry.el).textContent = on ? "Stop on board" : "Play on board";
+    $(".board", entry.el).disabled = entry.info.open || s.state === "recording";
+  }
   $("#rec").disabled = s.state === "recording";
   $("#stop").disabled = s.state !== "recording";
   $("#facts").replaceChildren(...[
@@ -217,6 +239,7 @@ function showClips(list) {
       clips.set(c.n, entry);
       $(".play", el).onclick = () => toggle(c.n);
       $(".delete", el).onclick = () => remove(c.n);
+      $(".board", el).onclick = () => command(last && last.playing === c.n ? "/api/stop" : `/api/play?n=${c.n}&speed=${$("#speed").value}`);
       $("canvas", el).onclick = (e) => {
         const r = e.currentTarget.getBoundingClientRect();
         play(c.n, ((e.clientX - r.left) / r.width) * (entry.buffer ? entry.buffer.duration : 0));

@@ -4,9 +4,16 @@
 // bang that is over within a tenth of a second (lib/sound-kit/src/onsets.h), and the claps that
 // come close together form one pattern (Groups: a pause of 0.65 s ends it).
 //
-// Wiring: the KY-037 as in S1 (+ -> 3V3, G -> GND, AO -> GPIO 6, DO -> GPIO 21) and the screen.
-// Optional: lesson 02's LED on GPIO 4 (through its resistor) for the `led` action; the push
-// button on GPIO 5 (it does what BOOT does).
+// Wiring: the screen and a microphone: the KY-037 (+ -> 3V3, G -> GND, AO -> GPIO 6, DO -> GPIO 21)
+// or the INMP441 (VDD -> 3V3, GND -> GND, L/R -> GND, SCK -> 40, WS -> 41, SD -> 42); `mic auto`
+// picks the one that answers. Optional: lesson 02's LED on GPIO 4 (through its resistor) for the
+// `led` action; the MAX98357A + speaker (BCLK 39, LRC 38, DIN 47, VIN 5V) for the confirmation
+// sounds and the `tune` action; the push button on GPIO 5 (it does what BOOT does).
+//
+// Sounds: every pattern answers with a little sound of its own, a pattern with nothing mapped
+// with a low "nope". The microphone hears those too, of course: the shell's echo guard
+// (lib/sound-kit/src/sound_lab.h) stops listening while the speaker plays and 200 ms after, so
+// the board never claps for itself. `sound off` keeps it quiet.
 //
 // Views: timeline · lamp · patterns · tune   (click = next, double-click = the action in the footer)
 // Serial: help lists the commands. Shared code: lib/sound-kit.
@@ -76,6 +83,24 @@ struct Learn {
 } learn;
 
 bool testing = false;  // print every detector event
+bool sounds = true;    // confirmation sounds (NVS)
+
+// The `tune` action's song, and each action's answer.
+const char *const kTwinkle = "C5/4 C5/4 G5/4 G5/4 A5/4 A5/4 G5/2 F5/4 F5/4 E5/4 E5/4 D5/4 D5/4 C5/2";
+
+void answer(SoundLab &lab, Action a, bool on) {
+  if (!sounds) return;
+  switch (a) {
+    case Action::Led: lab.chime(on ? Chime::Start : Chime::Stop); break;  // up = on, down = off
+    case Action::Colour: lab.speaker().tune("E6/32 G6/32 B6/16", 260, syn::Wave::Sine); break;
+    case Action::Dark: lab.chime(Chime::Stop); break;
+    case Action::Screen: lab.chime(Chime::Click); break;
+    case Action::View: lab.chime(Chime::Click); break;
+    case Action::Party: lab.chime(Chime::Score); break;
+    case Action::Tune: lab.speaker().tune(kTwinkle, 160); break;
+    default: lab.chime(Chime::No); break;
+  }
+}
 
 // ---- Settings in NVS --------------------------------------------------------------------------
 
@@ -87,6 +112,7 @@ void save() {
   p.putBytes("map", a, sizeof(a));
   p.putFloat("rise", ears.config.riseDb);
   p.putUInt("gap", groups.gapMs);
+  p.putBool("sound", sounds);
   p.end();
 }
 
@@ -98,6 +124,7 @@ void load() {
     for (int i = 0; i < claps::kPatterns; i++) map.action[i + 1] = a[i] < uint8_t(Action::Count) ? Action(a[i]) : Action::None;
   if (p.isKey("rise")) ears.config.riseDb = p.getFloat("rise", ears.config.riseDb);
   if (p.isKey("gap")) groups.gapMs = p.getUInt("gap", groups.gapMs);
+  sounds = p.getBool("sound", true);
   p.end();
 }
 
@@ -143,8 +170,10 @@ void run(SoundLab &lab, Action a) {
       lab.claimLed(true);
       lab.note(sv::Note::Good, "party!");
       break;
+    case Action::Tune: lab.note(sv::Note::Good, "twinkle, twinkle (claps wait until it ends)"); break;
     case Action::Count: break;
   }
+  answer(lab, a, out.led);
 }
 
 // ---- Detection (every 4 ms frame) -------------------------------------------------------------
@@ -198,7 +227,8 @@ void frame(SoundLab &lab, const snd::Frame &, uint32_t ms) {
   if (g.count > claps::kPatterns) lab.note(sv::Note::Warn, "%d claps: applause? nothing to do", g.count);
   else if (last.action == Action::None) lab.note(sv::Note::Info, "%d claps: not mapped", g.count);
   else lab.note(sv::Note::Info, "%d clap%s -> %s", g.count, g.count > 1 ? "s" : "", claps::info(last.action).name);
-  run(lab, last.action);
+  if (last.action == Action::None) answer(lab, Action::None, false);  // the "nope" sound
+  else run(lab, last.action);
 }
 
 // ---- Views ------------------------------------------------------------------------------------
@@ -362,7 +392,7 @@ void cmdMap(SoundLab &lab, const String &arg, const String &lower) {
   long n = 0;
   Action a;
   if (sp < 0 || !SoundLab::number(arg.substring(0, sp), 1, claps::kPatterns, n) || !claps::parse(lower.substring(sp + 1).c_str(), a))
-    return lab.warn("map <1-4> <led|colour|dark|screen|view|party|none>");
+    return lab.warn("map <1-4> <led|colour|dark|screen|view|party|tune|none>");
   map.action[n] = a;
   save();
   lab.note(sv::Note::Good, "%ld clap%s -> %s (saved)", n, n > 1 ? "s" : "", claps::info(a).name);
@@ -407,20 +437,28 @@ void cmdTest(SoundLab &lab, const String &, const String &lower) {
 // Run an action by hand, to check the wiring: `do led`.
 void cmdDo(SoundLab &lab, const String &, const String &lower) {
   Action a;
-  if (!claps::parse(lower.c_str(), a)) return lab.warn("do <led|colour|dark|screen|view|party>");
+  if (!claps::parse(lower.c_str(), a)) return lab.warn("do <led|colour|dark|screen|view|party|tune>");
   run(lab, a);
 }
 
 void cmdMaps(SoundLab &, const String &, const String &) { printMaps(); }
 
+void cmdSound(SoundLab &lab, const String &, const String &lower) {
+  if (!lower.isEmpty() && lower != "on" && lower != "off") return lab.warn("sound | sound on | sound off");
+  sounds = lower.isEmpty() ? !sounds : lower == "on";
+  save();
+  lab.note(sv::Note::Info, sounds ? "sounds on (the echo guard keeps them from counting as claps)" : "sounds off");
+}
+
 const SoundCommand kCommands[] = {
-    {"map", "<1-4> <action>", "what n claps do: led colour dark screen view party none", cmdMap},
+    {"map", "<1-4> <action>", "what n claps do: led colour dark screen view party tune none", cmdMap},
     {"maps", "", "print the pattern map", cmdMaps},
     {"sens", "<dB>", "how far above the quiet a clap must jump (default 18)", cmdSens},
     {"gap", "<ms>", "the pause that ends a pattern (default 650)", cmdGap},
     {"learn", "", "clap 5 times: sets sens from your softest clap", cmdLearn},
     {"test", "[off]", "print every clap, long sound and group", cmdTest},
     {"do", "<action>", "run an action now, without clapping", cmdDo},
+    {"sound", "[on|off]", "a little sound per pattern on the speaker (saved)", cmdSound},
     {"colour", "", "next RGB colour (the lamp view's double-click)", [](SoundLab &lab, const String &, const String &) { run(lab, Action::Colour); }},
 };
 

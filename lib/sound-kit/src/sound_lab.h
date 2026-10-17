@@ -1,6 +1,14 @@
-// The shell every sound lab (S1-S6) shares: the microphone and its sampler task, the level meter,
-// the screen with its header and footer, the push button and BOOT, the on-board RGB LED, and the
-// serial commands every lab has (help, view, status, rate, atten, quiet, plot).
+// The shell every sound lab (S1-S8) shares: the microphone and its sampler task, the speaker, the
+// level meter, the screen with its header and footer, the push button and BOOT, the on-board RGB
+// LED, and the serial commands every lab has (help, view, status, mic, vol, beep, tune, rate,
+// atten, quiet, plot).
+//
+// Which microphone? `mic auto` (the default) listens for an INMP441 on the I2S pins at start-up and
+// uses it when it answers, the KY-037 otherwise. `mic ky037` / `mic inmp441` force one (saved in
+// NVS, then a restart). The speaker (MAX98357A) is always started: with nothing wired it is silent.
+//
+// Echo guard: while the speaker plays (and 200 ms after), the lab's frame() hook gets no frames, so
+// a beep is never taken for a clap. A lab that wants to hear through it sets hearSpeaker.
 //
 // A lab is a SoundLabSpec: its views (each a draw function, plus what a double-click does there),
 // its serial commands, and hooks: setup() once the mic runs, frame() for every 4 ms frame of sound
@@ -16,10 +24,13 @@
 
 #include "button.h"
 #include "display.h"
+#include <Preferences.h>
+
 #include "level.h"
 #include "mic.h"
 #include "pins.h"
 #include "sound_views.h"
+#include "speaker.h"
 
 class SoundLab;
 
@@ -52,7 +63,11 @@ struct SoundLabSpec {
   void (*tick)(SoundLab &lab) = nullptr;                                    // every screen frame
   bool (*gesture)(SoundLab &lab, Gesture g, bool external) = nullptr;       // true = handled
   const char *longAction = nullptr;
+  bool hearSpeaker = false;  // true: frame() keeps running while the speaker plays (S8's effects)
 };
+
+// Little sounds every lab can make (only when a speaker is wired, of course).
+enum class Chime : uint8_t { Click, Ok, No, Start, Stop, Score, Hello };
 
 class SoundLab {
  public:
@@ -68,12 +83,27 @@ class SoundLab {
     rgbLedWrite(PIN_RGB, 0, 0, 0);
     external_.begin();
     boot_.begin();
-    if (!mic_.begin()) {
+    Preferences prefs;
+    prefs.begin("sound", true);
+    const String choice = prefs.isKey("mic") ? prefs.getString("mic") : String("auto");
+    const int volume = prefs.getInt("vol", 40);
+    prefs.end();
+    snd::Source source = snd::Source::Ky037;
+    if (choice == "inmp441") source = snd::Source::Inmp441;
+    else if (choice == "auto") {
+      Serial.println("Listening for an INMP441 on the I2S pins...");
+      if (snd::Mic::probeInmp441()) source = snd::Source::Inmp441;
+    }
+    Serial.printf("Microphone: %s (mic setting: %s)\n", snd::sourceName(source), choice.c_str());
+    speakerOk_ = speaker_.begin();
+    speaker_.setVolume(volume);
+    if (!mic_.begin(source)) {
       log_e("The microphone sampler did not start. Stopping.");
       return;
     }
     if (spec_.setup) spec_.setup(*this);
     printHelp();
+    chime(Chime::Hello);
     note(sv::Note::Info, "learning the quiet...");
   }
 
@@ -94,7 +124,8 @@ class SoundLab {
     const SoundView &v = spec_.views[view_];
     fb.fillScreen(pal::night);
     v.draw(*this, fb, t);
-    sv::header(fb, spec_.id, v.name, view_, spec_.viewCount, level_.reading(), mic_.doHigh(), recording_, t);
+    sv::header(fb, spec_.id, v.name, view_, spec_.viewCount, level_.reading(), mic_.doHigh(), recording_, t, mic_.digital(),
+               speaker_.busy());
     char hint[40];
     if (v.action) snprintf(hint, sizeof(hint), "2x: %s", v.action);
     else snprintf(hint, sizeof(hint), "click: next view");
@@ -105,6 +136,9 @@ class SoundLab {
   // ---- For views and commands ------------------------------------------------------------------
 
   snd::Mic &mic() { return mic_; }
+  snd::Speaker &speaker() { return speaker_; }
+  // The level in dB SPL (INMP441 only; NAN with the KY-037, which has no known sensitivity).
+  float spl() const { return mic_.splOf(level_.reading().fastDb); }
   const snd::LevelReading &level() const { return level_.reading(); }
   snd::Level &meter() { return level_; }
   Display &display() { return display_; }
@@ -130,6 +164,19 @@ class SoundLab {
   }
   // The REC dot in the header. The recorder sets it; nothing can record without it showing.
   void setRecording(bool on) { recording_ = on; }
+
+  void chime(Chime c) {
+    if (!speakerOk_) return;
+    switch (c) {
+      case Chime::Click: speaker_.tone(2400, 12, syn::Wave::Square, 0.4f); break;
+      case Chime::Ok: speaker_.tune("E6/16 B6/8", 240, syn::Wave::Sine); break;
+      case Chime::No: speaker_.tune("C4/16 r/32 C4/8", 200, syn::Wave::Square); break;
+      case Chime::Start: speaker_.tune("G5/16 C6/16", 260, syn::Wave::Triangle); break;
+      case Chime::Stop: speaker_.tune("C6/16 G5/16", 260, syn::Wave::Triangle); break;
+      case Chime::Score: speaker_.tune("C6/32 E6/32 G6/32 C7/16", 240, syn::Wave::Square); break;
+      case Chime::Hello: speaker_.tune("C5/16 E5/16 G5/8", 220, syn::Wave::Triangle); break;
+    }
+  }
 
   // A short line for the footer, also printed to serial.
   [[gnu::format(printf, 3, 4)]] void note(sv::Note kind, const char *fmt, ...) {
@@ -187,6 +234,10 @@ class SoundLab {
       return setView(n - 1);
     }
     if (cmd == "status") return printStatus();
+    if (cmd == "mic") return cmdMic(lower);
+    if (cmd == "vol") return cmdVol(arg);
+    if (cmd == "beep") return cmdBeep(arg, lower);
+    if (cmd == "tune") return cmdTune(lower);
     if (cmd == "rate") return cmdRate(arg);
     if (cmd == "atten") return cmdAtten(lower);
     if (cmd == "quiet") {
@@ -202,8 +253,7 @@ class SoundLab {
 
  private:
   void printHelp() {
-    Serial.printf("\nSound lab %s %s  (%s)  ·  KY-037: AO on GPIO %d, DO on GPIO %d\n", spec_.id, spec_.title, spec_.env, PIN_MIC_AO,
-                  PIN_MIC_DO);
+    Serial.printf("\nSound lab %s %s  (%s)  ·  microphone: %s\n", spec_.id, spec_.title, spec_.env, snd::sourceName(mic_.source()));
     for (int i = 0; i < spec_.commandCount; i++) {
       const SoundCommand &c = spec_.commands[i];
       char usage[40];
@@ -212,7 +262,11 @@ class SoundLab {
     }
     Serial.printf("  %-28s %s\n", "quiet", "re-learn the quiet of your room (half a second: shh)");
     Serial.printf("  %-28s %s\n", "plot [off]", "print the level as a bar every 50 ms");
-    Serial.printf("  %-28s %s\n", "status", "the sampler, the ADC and the level, in numbers");
+    Serial.printf("  %-28s %s\n", "status", "the sampler, the microphone and the level, in numbers");
+    Serial.printf("  %-28s %s\n", "mic [auto|ky037|inmp441]", "which microphone (saved; restarts)");
+    Serial.printf("  %-28s %s\n", "vol <0-100>", "speaker volume (saved, default 40)");
+    Serial.printf("  %-28s %s\n", "beep [Hz] [wave]", "a test tone on the speaker (sine square triangle saw noise)");
+    Serial.printf("  %-28s %s\n", "tune <name>", "play a tune: hello scale twinkle ode alarm");
     Serial.printf("  %-28s %s\n", "rate <Hz>", "sample rate, 2000-48000 (default 16000)");
     Serial.printf("  %-28s %s\n", "atten <0|2.5|6|12>", "the ADC's input range (default 12 dB = 0-3.1 V)");
     Serial.printf("  %-28s %s\n", "view <n>", "show screen view n");
@@ -227,12 +281,18 @@ class SoundLab {
     Serial.printf("sampler: %lu Hz asked, %lu Hz measured · frames dropped %lu · DMA overruns %lu\n",
                   static_cast<unsigned long>(mic_.rate()), static_cast<unsigned long>(mic_.measuredRate()),
                   static_cast<unsigned long>(mic_.framesDropped()), static_cast<unsigned long>(mic_.overruns()));
-    Serial.printf("ADC: attenuation %s · bias %d mV (raw %d) · last 100 ms raw %d..%d%s · %s\n", snd::attenName(mic_.atten()), mic_.biasMv(),
-                  int(mic_.biasRaw()), mic_.rawLow(), mic_.rawHigh(), mic_.rawLow() <= 0 || mic_.rawHigh() >= 4095 ? " CLIPPING" : "",
-                  mic_.calibrated() ? "eFuse calibration" : "no calibration (straight-line mV)");
+    if (mic_.digital())
+      Serial.printf("INMP441: 24-bit, offset %d · last 100 ms %d..%d of +-%d%s · dB SPL = dBFS + %.0f\n", int(mic_.biasRaw()), mic_.rawLow(),
+                    mic_.rawHigh(), mic_.rawMax(), mic_.clipping() ? " CLIPPING" : "", snd::Mic::kInmp441Spl);
+    else
+      Serial.printf("KY-037 on the ADC: attenuation %s · bias %d mV (raw %d) · last 100 ms raw %d..%d%s · %s\n", snd::attenName(mic_.atten()),
+                    mic_.biasMv(), int(mic_.biasRaw()), mic_.rawLow(), mic_.rawHigh(), mic_.clipping() ? " CLIPPING" : "",
+                    mic_.calibrated() ? "eFuse calibration" : "no calibration (straight-line mV)");
     Serial.printf("level: %.1f dBFS fast, %.1f slow, floor %.1f dBFS · %.1f dB above the quiet · peak %.1f dBFS\n", r.fastDb, r.slowDb,
                   r.floorDb, r.above(), r.peakDb);
-    Serial.printf("comparator DO: %s now, %lu rising edges\n", mic_.doHigh() ? "HIGH" : "low", static_cast<unsigned long>(mic_.doRises()));
+    if (mic_.digital()) Serial.printf("sound level: about %.0f dB SPL (unweighted)\n", spl());
+    else Serial.printf("comparator DO: %s now, %lu rising edges\n", mic_.doHigh() ? "HIGH" : "low", static_cast<unsigned long>(mic_.doRises()));
+    Serial.printf("speaker: volume %d, %s\n", speaker_.volume(), speaker_.busy() ? "playing" : "quiet");
   }
 
   void cmdRate(const String &arg) {
@@ -243,7 +303,62 @@ class SoundLab {
     note(sv::Note::Info, "rate %ld Hz", hz);
   }
 
+  void cmdMic(const String &lower) {
+    if (lower != "auto" && lower != "ky037" && lower != "inmp441")
+      return warn("mic auto | mic ky037 | mic inmp441   (now: %s)", snd::sourceName(mic_.source()));
+    Preferences prefs;
+    prefs.begin("sound", false);
+    prefs.putString("mic", lower);
+    prefs.end();
+    Serial.printf("mic %s saved. Restarting to switch...\n", lower.c_str());
+    Serial.flush();
+    delay(200);
+    ESP.restart();
+  }
+
+  void cmdVol(const String &arg) {
+    long v = 0;
+    if (!number(arg, 0, 100, v)) return warn("vol <0-100>   (now %d)", speaker_.volume());
+    speaker_.setVolume(int(v));
+    Preferences prefs;
+    prefs.begin("sound", false);
+    prefs.putInt("vol", int(v));
+    prefs.end();
+    chime(Chime::Click);
+    note(sv::Note::Info, "volume %ld", v);
+  }
+
+  void cmdBeep(const String &arg, const String &lower) {
+    float hz = 880;
+    syn::Wave wave = syn::Wave::Sine;
+    const int sp = lower.indexOf(' ');
+    if (!arg.isEmpty() && !decimal(sp < 0 ? arg : arg.substring(0, sp), 20, 8000, hz)) return warn("beep [Hz 20-8000] [sine|square|triangle|saw|noise]");
+    if (sp > 0 && !syn::parseWave(lower.substring(sp + 1).c_str(), wave)) return warn("wave: sine square triangle saw noise");
+    speaker_.tone(hz, 400, wave);
+    note(sv::Note::Info, "beep %.0f Hz %s", hz, syn::waveName(wave));
+  }
+
+  void cmdTune(const String &lower) {
+    static const struct {
+      const char *name, *notes;
+      int bpm;
+    } kTunes[] = {
+        {"hello", "C5/16 E5/16 G5/8", 220},
+        {"scale", "C4/8 D4/8 E4/8 F4/8 G4/8 A4/8 B4/8 C5/4", 160},
+        {"twinkle", "C5/4 C5/4 G5/4 G5/4 A5/4 A5/4 G5/2 F5/4 F5/4 E5/4 E5/4 D5/4 D5/4 C5/2", 160},
+        {"ode", "E5/4 E5/4 F5/4 G5/4 G5/4 F5/4 E5/4 D5/4 C5/4 C5/4 D5/4 E5/4 E5/4. D5/8 D5/2", 150},
+        {"alarm", "A5/16 E5/16 A5/16 E5/16 A5/16 E5/16 A5/16 E5/16", 200},
+    };
+    for (const auto &t : kTunes)
+      if (lower == t.name) {
+        speaker_.tune(t.notes, t.bpm);
+        return note(sv::Note::Info, "playing %s", t.name);
+      }
+    warn("tune hello | scale | twinkle | ode | alarm");
+  }
+
   void cmdAtten(const String &lower) {
+    if (mic_.digital()) return warn("atten is for the KY-037's ADC: the INMP441 has its own converter inside");
     adc_atten_t a;
     if (lower == "0") a = ADC_ATTEN_DB_0;
     else if (lower == "2.5") a = ADC_ATTEN_DB_2_5;
@@ -262,7 +377,8 @@ class SoundLab {
       soundMs_ += snd::kChunk * 1000.0 / mic_.rate();
       const uint32_t ms = uint32_t(soundMs_);
       level_.push(f.rms, ms);
-      if (spec_.frame) spec_.frame(*this, f, ms);
+      // The echo guard: the board's own sounds are not claps, knocks or voices.
+      if (spec_.frame && (spec_.hearSpeaker || !speaker_.recentlyLoud(200))) spec_.frame(*this, f, ms);
       if (plot_ && ms - plotAt_ >= 50) plotAt_ = ms, printPlot();
     }
   }
@@ -273,7 +389,8 @@ class SoundLab {
     const int n = int(snd::meterFraction(r.instAbove(), 60) * 40);
     for (int i = 0; i < 40; i++) bar[i] = i < n ? '#' : (i == int(snd::meterFraction(r.peakDb - r.floorDb, 60) * 40) ? '|' : ' ');
     bar[40] = 0;
-    Serial.printf("%5.1f dB |%s| DO %c\n", r.instAbove(), bar, mic_.doHigh() ? '1' : '0');
+    if (mic_.digital()) Serial.printf("%5.1f dB |%s| %3.0f dB SPL\n", r.instAbove(), bar, mic_.splOf(r.instDb));
+    else Serial.printf("%5.1f dB |%s| DO %c\n", r.instAbove(), bar, mic_.doHigh() ? '1' : '0');
   }
 
   void pollSerial() {
@@ -340,7 +457,9 @@ class SoundLab {
   Button external_{PIN_BUTTON, "button"};
   Button boot_{PIN_BOOT_BTN, "BOOT"};
   snd::Mic mic_;
+  snd::Speaker speaker_;
   snd::Level level_;
+  bool speakerOk_ = false;
   int view_;
   bool ledClaimed_ = false, recording_ = false, plot_ = false;
   uint32_t ledShown_ = 0xFFFFFFFF, plotAt_ = 0;

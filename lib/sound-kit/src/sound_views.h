@@ -60,16 +60,20 @@ inline void stat(FrameBuffer &fb, int x, int y, const char *label, const char *v
 // Green while calm, amber when loud, coral when very loud (dB above the quiet).
 inline uint16_t levelColour(float above) { return above < 25 ? pal::teal : above < 40 ? pal::amber : pal::coral; }
 
-// The ear in the header: 10 segments of level, the DO lamp, the REC dot.
-inline void ear(FrameBuffer &fb, int x, int y, const snd::LevelReading &r, bool doHigh, bool rec, float t) {
+// The ear in the header: 10 segments of level, then the DO lamp (KY-037) or a small "D" (the digital
+// INMP441), sound waves while the speaker plays, and the REC dot.
+inline void ear(FrameBuffer &fb, int x, int y, const snd::LevelReading &r, bool doHigh, bool rec, float t, bool digital, bool speaking) {
   const int lit = int(snd::meterFraction(r.above(), 50) * 10 + 0.5f);
   for (int i = 0; i < 10; i++) fb.fillRect(x + i * 4, y, 3, 10, i < lit ? levelColour(i * 5.0f) : pal::dim);
-  fb.fillCircle(x + 48, y + 5, 3, doHigh ? pal::amber : pal::dim);
+  if (digital) small(fb, x + 45, y + 2, pal::teal, "D");
+  else fb.fillCircle(x + 48, y + 5, 3, doHigh ? pal::amber : pal::dim);
+  if (speaking)
+    for (int i = 0; i < 2; i++) fb.drawCircleHelper(x - 8 + i * 3, y + 5, 3 + i * 3, 0x2 | 0x4, kSound);
   if (rec && fmodf(t, 1.0f) < 0.6f) fb.fillCircle(x + 60, y + 5, 4, kRec);
 }
 
 inline void header(FrameBuffer &fb, const char *labId, const char *view, int index, int count, const snd::LevelReading &r, bool doHigh,
-                   bool rec, float t) {
+                   bool rec, float t, bool digital = false, bool speaking = false) {
   fb.setFont(&FreeSansBold9pt7b);
   fb.setTextColor(kSound);
   fb.setCursor(8, 18);
@@ -78,8 +82,8 @@ inline void header(FrameBuffer &fb, const char *labId, const char *view, int ind
   fb.setFont(&FreeSans9pt7b);
   fb.setTextColor(pal::muted);
   fb.print(view);
-  ear(fb, kW - 74, 10, r, doHigh, rec, t);
-  const int firstDot = kW - 84 - (count - 1) * 9;
+  ear(fb, kW - 74, 10, r, doHigh, rec, t, digital, speaking);
+  const int firstDot = kW - 92 - (count - 1) * 9;
   for (int i = 0; i < count; i++) fb.fillCircle(firstDot + i * 9, 15, 3, i == index ? pal::ink : pal::dim);
   fb.drawFastHLine(0, 28, kW, pal::dim);
 }

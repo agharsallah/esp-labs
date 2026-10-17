@@ -5,15 +5,25 @@
 // phone at http://bench.local (the Wi-Fi W1 saved, plus the admin token), or pull a WAV file over
 // USB with tools/sound_pull.py.
 //
-// The KY-037 has no amplifier, so a voice fills a small part of the ADC's range: clips are made
-// louder ("normalised") on the way out, and they will sound thin and hissy. That's the lesson's
-// honest part: this module is a loudness sensor first, a microphone second.
+// And with the MAX98357A + speaker wired, `play <n>` plays a clip on the board itself, at any speed
+// (0.5 = slower and deeper, 2 = the chipmunk).
 //
-// Wiring: as S1 (+ -> 3V3 · G -> GND · AO -> GPIO 6 · DO -> GPIO 21) and the screen from lesson 03.
-// The push button on GPIO 5 is optional (it does what BOOT does).
+// Which microphone matters here more than anywhere. The KY-037 has no amplifier, so a voice fills
+// a small part of the ADC's range: clips are made louder ("normalised") on the way out and sound
+// thin and hissy: a loudness sensor first, a microphone second. The INMP441 has its own amplifier
+// and a 24-bit converter inside: its clips are actually pleasant to listen to. `mic auto` (the
+// default) picks the INMP441 whenever it answers.
+//
+// Echo guard: while the speaker plays (and 200 ms after), the shell gives the lab no frames, so the
+// voice trigger can't record the board's own playback. `play` refuses while recording, and `rec`
+// stops a playback first.
+//
+// Wiring: a microphone (KY-037: + -> 3V3, G -> GND, AO -> GPIO 6, DO -> GPIO 21; or INMP441: VDD ->
+// 3V3, GND, L/R -> GND, SCK -> 40, WS -> 41, SD -> 42), the screen from lesson 03, optionally the
+// MAX98357A (VIN -> 5V, GND, BCLK -> 39, LRC -> 38, DIN -> 47). Push button on GPIO 5 optional.
 //
 // Views: recorder · clips · web   (click = next, double-click = the action in the footer,
-//        long press = rec / stop)
+//        long press = rec / stop; on the clips view: double-click = play, long press = next clip)
 // Serial: help lists the commands. Shared code: lib/sound-kit, lib/wifi-kit (Wi-Fi, token).
 #include "api_token.h"
 #include "connection.h"
@@ -31,15 +41,37 @@ RecorderApi api(recorder.store(), token);
 int picked = 0;          // the clips view's picked row
 uint32_t lastStatus = 0;
 
+// Playback on the board's speaker. The clip is leased from the store while it plays, so `del`,
+// `clear` or a full store can take it off the list but can't free its samples under the speaker.
+// The speaker task reads the samples on its own core, up to a block (16 ms) after it was told to
+// stop, so a stopped clip is "retiring" for 100 ms before its lease is given back.
+struct Playback {
+  rec::Clip *clip = nullptr;
+  uint32_t number = 0;
+  float speed = 1;
+  uint32_t sinceMs = 0;
+} playback;
+rec::Clip *retiring = nullptr;
+uint32_t retireAt = 0;
+
+void endPlayback() {
+  rec::ClipStore::release(retiring);  // an older one still retiring: long done by now
+  retiring = playback.clip;
+  retireAt = millis();
+  playback = Playback{};
+}
+
 // ---- Views ------------------------------------------------------------------------------------
 
 void drawRecorder(SoundLab &, FrameBuffer &fb, float t) { s4v::recorder(fb, recorder, recorder.config(), recorder.store(), t); }
-void drawClips(SoundLab &, FrameBuffer &fb, float) { s4v::clips(fb, recorder.store(), picked); }
+void drawClips(SoundLab &lab, FrameBuffer &fb, float) {
+  s4v::clips(fb, recorder.store(), picked, playback.number, playback.clip ? lab.speaker().progress() : 0);
+}
 void drawWeb(SoundLab &, FrameBuffer &fb, float) { s4v::web(fb, connection, api.started(), api.clients()); }
 
 const SoundView kViews[] = {
     {"recorder", drawRecorder, "arm"},
-    {"clips", drawClips, "next"},
+    {"clips", drawClips, "play"},
     {"web", drawWeb, "wifi"},
 };
 
@@ -50,12 +82,55 @@ void cmdArm(SoundLab &lab, const String &, const String &lower) {
   recorder.arm(lab, lower.isEmpty() ? !recorder.armed() : lower == "on");
 }
 
+void stopPlayback(SoundLab &lab) {
+  if (!playback.clip) return;
+  lab.speaker().stop();
+  lab.note(sv::Note::Info, "playback of clip %lu stopped", static_cast<unsigned long>(playback.number));
+  endPlayback();
+}
+
 void cmdRec(SoundLab &lab, const String &, const String &) {
   if (recorder.recording()) return recorder.stop(lab);  // rec again (or a long press) stops
+  stopPlayback(lab);  // never record the board's own speaker
   recorder.start(lab);
 }
 
-void cmdStop(SoundLab &lab, const String &, const String &) { recorder.stop(lab); }
+void cmdStop(SoundLab &lab, const String &, const String &) {
+  if (playback.clip && !recorder.recording()) return stopPlayback(lab);
+  recorder.stop(lab);
+}
+
+// Play clip n (0 = the picked one) at `speed` on the board's speaker.
+void startPlayback(SoundLab &lab, uint32_t n, float speed) {
+  if (recorder.recording()) return lab.warn("recording: stop first (the microphone would hear the speaker)");
+  if (n == 0) {
+    rec::Clip c;
+    if (!recorder.store().facts(picked, c)) return lab.warn("no clips yet");
+    n = c.number;
+  }
+  rec::Clip *c = recorder.store().lease(n);
+  if (!c) return lab.warn("no finished clip %lu", static_cast<unsigned long>(n));
+  if (playback.clip) {
+    lab.speaker().stop();
+    endPlayback();
+  }
+  // Normalised like the download, but at most x16: a whisper on the KY-037 would otherwise come
+  // back as mostly hiss, at full volume.
+  const float gain = std::min(16.0f, snd::gainFor(c->peak));
+  playback = Playback{c, n, speed, millis()};
+  lab.speaker().play(c->data, c->samples, speed * float(c->rate) / float(snd::Speaker::kRate), gain);
+  lab.note(sv::Note::Good, "playing clip %lu (%.1f s) at x%.2f", static_cast<unsigned long>(n), c->durationMs() / 1000.0f / speed, speed);
+}
+
+void cmdPlay(SoundLab &lab, const String &arg, const String &) {
+  const int sp = arg.indexOf(' ');
+  long n = 0;
+  float speed = 1.0f;
+  if (!arg.isEmpty() && !SoundLab::number(sp < 0 ? arg : arg.substring(0, sp), 1, 1000000, n))
+    return lab.warn("play [n] [speed 0.5-2.0]: clip n (default: the picked one) on the board's speaker");
+  if (sp > 0 && !SoundLab::decimal(arg.substring(sp + 1), 0.5f, 2.0f, speed)) return lab.warn("speed: 0.5 (slow, deep) to 2.0 (fast, chipmunk)");
+  startPlayback(lab, uint32_t(n), speed);
+}
 
 void cmdTrigger(SoundLab &lab, const String &arg, const String &) {
   float db = 0;
@@ -168,7 +243,8 @@ void cmdWifi(SoundLab &lab, const String &, const String &) {
 const SoundCommand kCommands[] = {
     {"arm", "[on|off]", "voice-activated recording (alone: toggle)", cmdArm},
     {"rec", "", "record now, by hand (again, or long press: stop)", cmdRec},
-    {"stop", "", "stop recording", cmdStop},
+    {"stop", "", "stop recording (or the board's playback)", cmdStop},
+    {"play", "[n] [speed]", "play clip n on the board's speaker, speed 0.5-2.0 (default 1)", cmdPlay},
     {"trigger", "<dB>", "how loud starts a clip, dB above the quiet (default 15)", cmdTrigger},
     {"hold", "<ms>", "quiet this long ends a clip (default 1200)", cmdHold},
     {"max", "<s>", "the longest clip (default 20)", cmdMax},
@@ -187,7 +263,8 @@ void setup(SoundLab &lab) {
   token.begin();
   connection.begin();
   Serial.println("S4: clips are kept in PSRAM only, a reset forgets them. Recording always shows: REC on screen, red LED.");
-  (void)lab;
+  if (!lab.mic().digital())
+    Serial.println("S4: recording with the KY-037: expect thin, hissy clips. An INMP441 (mic auto) sounds far better.");
 }
 
 void frame(SoundLab &lab, const snd::Frame &f, uint32_t ms) { recorder.frame(lab, f, ms); }
@@ -211,12 +288,25 @@ void publishStatus(SoundLab &lab) {
   d["usedBytes"] = store.used();
   d["budgetBytes"] = store.budget;
   d["rate"] = lab.mic().rate();
+  d["mic"] = snd::sourceShort(lab.mic().source());
+  d["playing"] = playback.number;  // 0 = the board's speaker is quiet
+  d["playProgress"] = playback.clip ? roundf(lab.speaker().progress() * 1000) / 1000 : 0;
   String out;
   serializeJson(d, out);
   api.publishStatus(out);
 }
 
 void tick(SoundLab &lab) {
+  // Playback ends when the speaker says so; then the clip goes back to the store.
+  // (Give the speaker task 150 ms to pick up the play command before trusting "not playing".)
+  if (playback.clip && !lab.speaker().playing() && millis() - playback.sinceMs > 150) {
+    lab.note(sv::Note::Info, "clip %lu played", static_cast<unsigned long>(playback.number));
+    endPlayback();
+  }
+  if (retiring && millis() - retireAt > 100) {
+    rec::ClipStore::release(retiring);
+    retiring = nullptr;
+  }
   recorder.tick(lab);
   connection.loop();
   if (!api.started() && connection.state() == Connection::State::Connected) {
@@ -228,8 +318,15 @@ void tick(SoundLab &lab) {
   while (api.take(c)) {
     switch (c.type) {
       case WebCommand::Type::Arm: recorder.arm(lab, c.value != 0); break;
-      case WebCommand::Type::Rec: recorder.start(lab); break;
-      case WebCommand::Type::Stop: recorder.stop(lab); break;
+      case WebCommand::Type::Rec:
+        stopPlayback(lab);
+        recorder.start(lab);
+        break;
+      case WebCommand::Type::Stop:
+        if (recorder.recording()) recorder.stop(lab);
+        stopPlayback(lab);
+        break;
+      case WebCommand::Type::Play: startPlayback(lab, c.value, c.speed); break;
       case WebCommand::Type::Delete:
         if (recorder.recording() && c.value == recorder.clipNumber()) lab.note(sv::Note::Warn, "web: clip %lu is recording", static_cast<unsigned long>(c.value));
         else if (recorder.store().remove(c.value)) lab.note(sv::Note::Info, "web: clip %lu deleted", static_cast<unsigned long>(c.value));
@@ -243,9 +340,17 @@ void tick(SoundLab &lab) {
   }
 }
 
+// On the clips view, a long press picks the next clip (double-click plays it). Elsewhere: rec.
+bool gesture(SoundLab &lab, Gesture g, bool) {
+  if (g != Gesture::LongPress || strcmp(lab.spec().views[lab.view()].name, "clips") != 0) return false;
+  Serial.println("> next   (long press)");
+  lab.runLine("next");
+  return true;
+}
+
 const SoundLabSpec kSpec{
     "sound-lab-s4", "S4", "Recorder", kViews, sizeof(kViews) / sizeof(kViews[0]), 0,
-    kCommands, sizeof(kCommands) / sizeof(kCommands[0]), setup, frame, tick, nullptr, "rec",
+    kCommands, sizeof(kCommands) / sizeof(kCommands[0]), setup, frame, tick, gesture, "rec",
 };
 
 SoundLab lab(kSpec);

@@ -10,7 +10,8 @@
 
 namespace claps {
 
-enum class Action : uint8_t { None, Led, Colour, Dark, Screen, View, Party, Count };
+// New actions go at the end (before Count): the map in NVS stores these numbers.
+enum class Action : uint8_t { None, Led, Colour, Dark, Screen, View, Party, Tune, Count };
 
 struct ActionInfo {
   const char *name;  // what you type: map 2 colour
@@ -26,6 +27,7 @@ inline const ActionInfo &info(Action a) {
       {"screen", "backlight off / on"},
       {"view", "next screen view"},
       {"party", "2 s rainbow"},
+      {"tune", "play a tune on the speaker"},
   };
   const int i = int(a) < int(Action::Count) ? int(a) : 0;
   return kInfo[i];

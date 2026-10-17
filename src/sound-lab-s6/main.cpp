@@ -6,8 +6,17 @@
 //   party   the board finds the beat in music (a phone speaker near the mic) and throws light at it
 // Each view listens only while it is on screen: a clap in Clap Bird never knocks on the lock.
 //
-// Wiring: the KY-037 as in S1 (+ -> 3V3, G -> GND, AO -> GPIO 6, DO -> GPIO 21) and the screen.
-// Optional: lesson 02's LED on GPIO 4 (through its resistor) as the lock's bolt; the push button
+// Sounds (MAX98357A + speaker, optional; `sound off` silences the lab): Clap Bird blips on every
+// flap, dings per pipe, crashes, and plays a fanfare for a new best; the lock plays your secret back
+// after `knock set` (and on `knock play`), chimes when it opens and buzzes on a wrong rhythm; the
+// party can tick on every beat (`party click on`).
+// The trade-off: while the speaker sounds and 200 ms after, the shell's echo guard gives this lab no
+// frames, so the board never hears itself, but a clap in that window is missed too. So the game
+// sounds are tiny (a flap blip is 20 ms, a ding 30 ms), and the lock makes no sound per knock
+// while you set the secret: it would swallow the next knock of a fast rhythm.
+//
+// Wiring: a microphone (KY-037 as in S1, or the INMP441) and the screen. Optional: the MAX98357A +
+// speaker, lesson 02's LED on GPIO 4 (through its resistor) as the lock's bolt, and the push button
 // on GPIO 5 (it does what BOOT does).
 //
 // Views: knock · bird · party   (click = next, double-click = the action in the footer)
@@ -15,6 +24,7 @@
 #include <Preferences.h>
 #include <driver/gpio.h>
 #include <esp_random.h>
+#include <esp_timer.h>
 
 #include "bird.h"
 #include "knock_lock.h"
@@ -67,6 +77,62 @@ constexpr int kBeatLog = 32;
 uint32_t beatLog[kBeatLog];  // millis() of the last beats
 int beatHead = 0;
 uint32_t lastBeat = 0;
+bool partyClick = false;  // a tick on every beat (off: the guard would hide ~200 ms after each)
+
+// ---- Sounds -----------------------------------------------------------------------------------
+
+bool soundOn = true;  // NVS games/sound
+
+enum class Sfx : uint8_t { Flap, Point, Crash, Best, Open, Wrong, Tick };
+
+void sfx(SoundLab &lab, Sfx s) {
+  if (!soundOn) return;
+  snd::Speaker &spk = lab.speaker();
+  switch (s) {
+    case Sfx::Flap: spk.tone(900, 20, syn::Wave::Square, 0.25f); break;  // 20 ms: the guard stays short
+    case Sfx::Point: spk.tone(1568, 30, syn::Wave::Sine, 0.45f); break;
+    case Sfx::Crash: spk.tune("C4/16 G3/16 C3/8", 300, syn::Wave::Saw); break;
+    case Sfx::Best: lab.chime(Chime::Score); break;
+    case Sfx::Open: spk.tune("C5/16 E5/16 G5/16 C6/8", 280, syn::Wave::Triangle); break;
+    case Sfx::Wrong: lab.chime(Chime::No); break;
+    case Sfx::Tick: spk.tone(2200, 8, syn::Wave::Square, 0.3f); break;
+  }
+}
+
+// Playing a rhythm back (the secret): an esp_timer every 2 ms fires a click at each knock's time,
+// so the timing is exact even though the screen loop only runs every ~40 ms.
+struct RhythmPlayer {
+  snd::Rhythm r;
+  int next = 0;
+  int64_t startUs = 0;
+  snd::Speaker *speaker = nullptr;
+  esp_timer_handle_t timer = nullptr;
+} replay;
+
+void onReplayTimer(void *) {
+  const int64_t now = esp_timer_get_time() - replay.startUs;
+  while (replay.next < replay.r.count && now >= int64_t(replay.r.atMs[replay.next] - replay.r.atMs[0]) * 1000) {
+    replay.speaker->tone(replay.next == 0 ? 1320 : 1100, 25, syn::Wave::Square, 0.5f);
+    replay.next++;
+  }
+  if (replay.next >= replay.r.count) esp_timer_stop(replay.timer);
+}
+
+void playRhythm(SoundLab &lab, const snd::Rhythm &r) {
+  if (!soundOn || r.count < 1) return;
+  if (!replay.timer) {
+    esp_timer_create_args_t args = {};
+    args.callback = onReplayTimer;
+    args.name = "knock-replay";
+    if (esp_timer_create(&args, &replay.timer) != ESP_OK) return;
+  }
+  esp_timer_stop(replay.timer);  // fine if it wasn't running
+  replay.r = r;
+  replay.next = 0;
+  replay.speaker = &lab.speaker();
+  replay.startUs = esp_timer_get_time() + 300000;  // a short pause first, so it doesn't run into the last knock
+  esp_timer_start_periodic(replay.timer, 2000);
+}
 
 // ---- Saving -----------------------------------------------------------------------------------
 
@@ -94,6 +160,9 @@ void loadAll() {
   p.begin("bird", true);
   best = int(p.getUInt("best", 0));
   p.end();
+  p.begin("games", true);
+  soundOn = p.getBool("sound", true);
+  p.end();
 }
 
 void saveBest() {
@@ -111,6 +180,7 @@ void finishPattern(SoundLab &lab, const snd::Rhythm &r) {
     if (r.count < 2) return lab.note(sv::Note::Warn, "a secret needs 2 knocks or more");
     lock.secret = r;
     saveSecret();
+    playRhythm(lab, r);  // hear what it heard
     return lab.note(sv::Note::Good, "secret saved: %d knocks, %.1f s", r.count, r.lengthMs() / 1000.0f);
   }
   lock.attempt = r;
@@ -120,8 +190,10 @@ void finishPattern(SoundLab &lab, const snd::Rhythm &r) {
     lock.openUntil = millis() + 5000;
     lock.openedAt = millis();
     digitalWrite(PIN_LED, HIGH);
+    sfx(lab, Sfx::Open);
     lab.note(sv::Note::Good, "OPEN (score %d)", lock.match.score);
   } else {
+    sfx(lab, Sfx::Wrong);
     lab.note(sv::Note::Bad, "locked: %s", lock.match.why);
   }
 }
@@ -136,6 +208,7 @@ void frame(SoundLab &lab, const snd::Frame &f, uint32_t ms) {
       beatHead = (beatHead + 1) % kBeatLog;
       rings[ringHead] = {lastBeat, int16_t(40 + esp_random() % 240), int16_t(50 + esp_random() % 90), hue};
       ringHead = (ringHead + 1) % kRings;
+      if (partyClick) sfx(lab, Sfx::Tick);
     }
     return;
   }
@@ -149,6 +222,7 @@ void frame(SoundLab &lab, const snd::Frame &f, uint32_t ms) {
     }
     game.flap();
     flapAt = millis();
+    sfx(lab, Sfx::Flap);
   }
   if (screen(lab) == Screen::Knock) {
     if (e.kind == snd::Onsets::Kind::Clap && !lock.collector.add(e.ms)) lab.note(sv::Note::Warn, "12 knocks is the most");
@@ -340,7 +414,13 @@ void cmdKnock(SoundLab &lab, const String &, const String &lower) {
     saveSecret();
     return lab.note(sv::Note::Info, "secret erased");
   }
-  if (!lower.isEmpty() && lower != "show") return lab.warn("knock set | knock clear | knock show");
+  if (lower == "play") {
+    if (lock.secret.count < 2) return lab.warn("no secret yet: knock set");
+    if (!soundOn) return lab.warn("sound is off: sound on");
+    playRhythm(lab, lock.secret);
+    return lab.note(sv::Note::Info, "playing the secret: %d knocks", lock.secret.count);
+  }
+  if (!lower.isEmpty() && lower != "show") return lab.warn("knock set | knock clear | knock show | knock play");
   if (lock.secret.count < 2) Serial.println("  no secret yet: knock set");
   else printRhythm("secret", lock.secret);
   if (lock.attempt.count) {
@@ -380,6 +460,10 @@ void cmdParty(SoundLab &lab, const String &arg, const String &lower) {
     beats.ratio = r;
     return lab.note(sv::Note::Info, "beat = %.1fx the last second", r);
   }
+  if (lower == "click on" || lower == "click off") {
+    partyClick = lower == "click on";
+    return lab.note(sv::Note::Info, partyClick ? "a tick on every beat (the board can't hear for ~200 ms after it)" : "no beat tick");
+  }
   if (lower == "reset") {
     beats.reset();
     for (uint32_t &b : beatLog) b = 0;
@@ -388,11 +472,22 @@ void cmdParty(SoundLab &lab, const String &arg, const String &lower) {
   Serial.printf("  %lu beats, %d BPM, sens x%.1f\n", static_cast<unsigned long>(beats.beats()), beats.bpm(), beats.ratio);
 }
 
+void cmdSound(SoundLab &lab, const String &, const String &lower) {
+  if (!lower.isEmpty() && lower != "on" && lower != "off") return lab.warn("sound | sound on | sound off");
+  soundOn = lower.isEmpty() ? !soundOn : lower == "on";
+  Preferences p;
+  p.begin("games", false);
+  p.putBool("sound", soundOn);
+  p.end();
+  lab.note(sv::Note::Info, soundOn ? "game sounds on" : "game sounds off");
+}
+
 const SoundCommand kCommands[] = {
-    {"knock", "[set|clear|show]", "set = knock a new secret; show = secret and last try", cmdKnock},
+    {"knock", "[set|clear|show|play]", "set = knock a new secret; show = secret and last try; play = hear it", cmdKnock},
     {"tol", "<percent>", "knock lock: how far each gap may be off (default 12)", cmdTol},
     {"bird", "[reset]", "Clap Bird: a new round (reset = forget the best score)", cmdBird},
-    {"party", "[sens <x>|reset]", "beat party: sensitivity 1.2-3.0 (default 1.6), or forget the tempo", cmdParty},
+    {"party", "[sens <x>|click on|off|reset]", "beat party: sensitivity 1.2-3.0 (default 1.6), a tick per beat, forget the tempo", cmdParty},
+    {"sound", "[on|off]", "the game sounds on the speaker (saved)", cmdSound},
 };
 
 // ---- Hooks ------------------------------------------------------------------------------------
@@ -425,11 +520,17 @@ void tick(SoundLab &lab) {
     if (game.score() > best) {
       best = game.score();
       saveBest();
+      sfx(lab, Sfx::Best);
       lab.note(sv::Note::Good, "new best: %d", best);
     } else {
+      sfx(lab, Sfx::Crash);
       lab.note(sv::Note::Info, "score %d", game.score());
     }
   }
+  // A ding for every pipe passed (the score only ever grows by one per step).
+  static int lastScore = 0;
+  if (game.score() > lastScore && game.state() != bird::Game::State::Over) sfx(lab, Sfx::Point);
+  lastScore = game.score();
   lastState = game.state();
 
   // The lock's bolt closes again after 5 s.

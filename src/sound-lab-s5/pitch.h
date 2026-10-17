@@ -22,7 +22,7 @@ inline snd::Note noteFor(float hz, float a4 = 440.0f) {
   n.midi = int(lroundf(m));
   n.cents = (m - n.midi) * 100.0f;
   static const char *const kNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-  // Octave 0-9 as one character, so the name always fits its 5 bytes ("C#9" + end).
+  // Octave 0-9 as one character, so the name always fits ("C#9" + end).
   const int octave = n.midi < 12 ? 0 : n.midi > 131 ? 9 : n.midi / 12 - 1;
   snprintf(n.name, sizeof(n.name), "%s%c", kNames[((n.midi % 12) + 12) % 12], char('0' + octave));
   return n;

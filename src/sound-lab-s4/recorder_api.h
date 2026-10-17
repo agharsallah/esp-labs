@@ -17,7 +17,8 @@
 //   DELETE /api/clip?n=N      delete clip N
 //   POST   /api/arm?on=1|0    voice trigger on or off
 //   POST   /api/rec           start recording now
-//   POST   /api/stop          stop recording
+//   POST   /api/stop          stop recording, and stop the board's playback
+//   POST   /api/play?n=N      play clip N on the board's speaker (&speed=0.5-2.0, default 1)
 //   WS     /ws?token=...      pushes {"type": "status" | "clips", "data": ...}, ~10 a second
 //
 // Web requests run in the network task; loop() owns the recorder. So the API never changes the
@@ -39,9 +40,10 @@
 #include "web_page.h"
 
 struct WebCommand {
-  enum class Type : uint8_t { Arm, Rec, Stop, Delete };
+  enum class Type : uint8_t { Arm, Rec, Stop, Delete, Play };
   Type type;
-  uint32_t value = 0;  // Arm: 1/0 · Delete: the clip number
+  uint32_t value = 0;  // Arm: 1/0 · Delete, Play: the clip number
+  float speed = 1.0f;  // Play: 0.5-2.0
 };
 
 class RecorderApi {
@@ -96,6 +98,16 @@ class RecorderApi {
     });
     server_.on(AsyncURIMatcher::exact("/api/stop"), HTTP_POST, [this](AsyncWebServerRequest *req) {
       if (admin(req)) queue(req, {WebCommand::Type::Stop, 0});
+    });
+    server_.on(AsyncURIMatcher::exact("/api/play"), HTTP_POST, [this](AsyncWebServerRequest *req) {
+      uint32_t n = 0;
+      if (!admin(req) || !clipParam(req, n)) return;
+      float speed = 1.0f;
+      if (req->hasParam("speed")) {
+        speed = req->getParam("speed")->value().toFloat();
+        if (speed < 0.5f || speed > 2.0f) return error(req, 400, "speed: 0.5 to 2.0");
+      }
+      queue(req, {WebCommand::Type::Play, n, speed});
     });
     server_.onNotFound([](AsyncWebServerRequest *req) { error(req, 404, "no such endpoint, see /api"); });
     server_.begin();
@@ -211,7 +223,7 @@ class RecorderApi {
 
   static constexpr const char *kIndex =
       "{\"endpoints\":[\"GET / (the page)\",\"GET /api/status\",\"GET /api/clips\",\"GET /api/clip?n=N[&raw=1]\",\"DELETE /api/clip?n=N\","
-      "\"POST /api/arm?on=1|0\",\"POST /api/rec\",\"POST /api/stop\",\"WS /ws?token=...\"],"
+      "\"POST /api/arm?on=1|0\",\"POST /api/rec\",\"POST /api/stop\",\"POST /api/play?n=N[&speed=1.0]\",\"WS /ws?token=...\"],"
       "\"auth\":\"everything but this list: Authorization: Bearer <token> (serial command: token)\"}";
 
   rec::ClipStore &store_;
