@@ -2,7 +2,7 @@
 
 ESP32-S3 learning labs, one standalone PlatformIO project per lab. It was extracted from `hardware-diary/test-esp`; the full course text is in [docs/course.md](docs/course.md).
 
-Every lab builds on its own (`labs/<lab>`), shares board settings through [`common.ini`](common.ini) and pulls only the kit libraries it includes. [`labs.json`](labs.json) is the machine-readable index (tracks, labs, environments, kit libraries, companion apps, host tests): the learning dashboard links to labs through it.
+Every lab builds on its own (`labs/<lab>`), shares board settings through [`common.ini`](common.ini) and pulls only the kit libraries it includes. [`labs.json`](labs.json) is the machine-readable index (tracks, labs, environments, kit libraries, companion apps, host tests): the learning dashboard links to labs through it. The bench guide, [esp-labs-web](https://github.com/agharsallah/esp-labs-web), is cloned next to this repo and reads the lab code from it at build time (`FIRMWARE_DIR=../esp-labs`).
 
 ## Layout
 
