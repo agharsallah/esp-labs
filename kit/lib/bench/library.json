@@ -1,0 +1,7 @@
+{
+  "name": "bench",
+  "version": "0.1.0",
+  "description": "Shared helpers for the esp-labs lessons: frame buffer, colours, buttons, display setup.",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

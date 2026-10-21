@@ -1,0 +1,7 @@
+{
+  "name": "door-rules",
+  "version": "0.1.0",
+  "description": "The door's access rules (roles, hours, end dates, uses), shared by R7 and R8. Pure C++, checked on the Mac.",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

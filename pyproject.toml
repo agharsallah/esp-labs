@@ -1,5 +1,5 @@
 [project]
-name = "test-esp"
+name = "esp-labs"
 version = "0.1.0"
 description = "Hands-on ESP32-S3 learning sessions (PlatformIO + Arduino framework)."
 requires-python = ">=3.14"

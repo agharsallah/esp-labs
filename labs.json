@@ -1,0 +1,653 @@
+{
+  "version": 1,
+  "tracks": [
+    {
+      "id": "intro",
+      "title": "Intro",
+      "labs": [
+        {
+          "id": "01-hello",
+          "title": "Meet the board",
+          "path": "labs/01-hello",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "01-hello",
+              "about": "Meet the board: print its identity card and cycle the on-board RGB LED."
+            }
+          ],
+          "kit": [],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "02-led",
+          "title": "First circuit",
+          "path": "labs/02-led",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "02-led",
+              "about": "First circuit: an external LED on the breadboard, driven by serial commands."
+            }
+          ],
+          "kit": [],
+          "apps": [],
+          "hostTests": []
+        }
+      ]
+    },
+    {
+      "id": "display",
+      "title": "Display & input",
+      "labs": [
+        {
+          "id": "03-display",
+          "title": "The 1",
+          "path": "labs/03-display",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "03-display",
+              "about": "The 1.9\" 170x320 ST7789 IPS screen over SPI."
+            }
+          ],
+          "kit": [],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "03b-showcase",
+          "title": "Variation 1",
+          "path": "labs/03b-showcase",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "03b-showcase",
+              "about": "Variation 1: a bigger display demo on the same wiring (3D torus, plasma, fireworks, live dashboard). Controlled with the on-board BOOT button. Nothing new to wire."
+            },
+            {
+              "name": "03b-showcase-button",
+              "about": "Variation 2: the same showcase, driven by a push button on GPIO 5 (plus BOOT)."
+            }
+          ],
+          "kit": [
+            "bench"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "pin-check",
+          "title": "Diagnostic",
+          "path": "labs/pin-check",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "pin-check",
+              "about": "Diagnostic: are the screen wires shorted or broken? Short test + an LED probe on each data pin."
+            }
+          ],
+          "kit": [],
+          "apps": [],
+          "hostTests": []
+        }
+      ]
+    },
+    {
+      "id": "wifi",
+      "title": "Wi-Fi",
+      "labs": [
+        {
+          "id": "wifi-lab-w1",
+          "title": "W1 Scan & join",
+          "path": "labs/wifi-lab-w1",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "wifi-lab-w1",
+              "about": "W1 Scan & join: scanner views, join your network (password in NVS), status view, ping."
+            }
+          ],
+          "kit": [
+            "bench",
+            "wifi-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "wifi-lab-w2",
+          "title": "W2 Phone control, variation 1",
+          "path": "labs/wifi-lab-w2",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "wifi-lab-w2",
+              "about": "W2 Phone control, variation 1: W1 plus REST API + WebSocket, phone page, set-up network, firmware updates over HTTP. Control from your own Wi-Fi."
+            },
+            {
+              "name": "wifi-lab-w2-remote",
+              "about": "W2 Phone control, variation 2: everything above, plus the board dials out to the dashboard server (through a cloudflared or ngrok tunnel) so you can control it from anywhere."
+            }
+          ],
+          "kit": [
+            "bench",
+            "wifi-kit"
+          ],
+          "apps": [
+            "apps/dashboard"
+          ],
+          "hostTests": []
+        },
+        {
+          "id": "wifi-lab-w3",
+          "title": "W3 Internet & AI",
+          "path": "labs/wifi-lab-w3",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "wifi-lab-w3",
+              "about": "W3 Internet & AI: weather over HTTPS + JSON (Open-Meteo, no key), and the Bench Oracle: Claude (Anthropic API, key stored on the chip) writes a haiku about the moment or answers questions."
+            }
+          ],
+          "kit": [
+            "bench",
+            "wifi-kit"
+          ],
+          "apps": [
+            "apps/ai-gateway"
+          ],
+          "hostTests": []
+        }
+      ]
+    },
+    {
+      "id": "rfid",
+      "title": "RFID & NFC",
+      "labs": [
+        {
+          "id": "rfid-lab-r1",
+          "title": "R1 Wire & talk",
+          "path": "labs/rfid-lab-r1",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "rfid-lab-r1",
+              "about": "R1 Wire & talk: the chip itself. chip, reset, selftest, loopback, regs, spi, gain, timeout, irq."
+            }
+          ],
+          "kit": [
+            "rfid-lab-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "rfid-lab-r2",
+          "title": "R2 Wake a card",
+          "path": "labs/rfid-lab-r2",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "rfid-lab-r2",
+              "about": "R2 Wake a card: + the trace view, poll, trace."
+            }
+          ],
+          "kit": [
+            "rfid-lab-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "rfid-lab-r3",
+          "title": "R3 Who's there",
+          "path": "labs/rfid-lab-r3",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "rfid-lab-r3",
+              "about": "R3 Who's there: + inventory (two cards at once)."
+            }
+          ],
+          "kit": [
+            "rfid-lab-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "rfid-lab-r4",
+          "title": "R4 Inside the card",
+          "path": "labs/rfid-lab-r4",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "rfid-lab-r4",
+              "about": "R4 Inside the card: + the memory view, dump, read."
+            }
+          ],
+          "kit": [
+            "rfid-lab-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "rfid-lab-r5",
+          "title": "R5 Write & count",
+          "path": "labs/rfid-lab-r5",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "rfid-lab-r5",
+              "about": "R5 Write & count: + the credits view, write, credits."
+            }
+          ],
+          "kit": [
+            "rfid-lab-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "rfid-lab-r6",
+          "title": "R6 Edge lab",
+          "path": "labs/rfid-lab-r6",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "rfid-lab-r6",
+              "about": "R6 Edge lab: + the edge view and the seven edge experiments."
+            }
+          ],
+          "kit": [
+            "rfid-lab-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "rfid-lab-r7",
+          "title": "R7 Card manager",
+          "path": "labs/rfid-lab-r7",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "rfid-lab-r7",
+              "about": "R7 Card manager: a bench door (simulated: screen + LED) managed from the React app in apps/door-app over Wi-Fi. The board keeps the card list in NVS and decides every tap. JSON API + WebSocket on port 80 (the same web libraries as W2); admin token for every change."
+            }
+          ],
+          "kit": [
+            "bench",
+            "door-rules",
+            "rfid-kit",
+            "wifi-kit"
+          ],
+          "apps": [
+            "apps/door-app"
+          ],
+          "hostTests": [
+            "labs/rfid-lab-r7/test/host/door_rules_test.cpp"
+          ]
+        },
+        {
+          "id": "rfid-lab-r8",
+          "title": "R8 Card friends",
+          "path": "labs/rfid-lab-r8",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "rfid-lab-r8",
+              "about": "R8 Card friends: a kids' lab. Every card is the home of a friend (fox, robot, dragon, ...): tap it and the friend pops out on the screen and in 3D in apps/friends-app, where you drag friends onto cards. New cards add themselves on their first tap. UID only, nothing is written. R7's driver, reader health checks, web libraries and admin token."
+            }
+          ],
+          "kit": [
+            "bench",
+            "door-rules",
+            "rfid-kit",
+            "wifi-kit"
+          ],
+          "apps": [
+            "apps/friends-app"
+          ],
+          "hostTests": []
+        },
+        {
+          "id": "rfid-lab-r9",
+          "title": "R9 Vault (work in progress)",
+          "path": "labs/rfid-lab-r9",
+          "buildable": false,
+          "envs": [],
+          "kit": [
+            "bench",
+            "rfid-kit",
+            "wifi-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        }
+      ]
+    },
+    {
+      "id": "ble",
+      "title": "Bluetooth LE",
+      "labs": [
+        {
+          "id": "ble-lab-b1",
+          "title": "B1 Listen",
+          "path": "labs/ble-lab-b1",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "ble-lab-b1",
+              "about": "B1 Listen: a scanner. Radar, list, a byte-by-byte packet inspector, air statistics."
+            }
+          ],
+          "kit": [
+            "bench",
+            "ble-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "ble-lab-b2",
+          "title": "B2 Be seen",
+          "path": "labs/ble-lab-b2",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "ble-lab-b2",
+              "about": "B2 Be seen: a beacon. Live data in the advertisement, iBeacon and Eddystone-URL, TX power, interval."
+            }
+          ],
+          "kit": [
+            "bench",
+            "ble-kit"
+          ],
+          "apps": [],
+          "hostTests": [
+            "labs/ble-lab-b2/test/host/ble_beacon_test.cpp"
+          ]
+        },
+        {
+          "id": "ble-lab-b3",
+          "title": "B3 Connect & talk",
+          "path": "labs/ble-lab-b3",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "ble-lab-b3",
+              "about": "B3 Connect & talk: a GATT server. LED, message, button, temperature from nRF Connect/LightBlue."
+            }
+          ],
+          "kit": [
+            "bench",
+            "ble-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "ble-lab-b4",
+          "title": "B4 Pair & trust",
+          "path": "labs/ble-lab-b4",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "ble-lab-b4",
+              "about": "B4 Pair & trust: B3's service plus a Vault. Passkey on the screen, numeric comparison on the button, bonds."
+            }
+          ],
+          "kit": [
+            "bench",
+            "ble-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "ble-lab-b5",
+          "title": "B5 Phone app",
+          "path": "labs/ble-lab-b5",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "ble-lab-b5",
+              "about": "B5 Phone app: B3's service plus sketch, live sensors and a speed test for the Web Bluetooth app in apps/ble-app."
+            }
+          ],
+          "kit": [
+            "bench",
+            "ble-kit"
+          ],
+          "apps": [
+            "apps/ble-app"
+          ],
+          "hostTests": [
+            "labs/ble-lab-b5/test/host/b5_canvas_test.cpp"
+          ]
+        },
+        {
+          "id": "ble-lab-b6",
+          "title": "B6 Keyboard & media",
+          "path": "labs/ble-lab-b6",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "ble-lab-b6",
+              "about": "B6 Keyboard & media: a BLE keyboard with media keys. Volume and play/pause for the music on your phone or Mac."
+            }
+          ],
+          "kit": [
+            "bench",
+            "ble-kit"
+          ],
+          "apps": [],
+          "hostTests": [
+            "labs/ble-lab-b6/test/host/ble_keymap_test.cpp"
+          ]
+        },
+        {
+          "id": "ble-lab-b7",
+          "title": "B7 Music",
+          "path": "labs/ble-lab-b7",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "ble-lab-b7",
+              "about": "B7 Music: a BLE-MIDI instrument for GarageBand or the ble-app synth. Button and touch wires play notes."
+            }
+          ],
+          "kit": [
+            "bench",
+            "ble-kit"
+          ],
+          "apps": [
+            "apps/ble-app"
+          ],
+          "hostTests": []
+        },
+        {
+          "id": "ble-lab-b8",
+          "title": "B8 Host",
+          "path": "labs/ble-lab-b8",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "ble-lab-b8",
+              "about": "B8 Host: the board is the central. Explore any device's GATT, then host your BLE keyboard and mouse."
+            }
+          ],
+          "kit": [
+            "bench",
+            "ble-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        }
+      ]
+    },
+    {
+      "id": "sound",
+      "title": "Sound",
+      "labs": [
+        {
+          "id": "sound-lab-s1",
+          "title": "S1 Hear",
+          "path": "labs/sound-lab-s1",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "sound-lab-s1",
+              "about": "S1 Hear: the raw signal. Oscilloscope, the DC bias and the ADC's range, the comparator (DO + pot)."
+            }
+          ],
+          "kit": [
+            "bench",
+            "sound-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "sound-lab-s2",
+          "title": "S2 Loudness",
+          "path": "labs/sound-lab-s2",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "sound-lab-s2",
+              "about": "S2 Loudness: a sound level meter. dB above your room's quiet, fast/slow, a 10-minute diary, alarm."
+            }
+          ],
+          "kit": [
+            "bench",
+            "sound-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "sound-lab-s3",
+          "title": "S3 Clap control",
+          "path": "labs/sound-lab-s3",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "sound-lab-s3",
+              "about": "S3 Clap control: claps (not voices) in patterns of 1-4 switch the LED, the RGB LED and the screen."
+            }
+          ],
+          "kit": [
+            "bench",
+            "sound-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "sound-lab-s4",
+          "title": "S4 Recorder",
+          "path": "labs/sound-lab-s4",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "sound-lab-s4",
+              "about": "S4 Recorder: a voice-activated recorder into PSRAM, with half a second of \"before\". Listen and download on your phone at http://bench.local (Wi-Fi saved by W1, admin token), or pull a WAV over USB with tools/sound_pull.py."
+            }
+          ],
+          "kit": [
+            "bench",
+            "sound-kit",
+            "wifi-kit"
+          ],
+          "apps": [],
+          "hostTests": [
+            "labs/sound-lab-s4/test/host/sound_clips_test.cpp"
+          ]
+        },
+        {
+          "id": "sound-lab-s5",
+          "title": "S5 Spectrum",
+          "path": "labs/sound-lab-s5",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "sound-lab-s5",
+              "about": "S5 Spectrum: our own FFT. Bands, a waterfall, a whistle tuner, and steering by pitch."
+            }
+          ],
+          "kit": [
+            "bench",
+            "sound-kit"
+          ],
+          "apps": [],
+          "hostTests": [
+            "labs/sound-lab-s5/test/host/sound_spectrum_test.cpp"
+          ]
+        },
+        {
+          "id": "sound-lab-s6",
+          "title": "S6 Sound games",
+          "path": "labs/sound-lab-s6",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "sound-lab-s6",
+              "about": "S6 Sound games: a knock lock (your secret rhythm), Clap Bird, and a beat-following light party."
+            }
+          ],
+          "kit": [
+            "bench",
+            "sound-kit"
+          ],
+          "apps": [],
+          "hostTests": [
+            "labs/sound-lab-s6/test/host/sound_games_test.cpp"
+          ]
+        },
+        {
+          "id": "sound-lab-s7",
+          "title": "S7 Speaker",
+          "path": "labs/sound-lab-s7",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "sound-lab-s7",
+              "about": "S7 Speaker: the board makes sound. Waveforms, envelopes, notes and tunes, a keyboard, a sound-effects box."
+            }
+          ],
+          "kit": [
+            "bench",
+            "sound-kit"
+          ],
+          "apps": [],
+          "hostTests": []
+        },
+        {
+          "id": "sound-lab-s8",
+          "title": "S8 Voice FX",
+          "path": "labs/sound-lab-s8",
+          "buildable": true,
+          "envs": [
+            {
+              "name": "sound-lab-s8",
+              "about": "S8 Voice FX: microphone in, speaker out. A parrot that repeats you as a chipmunk, a giant or a robot, an echo, and a talking-robot mode. Needs the INMP441 + the speaker for good results."
+            }
+          ],
+          "kit": [
+            "bench",
+            "sound-kit"
+          ],
+          "apps": [],
+          "hostTests": [
+            "labs/sound-lab-s8/test/host/sound_fx_test.cpp"
+          ]
+        }
+      ]
+    }
+  ]
+}
