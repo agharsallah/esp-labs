@@ -89,3 +89,26 @@ Libraries and compiled objects are shared across labs in the root `.pio/` (`libd
 | Sound | [S6 Sound games](labs/sound-lab-s6/README.md) | `sound-lab-s6` | bench, sound-kit | none |
 | Sound | [S7 Speaker](labs/sound-lab-s7/README.md) | `sound-lab-s7` | bench, sound-kit | none |
 | Sound | [S8 Voice FX](labs/sound-lab-s8/README.md) | `sound-lab-s8` | bench, sound-kit | none |
+
+## License
+
+Released under the [MIT License](LICENSE): free and open source, with one condition, credit the original work.
+
+**You can**
+
+- use it for anything: learning, teaching, workshops, work, commercial products
+- change it, fork it, build on it, mix it into your own projects
+- deploy it, share it, sell it
+
+**You must**
+
+- keep the copyright notice and the [LICENSE](LICENSE) text with any copy or substantial part you reuse. That is how the original work is credited.
+
+**Good to know**
+
+- You don't need to ask permission or tell anyone.
+- Your own changes can carry any license you like, as long as the original notice stays.
+- The code comes as is: no warranty, and the authors aren't liable for what you do with it.
+- Third-party libraries and dependencies keep their own licenses.
+
+This summary is a guide only; the [LICENSE](LICENSE) file is the legal text.
